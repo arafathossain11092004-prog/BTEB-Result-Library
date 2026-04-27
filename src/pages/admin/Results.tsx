@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, addDoc, deleteDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
-import { Plus, Trash2, Edit2, Upload, Loader2, Download } from 'lucide-react';
+import { Plus, Trash2, Edit2, Upload, Loader2, Download, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import * as xlsx from 'xlsx';
 
@@ -148,6 +148,48 @@ const SemesterInput = ({ label, value, onChange }: { label: string, value: strin
   );
 };
 
+const ResultRow = ({ r, handleEdit, handleDelete }: any) => (
+  <tr className="hover:bg-gray-50 transition-colors">
+    <td className="py-3 px-4 font-medium text-gray-900">{r.rollNumber}</td>
+    <td className="py-3 px-4 text-gray-600">{r.curriculum}</td>
+    <td className="py-3 px-4 text-gray-600">{r.regulation}</td>
+    <td className="py-3 px-4 text-gray-600">{r.instituteName}</td>
+    <td className="py-3 px-4 text-right flex justify-end gap-2">
+      <button onClick={() => handleEdit(r)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Edit">
+        <Edit2 className="w-4 h-4" />
+      </button>
+      <button onClick={() => handleDelete(r.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </td>
+  </tr>
+);
+
+const GroupedRow = ({ group, handleEdit, handleDelete }: any) => {
+  const [expanded, setExpanded] = useState(false);
+  const { latestSemName, items } = group;
+
+  return (
+    <React.Fragment>
+      <tr className="bg-blue-50 border-y border-blue-100 hover:bg-blue-100 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <td colSpan={5} className="py-3 px-4">
+          <div className="flex items-center text-blue-900 font-medium">
+             {expanded ? <ChevronDown className="w-4 h-4 mr-2 text-blue-500"/> : <ChevronRight className="w-4 h-4 mr-2 text-blue-500"/>}
+             <Folder className="w-4 h-4 mr-2 text-blue-500 fill-blue-100" />
+             {latestSemName}
+             <span className="ml-3 text-xs font-normal text-blue-700 bg-blue-100/50 px-2.5 py-0.5 rounded-full border border-blue-200">
+               {items.length} results
+             </span>
+          </div>
+        </td>
+      </tr>
+      {expanded && items.map((r: any) => (
+        <ResultRow key={r.id} r={r} handleEdit={handleEdit} handleDelete={handleDelete} />
+      ))}
+    </React.Fragment>
+  );
+};
+
 export default function AdminResults() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,6 +214,24 @@ export default function AdminResults() {
 
   const [saving, setSaving] = useState(false);
   const [searchingRoll, setSearchingRoll] = useState(false);
+
+  const groupedResults = React.useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    results.forEach(r => {
+      const latestSemIndex = [8,7,6,5,4,3,2,1].find(n => r[`semester${n}`]) || 1;
+      let latestSemName = `${latestSemIndex}th Semester`;
+      if (latestSemIndex === 1) latestSemName = '1st Semester';
+      else if (latestSemIndex === 2) latestSemName = '2nd Semester';
+      else if (latestSemIndex === 3) latestSemName = '3rd Semester';
+
+      const key = latestSemName;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+    return Object.entries(groups).map(([key, items]) => {
+       return { id: key, latestSemName: key, items };
+    });
+  }, [results]);
 
   useEffect(() => {
     fetchResults();
@@ -513,24 +573,11 @@ export default function AdminResults() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {results.length === 0 ? (
+                {groupedResults.length === 0 ? (
                    <tr><td colSpan={5} className="py-8 text-center text-gray-500">No results found.</td></tr>
                 ) : (
-                  results.map(r => (
-                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 font-medium text-gray-900">{r.rollNumber}</td>
-                      <td className="py-3 px-4 text-gray-600">{r.curriculum}</td>
-                      <td className="py-3 px-4 text-gray-600">{r.regulation}</td>
-                      <td className="py-3 px-4 text-gray-600">{r.instituteName}</td>
-                      <td className="py-3 px-4 text-right flex justify-end gap-2">
-                        <button onClick={() => handleEdit(r)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Edit">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(r.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+                  groupedResults.map(group => (
+                    <GroupedRow key={group.id} group={group} handleEdit={handleEdit} handleDelete={handleDelete} />
                   ))
                 )}
               </tbody>
