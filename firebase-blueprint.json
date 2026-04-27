@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "Result": {
+      "title": "Result",
+      "description": "A student's exam result covering multiple semesters",
+      "type": "object",
+      "properties": {
+        "curriculum": { "type": "string" },
+        "regulation": { "type": "string" },
+        "rollNumber": { "type": "string", "description": "Student roll number" },
+        "instituteName": { "type": "string", "description": "Institute Name" },
+        "semester1": { "type": "string" },
+        "semester2": { "type": "string" },
+        "semester3": { "type": "string" },
+        "semester4": { "type": "string" },
+        "semester5": { "type": "string" },
+        "semester6": { "type": "string" },
+        "semester7": { "type": "string" },
+        "semester8": { "type": "string" },
+        "createdAt": { "type": "integer", "description": "Timestamp" },
+        "updatedAt": { "type": "integer", "description": "Timestamp" }
+      },
+      "required": ["rollNumber", "instituteName", "createdAt", "updatedAt"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "description": "An exam schedule or notice",
+      "type": "object",
+      "properties": {
+        "semester": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "subjectCode": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["semester", "subjectName", "subjectCode", "date", "time", "createdAt", "updatedAt"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "A notice board entry with a PDF",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "pdfUrl": { "type": "string" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["title", "pdfUrl", "createdAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Admin user profile for RBAC",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "results": {
+      "schema": { "$ref": "#/entities/Result" },
+      "description": "Collection of student results"
+    },
+    "examRoutines": {
+      "schema": { "$ref": "#/entities/Schedule" },
+      "description": "Collection of exam routines"
+    },
+    "notices": {
+      "schema": { "$ref": "#/entities/Notice" },
+      "description": "Collection of notices"
+    },
+    "admins": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "List of admin users by UID"
+    }
+  }
+}
