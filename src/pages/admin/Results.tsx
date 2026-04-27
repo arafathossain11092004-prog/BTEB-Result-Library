@@ -264,7 +264,14 @@ export default function AdminResults() {
            createdAt: Date.now(),
          });
       }
-      resetForm();
+      
+      // Clear specific fields to allow consecutive data entry without closing the form
+      setRollNumber('');
+      setSemester1(''); setSemester2(''); setSemester3(''); setSemester4('');
+      setSemester5(''); setSemester6(''); setSemester7(''); setSemester8('');
+      setIsEditing(false);
+      setEditId(null);
+      
       fetchResults();
     } catch (error) {
       handleFirestoreError(error, isEditing ? OperationType.UPDATE : OperationType.CREATE, 'results');
