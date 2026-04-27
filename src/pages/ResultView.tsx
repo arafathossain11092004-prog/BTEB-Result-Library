@@ -105,7 +105,7 @@ export default function ResultView() {
       try {
         const parsed = JSON.parse(val);
         const subjects: any[] = parsed.subjects || [];
-        return { type: 'referred', subjects, total: subjects.length, gpa: null };
+        return { type: 'referred', subjects, total: subjects.length, gpa: parsed.gpa || null };
       } catch (e) {
         return { type: 'passed', gpa: val };
       }
@@ -280,20 +280,21 @@ export default function ResultView() {
                                 </div>
                               </div>
 
-                              {isPassed ? (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                              {isPassed || parsed.gpa ? (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center mb-3">
                                    <span className="text-gray-500 font-semibold mr-2 text-sm">GPA</span>
                                    <span className="text-green-600 font-bold text-xl">{parsed.gpa}</span>
                                 </div>
-                              ) : (
+                              ) : null}
+                              {!isPassed && (
                                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden text-sm divide-y divide-gray-100">
                                    {parsed.subjects.map((sub: any, idx: number) => (
                                      <div key={idx} className="p-3 bg-white flex items-center justify-between">
-                                        <span className="text-red-600 font-medium whitespace-nowrap">
+                                        <div className="text-gray-900 font-normal">
                                           <span className="text-purple-700 mr-2">{sub.code}</span>
                                           {sub.name}
-                                        </span>
-                                        <span className="text-gray-500 font-medium px-2 py-0.5 border border-gray-200 rounded bg-gray-50 text-xs">
+                                        </div>
+                                        <span className="text-gray-500 font-medium px-2 py-0.5 border border-gray-200 rounded-full bg-white text-xs">
                                            {sub.type}
                                         </span>
                                      </div>

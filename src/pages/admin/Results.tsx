@@ -21,7 +21,7 @@ const SemesterInput = ({ label, value, onChange }: { label: string, value: strin
         const parsed = JSON.parse(value);
         setMode('referred');
         setSubjects(parsed.subjects || []);
-        setGpa('');
+        setGpa(parsed.gpa || '');
       } catch (e) {
         setMode('gpa'); setGpa(value);
       }
@@ -37,7 +37,7 @@ const SemesterInput = ({ label, value, onChange }: { label: string, value: strin
       if (newSubjects.length === 0) {
         onChange('');
       } else {
-        onChange(JSON.stringify({ type: 'referred', subjects: newSubjects }));
+        onChange(JSON.stringify({ type: 'referred', subjects: newSubjects, gpa: newGpa }));
       }
     }
   };
@@ -100,6 +100,16 @@ const SemesterInput = ({ label, value, onChange }: { label: string, value: strin
         />
       ) : (
         <div className="flex flex-col gap-2">
+          <input 
+            type="text" 
+            value={gpa} 
+            onChange={e => {
+              setGpa(e.target.value);
+              triggerChange('referred', e.target.value, subjects);
+            }} 
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded outline-none focus:ring-1 focus:ring-blue-500 bg-white" 
+            placeholder="GPA (optional)" 
+          />
           {subjects.map((sub, i) => (
             <div key={i} className="flex flex-wrap gap-1 items-center bg-white p-2 rounded border border-gray-200">
                <input 
