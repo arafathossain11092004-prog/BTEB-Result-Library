@@ -394,7 +394,67 @@ export default function AdminResults() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Institute Name *</label>
-            <input required type="text" value={instituteName} onChange={e => setInstituteName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+            <input 
+              required 
+              type="text" 
+              list="institute-list"
+              value={instituteName} 
+              onChange={e => setInstituteName(e.target.value)} 
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="Select from dropdown or type manually" 
+            />
+            <datalist id="institute-list">
+              <option value="Dhaka Polytechnic Institute" />
+              <option value="Chittagong Polytechnic Institute" />
+              <option value="Rajshahi Polytechnic Institute" />
+              <option value="Khulna Polytechnic Institute" />
+              <option value="Bogra Polytechnic Institute" />
+              <option value="Sylhet Polytechnic Institute" />
+              <option value="Barisal Polytechnic Institute" />
+              <option value="Mymensingh Polytechnic Institute" />
+              <option value="Rangpur Polytechnic Institute" />
+              <option value="Comilla Polytechnic Institute" />
+              <option value="Faridpur Polytechnic Institute" />
+              <option value="Kushtia Polytechnic Institute" />
+              <option value="Pabna Polytechnic Institute" />
+              <option value="Dinajpur Polytechnic Institute" />
+              <option value="Feni Polytechnic Institute" />
+              <option value="Patuakhali Polytechnic Institute" />
+              <option value="Tangail Polytechnic Institute" />
+              <option value="Jessore Polytechnic Institute" />
+              <option value="Noakhali Polytechnic Institute" />
+              <option value="Brahmanbaria Polytechnic Institute" />
+              <option value="Thakurgaon Polytechnic Institute" />
+              <option value="Satkhira Polytechnic Institute" />
+              <option value="Sirajganj Polytechnic Institute" />
+              <option value="Kurigram Polytechnic Institute" />
+              <option value="Magura Polytechnic Institute" />
+              <option value="Bhola Polytechnic Institute" />
+              <option value="Habiganj Polytechnic Institute" />
+              <option value="Sherpur Polytechnic Institute" />
+              <option value="Cox's Bazar Polytechnic Institute" />
+              <option value="Jhenaidah Polytechnic Institute" />
+              <option value="Munshiganj Polytechnic Institute" />
+              <option value="Narsingdi Polytechnic Institute" />
+              <option value="Chandpur Polytechnic Institute" />
+              <option value="Shariatpur Polytechnic Institute" />
+              <option value="Barguna Polytechnic Institute" />
+              <option value="Gopalganj Polytechnic Institute" />
+              <option value="Lakshmipur Polytechnic Institute" />
+              <option value="Nilphamari Polytechnic Institute" />
+              <option value="Kishoreganj Polytechnic Institute" />
+              <option value="Chapainawabganj Polytechnic Institute" />
+              <option value="Lalmonirhat Polytechnic Institute" />
+              <option value="Panchagarh Polytechnic Institute" />
+              <option value="Chittagong Mohila Polytechnic Institute" />
+              <option value="Feni Computer Institute" />
+              <option value="Rajshahi Mohila Polytechnic Institute" />
+              <option value="Dhaka Mohila Polytechnic Institute" />
+              <option value="Khulna Mohila Polytechnic Institute" />
+              <option value="Bangladesh Sweden Polytechnic Institute" />
+              <option value="Graphic Arts Institute, Dhaka" />
+              <option value="Govt. Graphic Arts Institute, Dhaka" />
+            </datalist>
           </div>
           
           <div className="sm:col-span-2 lg:col-span-5 mt-2">
