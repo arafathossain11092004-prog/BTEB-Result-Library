@@ -171,13 +171,13 @@ const GroupedRow = ({ group, handleEdit, handleDelete }: any) => {
 
   return (
     <React.Fragment>
-      <tr className="bg-blue-50 border-y border-blue-100 hover:bg-blue-100 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <td colSpan={5} className="py-3 px-4">
-          <div className="flex items-center text-blue-900 font-medium">
-             {expanded ? <ChevronDown className="w-4 h-4 mr-2 text-blue-500"/> : <ChevronRight className="w-4 h-4 mr-2 text-blue-500"/>}
-             <Folder className="w-4 h-4 mr-2 text-blue-500 fill-blue-100" />
+      <tr className="bg-blue-50/50 border-y border-blue-50 hover:bg-blue-50 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <td colSpan={5} className="py-2.5 px-6">
+          <div className="flex items-center text-blue-800 font-medium text-sm">
+             {expanded ? <ChevronDown className="w-4 h-4 mr-2 text-blue-400"/> : <ChevronRight className="w-4 h-4 mr-2 text-blue-400"/>}
+             <Folder className="w-4 h-4 mr-2 text-blue-400 fill-blue-50" />
              {latestSemName}
-             <span className="ml-3 text-xs font-normal text-blue-700 bg-blue-100/50 px-2.5 py-0.5 rounded-full border border-blue-200">
+             <span className="ml-3 text-xs font-normal text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded border border-blue-200/50">
                {items.length} results
              </span>
           </div>
@@ -185,6 +185,31 @@ const GroupedRow = ({ group, handleEdit, handleDelete }: any) => {
       </tr>
       {expanded && items.map((r: any) => (
         <ResultRow key={r.id} r={r} handleEdit={handleEdit} handleDelete={handleDelete} />
+      ))}
+    </React.Fragment>
+  );
+};
+
+const InstituteRow = ({ institute, handleEdit, handleDelete }: any) => {
+  const [expanded, setExpanded] = useState(false);
+  const { instituteName, semesters, totalItems } = institute;
+
+  return (
+    <React.Fragment>
+      <tr className="bg-gray-100 border-y border-gray-200 hover:bg-gray-200 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <td colSpan={5} className="py-3 px-4">
+          <div className="flex items-center text-gray-900 font-semibold">
+             {expanded ? <ChevronDown className="w-4 h-4 mr-2 text-gray-500"/> : <ChevronRight className="w-4 h-4 mr-2 text-gray-500"/>}
+             <Folder className="w-4 h-4 mr-2 text-gray-500 fill-gray-100" />
+             {instituteName}
+             <span className="ml-3 text-xs font-normal text-gray-600 bg-gray-200 px-2.5 py-0.5 rounded-full border border-gray-300">
+               {totalItems} total results
+             </span>
+          </div>
+        </td>
+      </tr>
+      {expanded && semesters.map((group: any) => (
+        <GroupedRow key={group.id} group={group} handleEdit={handleEdit} handleDelete={handleDelete} />
       ))}
     </React.Fragment>
   );
@@ -216,8 +241,12 @@ export default function AdminResults() {
   const [searchingRoll, setSearchingRoll] = useState(false);
 
   const groupedResults = React.useMemo(() => {
-    const groups: Record<string, any[]> = {};
+    const institutes: Record<string, Record<string, any[]>> = {};
+
     results.forEach(r => {
+      const gInstituteName = r.instituteName || "Unknown Institute";
+      if (!institutes[gInstituteName]) institutes[gInstituteName] = {};
+
       const latestSemIndex = [8,7,6,5,4,3,2,1].find(n => r[`semester${n}`]) || 1;
       let latestSemName = `${latestSemIndex}th Semester`;
       if (latestSemIndex === 1) latestSemName = '1st Semester';
@@ -225,11 +254,20 @@ export default function AdminResults() {
       else if (latestSemIndex === 3) latestSemName = '3rd Semester';
 
       const key = latestSemName;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(r);
+      if (!institutes[gInstituteName][key]) institutes[gInstituteName][key] = [];
+      institutes[gInstituteName][key].push(r);
     });
-    return Object.entries(groups).map(([key, items]) => {
-       return { id: key, latestSemName: key, items };
+    return Object.entries(institutes).map(([name, semestersMap]) => {
+      return {
+        id: name,
+        instituteName: name,
+        semesters: Object.entries(semestersMap).map(([semName, items]) => ({
+          id: `${name}-${semName}`,
+          latestSemName: semName,
+          items,
+        })),
+        totalItems: Object.values(semestersMap).reduce((sum, items) => sum + items.length, 0),
+      };
     });
   }, [results]);
 
@@ -576,8 +614,8 @@ export default function AdminResults() {
                 {groupedResults.length === 0 ? (
                    <tr><td colSpan={5} className="py-8 text-center text-gray-500">No results found.</td></tr>
                 ) : (
-                  groupedResults.map(group => (
-                    <GroupedRow key={group.id} group={group} handleEdit={handleEdit} handleDelete={handleDelete} />
+                  groupedResults.map(institute => (
+                    <InstituteRow key={institute.id} institute={institute} handleEdit={handleEdit} handleDelete={handleDelete} />
                   ))
                 )}
               </tbody>
