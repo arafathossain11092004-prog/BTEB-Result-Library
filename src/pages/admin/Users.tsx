@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, setDoc, deleteDoc, doc } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut } from 'firebase/auth';
-import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { db, handleFirestoreError, OperationType, firebaseConfig } from '../../lib/firebase';
 import { Plus, Trash2, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import firebaseConfig from '../../../firebase-applet-config.json';
 
 export default function AdminUsers() {
   const [admins, setAdmins] = useState<any[]>([]);
