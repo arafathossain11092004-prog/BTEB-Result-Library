@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [curriculum, setCurriculum] = useState('diploma_in_engineering');
+  const [curriculum, setCurriculum] = useState('');
   const [regulation, setRegulation] = useState('');
   const [roll, setRoll] = useState('');
 
@@ -56,10 +56,23 @@ export default function Home() {
                 onChange={(e) => setCurriculum(e.target.value)}
                 className="w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg appearance-none bg-white"
               >
-                <option value="diploma_in_engineering">Diploma in Engineering</option>
-                <option value="diploma_in_textile">Diploma in Textile Engineering</option>
-                <option value="diploma_in_agriculture">Diploma in Agriculture</option>
-                <option value="diploma_in_marine">Diploma in Marine Engineering</option>
+                <option value="">Any</option>
+                <option value="diploma_in_engineering">Diploma In Engineering</option>
+                <option value="diploma_in_engineering_army">Diploma In Engineering (Army)</option>
+                <option value="diploma_in_engineering_naval">Diploma In Engineering (Naval)</option>
+                <option value="diploma_in_textile">Diploma In Textile Engineering</option>
+                <option value="diploma_in_tourism">Diploma In Tourism And Hospitality</option>
+                <option value="diploma_in_agriculture">Diploma In Agriculture</option>
+                <option value="diploma_in_fisheries">Diploma In Fisheries</option>
+                <option value="diploma_in_forestry">Diploma In Forestry</option>
+                <option value="diploma_in_livestock">Diploma In Livestock</option>
+                <option value="certificate_in_marine_trade">Certificate In Marine Trade</option>
+                <option value="diploma_in_medical_technology">Diploma In Medical Technology</option>
+                <option value="advanced_certificate_course">Advanced Certificate Course</option>
+                <option value="national_skill_standard_basic">National Skill Standard Basic Certificate Course</option>
+                <option value="one_year_certificate">One Year Certificate Course</option>
+                <option value="diploma_in_commerce">Diploma In Commerce</option>
+                <option value="certificate_in_medical_ultrasound">Certificate In Medical Ultrasound</option>
                 <option value="hsc_bm">HSC (Business Management)</option>
                 <option value="hsc_voc">HSC (Vocational)</option>
               </select>

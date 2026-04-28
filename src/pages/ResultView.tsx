@@ -69,9 +69,14 @@ export default function ResultView() {
                  chunks.push(rollsList.slice(i, i + 10));
              }
              for (const chunk of chunks) {
-                 const q = query(collection(db, 'results'), where('rollNumber', 'in', chunk));
+                 let q = query(collection(db, 'results'), where('rollNumber', 'in', chunk));
                  const snap = await getDocs(q);
-                 snap.forEach(d => firebaseResults.push({ id: d.id, ...d.data() }));
+                 snap.forEach(d => {
+                   const data = d.data();
+                   if (!curriculum || data.curriculum === curriculum || data.curriculumId === curriculum) {
+                     firebaseResults.push({ id: d.id, ...data });
+                   }
+                 });
              }
           }
         } catch (dbErr) {
@@ -79,6 +84,7 @@ export default function ResultView() {
         }
 
         if (firebaseResults.length > 0 && type !== 'institute') {
+           setSelectedResultIndex(0);
            setResults(firebaseResults);
            setLoading(false);
            return;
@@ -146,22 +152,56 @@ export default function ResultView() {
         }
 
         const mappedResults = json.data.map((item: any, index: number) => {
+          const getCurriculumName = (id: string) => {
+            const map: Record<string, string> = {
+              'diploma_in_engineering': 'Diploma In Engineering',
+              'diploma_in_engineering_army': 'Diploma In Engineering (Army)',
+              'diploma_in_engineering_naval': 'Diploma In Engineering (Naval)',
+              'diploma_in_textile': 'Diploma In Textile Engineering',
+              'diploma_in_tourism': 'Diploma In Tourism And Hospitality',
+              'diploma_in_agriculture': 'Diploma In Agriculture',
+              'diploma_in_fisheries': 'Diploma In Fisheries',
+              'diploma_in_forestry': 'Diploma In Forestry',
+              'diploma_in_livestock': 'Diploma In Livestock',
+              'certificate_in_marine_trade': 'Certificate In Marine Trade',
+              'diploma_in_marine': 'Diploma In Marine Engineering', // fallback
+              'diploma_in_medical_technology': 'Diploma In Medical Technology',
+              'advanced_certificate_course': 'Advanced Certificate Course',
+              'national_skill_standard_basic': 'National Skill Standard Basic Certificate Course',
+              'one_year_certificate': 'One Year Certificate Course',
+              'diploma_in_commerce': 'Diploma In Commerce',
+              'certificate_in_medical_ultrasound': 'Certificate In Medical Ultrasound',
+              'hsc_bm': 'HSC (Business Management)',
+              'hsc_voc': 'HSC (Vocational)',
+            };
+            if (map[id]) return map[id];
+            return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          };
+
           const mapped: any = {
             id: item.roll + '_' + item.curriculumId + '_' + index,
             rollNumber: item.roll.toString(),
             instituteName: item.institute?.name ? `${item.institute.name}${item.institute.district ? `, ${item.institute.district}` : ''}` : '',
-            curriculum: item.curriculumId === 'diploma_in_engineering' ? 'Diploma in Engineering' : 
-                        item.curriculumId === 'diploma_in_textile' ? 'Diploma in Textile Engineering' :
-                        item.curriculumId === 'diploma_in_agriculture' ? 'Diploma in Agriculture' :
-                        item.curriculumId === 'diploma_in_marine' ? 'Diploma in Marine Engineering' :
-                        item.curriculumId === 'hsc_bm' ? 'HSC (Business Management)' :
-                        item.curriculumId === 'hsc_voc' ? 'HSC (Vocational)' : item.curriculumId,
+            curriculum: getCurriculumName(item.curriculumId),
             regulation: item.regulation?.toString() || '',
           };
 
           const currentFailed = item.currentFailedSubjects || [];
+          
+          let semsToProcess = item.semesterResults || [];
+          if (semsToProcess.length === 0 && item.latestResults && item.latestResults.length > 0) {
+             // Fallback to latest results if semesterResults is empty
+             const latSem = item.latestResults[0].semester;
+             if (latSem) {
+               semsToProcess = [{
+                 semester: latSem,
+                 status: item.latestResults[0].failedSubjects?.length ? 'failed' : 'passed',
+                 results: item.latestResults
+               }];
+             }
+          }
 
-          item.semesterResults?.forEach((sem: any) => {
+          semsToProcess.forEach((sem: any) => {
             let valStr = '';
             const failedInThisSem = currentFailed.filter((f: any) => f.originSemester === sem.semester);
             const originalResult = sem.results?.find((r: any) => r.republished === false) || sem.results?.[0] || {};
@@ -185,6 +225,7 @@ export default function ResultView() {
           return mapped;
         });
 
+        setSelectedResultIndex(0);
         setResults(mappedResults);
       } catch (err) {
         console.error(err);
@@ -357,16 +398,9 @@ export default function ResultView() {
                   {mapIndex === 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mb-6 print:hidden py-2" data-html2canvas-ignore="true">
                       <button onClick={() => {
-                         const sems = [
-                           parseSemester(resultItem.semester1),
-                           parseSemester(resultItem.semester2),
-                           parseSemester(resultItem.semester3),
-                           parseSemester(resultItem.semester4),
-                           parseSemester(resultItem.semester5),
-                           parseSemester(resultItem.semester6),
-                           parseSemester(resultItem.semester7),
-                           parseSemester(resultItem.semester8)
-                         ];
+                         const sems = Object.keys(resultItem)
+                           .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
+                           .map(k => parseSemester(resultItem[k]));
                          let total = 0;
                          let count = 0;
                          let isReferred = false;
@@ -405,16 +439,26 @@ export default function ResultView() {
 
                   {/* Overall referred warning */}
                   {(() => {
-                    const semestersList = [
-                      { label: '8th Semester', value: resultItem.semester8 },
-                      { label: '7th Semester', value: resultItem.semester7 },
-                      { label: '6th Semester', value: resultItem.semester6 },
-                      { label: '5th Semester', value: resultItem.semester5 },
-                      { label: '4th Semester', value: resultItem.semester4 },
-                      { label: '3rd Semester', value: resultItem.semester3 },
-                      { label: '2nd Semester', value: resultItem.semester2 },
-                      { label: '1st Semester', value: resultItem.semester1 },
-                    ].filter(s => parseSemester(s.value) !== null);
+                    const semestersList = Object.keys(resultItem)
+                      .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
+                      .map(k => {
+                        const semNum = parseInt(k.replace('semester', ''));
+                        let label = `${semNum}th `;
+                        if (semNum === 1) label = '1st ';
+                        else if (semNum === 2) label = '2nd ';
+                        else if (semNum === 3) label = '3rd ';
+
+                        const isYearly = resultItem.curriculum?.toLowerCase().includes('hsc') || resultItem.curriculum?.toLowerCase().includes('year') || resultItem.curriculum?.toLowerCase().includes('advanced');
+                        if (isYearly) {
+                          label += 'Year/Part';
+                        } else {
+                          label += 'Semester';
+                        }
+                        
+                        return { num: semNum, label, value: resultItem[k] };
+                      })
+                      .filter(s => parseSemester(s.value) !== null)
+                      .sort((a, b) => b.num - a.num);
 
                     const totalReferredCount = semestersList.reduce((acc, curr) => {
                       const p = parseSemester(curr.value);
@@ -547,7 +591,9 @@ export default function ResultView() {
                                                  <button onClick={() => toggleNode(semNodeId)} className="w-full bg-gray-50 p-3 flex flex-wrap items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer text-left focus:outline-none border-b border-gray-100">
                                                     <div className="flex items-center">
                                                        <Folder className="w-4 h-4 text-emerald-400 mr-2" />
-                                                       <span className="font-medium text-gray-700">{sem}th Semester</span>
+                                                       <span className="font-medium text-gray-700">
+                                                         {sem === '1' ? '1st' : sem === '2' ? '2nd' : sem === '3' ? '3rd' : sem + 'th'} Sem/Year
+                                                       </span>
                                                     </div>
                                                     <div className="flex items-center space-x-3 mt-2 sm:mt-0">
                                                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">Passed: {passed.length}</span>
@@ -607,7 +653,9 @@ export default function ResultView() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 mx-auto lg:grid-cols-3 gap-5">
                  {results.map((r) => {
-                   const sems = [r.semester1, r.semester2, r.semester3, r.semester4, r.semester5, r.semester6, r.semester7, r.semester8];
+                   const sems = Object.keys(r)
+                     .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
+                     .map(k => r[k]);
                    let referredCount = 0;
                    
                    for (let i = 0; i < sems.length; i++) {
@@ -617,12 +665,19 @@ export default function ResultView() {
                      }
                    }
                    
-                   const s8 = parseSemester(r.semester8);
-                   const s8Display = s8 ? (
-                     s8.type === 'passed' ? (
-                       <span className="text-green-600">{s8.gpa}</span>
+                   const validSemKeys = Object.keys(r)
+                     .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))) && parseSemester(r[k]) !== null)
+                     .sort((a, b) => parseInt(b.replace('semester', '')) - parseInt(a.replace('semester', '')));
+                   const highestSemKey = validSemKeys[0];
+                   
+                   const sHighest = highestSemKey ? parseSemester(r[highestSemKey]) : null;
+                   const sHighestLabel = highestSemKey ? `Sem ${highestSemKey.replace('semester', '')}` : 'Latest';
+
+                   const sHighestDisplay = sHighest ? (
+                     sHighest.type === 'passed' ? (
+                       <span className="text-green-600">{sHighest.gpa}</span>
                      ) : (
-                       <span className="text-red-600">{s8.total} Sub</span>
+                       <span className="text-red-600">{sHighest.total} Sub</span>
                      )
                    ) : '-';
 
@@ -649,8 +704,8 @@ export default function ResultView() {
 
                         <div className="mt-auto grid grid-cols-2 gap-3 pt-4 border-t border-gray-100 relative z-10">
                            <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
-                              <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider mb-1">8th Sem Result</p>
-                              <div className="font-bold text-base text-gray-800">{s8Display}</div>
+                              <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider mb-1">{sHighestLabel} Result</p>
+                              <div className="font-bold text-base text-gray-800">{sHighestDisplay}</div>
                            </div>
                            <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
                               <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider mb-1">Total Due</p>
