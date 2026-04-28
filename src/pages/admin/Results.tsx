@@ -450,12 +450,39 @@ export default function AdminResults() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 lg:px-0 px-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-6 mb-6">
+       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-6 mb-6">
         <div>
           <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Results</h1>
           <p className="text-sm text-gray-500">Add, edit, or remove student results.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+           {results.length > 0 && (
+             <button
+               onClick={async () => {
+                 if (confirm('Are you sure you want to delete ALL results? This cannot be undone.')) {
+                   setLoading(true);
+                   try {
+                     const q = query(collection(db, 'results'));
+                     const snap = await getDocs(q);
+                     let c = 0;
+                     for (const docSnap of snap.docs) {
+                       await deleteDoc(doc(db, 'results', docSnap.id));
+                       c++;
+                     }
+                     alert(`Deleted ${c} results.`);
+                     fetchResults();
+                   } catch (error) {
+                     handleFirestoreError(error, OperationType.DELETE, 'results/all');
+                     setLoading(false);
+                   }
+                 }
+               }}
+               className="inline-flex items-center px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+             >
+               <Trash2 className="w-4 h-4 mr-2" />
+               Delete All
+             </button>
+           )}
            <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
               <Upload className="w-4 h-4 mr-2" />
               Import Excel
