@@ -5,7 +5,6 @@ import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut } from 'f
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Plus, Trash2, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import firebaseConfig from '../../../firebase-applet-config.json';
 
 export default function AdminUsers() {
   const [admins, setAdmins] = useState<any[]>([]);
@@ -42,7 +41,12 @@ export default function AdminUsers() {
       const loweredEmail = safeEmail.toLowerCase();
       
       // Create user in Firebase Auth using secondary app to prevent log-out of primary app
-      const secondaryApp = initializeApp(firebaseConfig, "Secondary_" + Date.now());
+      const secondaryApp = initializeApp({
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        appId: import.meta.env.VITE_FIREBASE_APP_ID,
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      }, "Secondary_" + Date.now());
       const secondaryAuth = getAuth(secondaryApp);
       await createUserWithEmailAndPassword(secondaryAuth, loweredEmail, password);
       await fbSignOut(secondaryAuth);

@@ -1,26 +1,27 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as fbSignOut } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer, getDocs, collection, query, where, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, getDocs, collection, query, where, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import defaultFirebaseConfig from '../../firebase-applet-config.json';
 
 const firebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || defaultFirebaseConfig.appId,
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || defaultFirebaseConfig.firestoreDatabaseId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || defaultFirebaseConfig.measurementId
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
+
+if (!firebaseConfig.projectId) {
+  console.error("FIREBASE CONFIG ERROR: VITE_FIREBASE_PROJECT_ID is missing. If you are on Vercel, ensure you added the environment variables exactly as VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_API_KEY, etc.");
+}
 
 console.log("Firebase config loaded:", JSON.stringify(firebaseConfig));
 
 export const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-}, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
