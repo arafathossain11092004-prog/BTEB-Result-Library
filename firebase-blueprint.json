@@ -49,6 +49,17 @@
       },
       "required": ["title", "pdfUrl", "createdAt", "updatedAt"]
     },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "bannerUrl": { "type": "string" },
+        "bannerLink": { "type": "string" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["updatedAt"]
+    },
     "Admin": {
       "title": "Admin",
       "description": "Admin user profile for RBAC",
@@ -76,6 +87,10 @@
     "admins": {
       "schema": { "$ref": "#/entities/Admin" },
       "description": "List of admin users by UID"
+    },
+    "settings": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "Global application settings"
     }
   }
 }

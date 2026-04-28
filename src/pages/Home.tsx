@@ -1,6 +1,6 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Search, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -15,7 +15,29 @@ export default function Home({ isGroup, isInstitute }: { isGroup?: boolean; isIn
   const [examYear, setExamYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [bannerConfig, setBannerConfig] = useState<{bannerUrl: string, bannerLink: string} | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.bannerUrl) {
+            setBannerConfig({
+              bannerUrl: data.bannerUrl,
+              bannerLink: data.bannerLink || ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const semesters = [
     "1st", "2nd", "3rd", "4th", 
@@ -274,6 +296,23 @@ export default function Home({ isGroup, isInstitute }: { isGroup?: boolean; isIn
           </form>
         </div>
       </motion.div>
+
+      {bannerConfig?.bannerUrl && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+          className="mt-12 w-full max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-lg border border-gray-100"
+        >
+          {bannerConfig.bannerLink ? (
+             <a href={bannerConfig.bannerLink} target="_blank" rel="noopener noreferrer" className="block w-full">
+                <img src={bannerConfig.bannerUrl} alt="Ad Banner" className="w-full object-cover" />
+             </a>
+          ) : (
+             <img src={bannerConfig.bannerUrl} alt="Ad Banner" className="w-full object-cover" />
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

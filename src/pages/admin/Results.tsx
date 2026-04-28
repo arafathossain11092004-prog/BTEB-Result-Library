@@ -309,7 +309,7 @@ export default function AdminResults() {
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'results'), orderBy('updatedAt', 'desc'), limit(100));
+      const q = query(collection(db, 'results'), orderBy('updatedAt', 'desc'));
       const snapshot = await getDocs(q);
       setResults(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {

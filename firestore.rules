@@ -60,6 +60,14 @@ service cloud.firestore {
         && data.updatedAt is number;
     }
 
+    function isValidSettings(data) {
+      return data.keys().hasAll(['updatedAt'])
+        && data.keys().size() >= 1 && data.keys().size() <= 3
+        && data.updatedAt is number
+        && (data.get('bannerUrl', '') is string) && data.get('bannerUrl', '').size() <= 1000
+        && (data.get('bannerLink', '') is string) && data.get('bannerLink', '').size() <= 1000;
+    }
+
     match /results/{resultId} {
       allow get: if isValidId(resultId);
       allow list: if true; 
@@ -114,6 +122,21 @@ service cloud.firestore {
                     && incoming().email is string && incoming().email.size() <= 100
                     && incoming().createdAt is number;
       allow delete: if isBootstrappedAdmin() && adminId.matches('^.*@.*$');
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true; 
+      
+      allow create: if isEffectiveAdmin()
+                    && isValidId(settingId)
+                    && isValidSettings(incoming());
+                    
+      allow update: if isEffectiveAdmin()
+                    && isValidId(settingId)
+                    && isValidSettings(incoming());
+                    
+      allow delete: if false;
     }
   }
 }

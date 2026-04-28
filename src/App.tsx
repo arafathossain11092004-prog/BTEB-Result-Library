@@ -16,6 +16,7 @@ import AdminResults from './pages/admin/Results';
 import AdminExamRoutines from './pages/admin/ExamRoutines';
 import AdminNotices from './pages/admin/Notices';
 import AdminUsers from './pages/admin/Users';
+import AdminSettings from './pages/admin/Settings';
 
 import { ReactNode } from 'react';
 
@@ -63,6 +64,10 @@ export default function App() {
             <Route 
               path="admin/users" 
               element={<AdminRoute><AdminUsers /></AdminRoute>} 
+            />
+            <Route 
+              path="admin/settings" 
+              element={<AdminRoute><AdminSettings /></AdminRoute>} 
             />
           </Route>
         </Routes>

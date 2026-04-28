@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function ResultView() {
   const [searchParams] = useSearchParams();
@@ -15,8 +16,30 @@ export default function ResultView() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [bannerConfig, setBannerConfig] = useState<{bannerUrl: string, bannerLink: string} | null>(null);
   
   const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.bannerUrl) {
+            setBannerConfig({
+              bannerUrl: data.bannerUrl,
+              bannerLink: data.bannerLink || ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     if (!roll && !instituteCode) {
@@ -397,6 +420,23 @@ export default function ResultView() {
            </p>
         </div>
       </div>
+
+      {bannerConfig?.bannerUrl && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+          className="mt-12 w-full max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-lg border border-gray-100 print:hidden"
+        >
+          {bannerConfig.bannerLink ? (
+             <a href={bannerConfig.bannerLink} target="_blank" rel="noopener noreferrer" className="block w-full">
+                <img src={bannerConfig.bannerUrl} alt="Ad Banner" className="w-full object-cover" />
+             </a>
+          ) : (
+             <img src={bannerConfig.bannerUrl} alt="Ad Banner" className="w-full object-cover" />
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

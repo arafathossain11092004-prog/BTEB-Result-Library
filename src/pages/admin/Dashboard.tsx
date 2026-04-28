@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, FileText, CalendarRange, Award, ShieldCheck } from 'lucide-react';
+import { Users, FileText, CalendarRange, Award, ShieldCheck, Settings } from 'lucide-react';
 
 export default function AdminDashboard() {
   const cards = [
@@ -34,6 +34,14 @@ export default function AdminDashboard() {
       to: '/admin/users',
       color: 'text-green-600',
       bg: 'bg-green-50',
+    },
+    {
+      title: 'System Settings',
+      description: 'Configure banner images and application preferences.',
+      icon: Users, // Using an available icon or importing Settings icon
+      to: '/admin/settings',
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50',
     }
   ];
 
