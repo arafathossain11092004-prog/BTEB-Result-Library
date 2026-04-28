@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -50,38 +50,54 @@ export default function ResultView() {
 
     const fetchResult = async () => {
       try {
-        const resultsRef = collection(db, 'results');
-        let clauses = [];
-        
-        if (type === 'institute' && instituteCode) {
-          clauses.push(where('instituteCode', '==', instituteCode.trim()));
-        } else if (type === 'group' && roll) {
-          const rollsList = roll.split(/[,\n]/).map(r => r.trim()).filter(Boolean);
-          if (rollsList.length > 30) {
-            clauses.push(where('rollNumber', 'in', rollsList.slice(0, 30)));
-          } else {
-            clauses.push(where('rollNumber', 'in', rollsList));
-          }
-        } else if (roll) {
-          clauses.push(where('rollNumber', '==', roll.trim()));
+        let apiUrl = `/api/results?roll=${roll}`;
+        if (curriculum) apiUrl += `&curriculumId=${curriculum}`;
+        if (regulation) apiUrl += `&regulation=${regulation}`;
+
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch from server');
         }
+
+        const json = await response.json();
         
-        if (curriculum) clauses.push(where('curriculum', '==', curriculum));
-        if (regulation) clauses.push(where('regulation', '==', regulation));
-        
-        const q = query(resultsRef, ...clauses, limit(100)); // allow more for institute
-        
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-          setError('No results found.');
-        } else {
-          const res = querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) }));
-          res.sort((a: any, b: any) => parseInt(a.rollNumber) - parseInt(b.rollNumber));
-          setResults(res);
+        if (!json.success || !json.data || json.data.length === 0) {
+          setError('No results found for this roll number.');
+          setLoading(false);
+          return;
         }
+
+        const mappedResults = json.data.map((item: any) => {
+          const mapped: any = {
+            id: item.roll + '_' + item.curriculumId,
+            rollNumber: item.roll.toString(),
+            instituteName: item.institute?.name || '',
+            curriculum: item.curriculumId === 'diploma_in_engineering' ? 'Diploma in Engineering' : 
+                        item.curriculumId === 'diploma_in_textile' ? 'Diploma in Textile Engineering' :
+                        item.curriculumId === 'diploma_in_agriculture' ? 'Diploma in Agriculture' :
+                        item.curriculumId === 'diploma_in_marine' ? 'Diploma in Marine Engineering' :
+                        item.curriculumId === 'hsc_bm' ? 'HSC (Business Management)' :
+                        item.curriculumId === 'hsc_voc' ? 'HSC (Vocational)' : item.curriculumId,
+            regulation: item.regulation?.toString() || '',
+          };
+
+          item.semesterResults?.forEach((sem: any) => {
+            let valStr = '';
+            if (sem.status === 'passed') {
+              valStr = sem.results?.[0]?.cgpa ? sem.results[0].cgpa.toString() : (sem.results?.[0]?.gpa?.toString() || 'Passed');
+            } else {
+              valStr = JSON.stringify({ type: 'referred', subjects: sem.results?.[0]?.failedSubjects || [], gpa: null });
+            }
+            mapped[`semester${sem.semester}`] = valStr;
+          });
+
+          return mapped;
+        });
+
+        setResults(mappedResults);
       } catch (err) {
         console.error(err);
-        setError('Failed to fetch results.');
+        setError('Failed to fetch results. Please try again later.');
       } finally {
         setLoading(false);
       }
