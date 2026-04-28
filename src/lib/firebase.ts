@@ -8,11 +8,27 @@ export const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
+
+// --- DEBUG ENVIRONMENT VARIABLES ---
+const maskSecret = (secret: string | undefined | null) => {
+  if (!secret) return 'undefined or empty';
+  if (secret.length <= 6) return '***';
+  return `${secret.slice(0, 4)}...${secret.slice(-3)}`;
+};
+
+console.log("Firebase Env Variables Check (Masked):", {
+  VITE_FIREBASE_PROJECT_ID: maskSecret(firebaseConfig.projectId),
+  VITE_FIREBASE_API_KEY: maskSecret(firebaseConfig.apiKey),
+  VITE_FIREBASE_APP_ID: maskSecret(firebaseConfig.appId),
+  VITE_FIREBASE_AUTH_DOMAIN: maskSecret(firebaseConfig.authDomain),
+  VITE_FIREBASE_DATABASE_ID: maskSecret(firebaseConfig.firestoreDatabaseId),
+});
+// ------------------------------------
 
 if (!firebaseConfig.projectId) {
   console.warn("Firebase environment variables are missing. Please set VITE_FIREBASE_PROJECT_ID and others in your .env.local file.");
@@ -77,9 +93,12 @@ export async function testConnection() {
   if (!firebaseConfig.projectId) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log(`✅ Successfully connected to Firestore using database: ${firebaseConfig.firestoreDatabaseId}`);
   } catch (error) {
     if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+      console.error("❌ Please check your Firebase configuration. The client is offline.");
+    } else {
+      console.warn("⚠️ Firebase connection check failed, but app may still work:", error);
     }
   }
 }
