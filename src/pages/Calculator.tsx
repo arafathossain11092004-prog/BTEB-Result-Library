@@ -9,9 +9,22 @@ const WEIGHTS: Record<string, number[]> = {
   '2022': [0.05, 0.05, 0.10, 0.10, 0.20, 0.20, 0.20, 0.10],
 };
 
-const parseGPA = (val: string | undefined): string => {
+const parseGPA = (val: any): string => {
   if (!val) return '';
-  if (val.startsWith('{"type":"referred"')) return '';
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      if (parsed.type === 'passed') {
+        const gpa = parseFloat(parsed.gpa);
+        return isNaN(gpa) ? '' : gpa.toFixed(2);
+      }
+      return '';
+    } catch (e) {
+      if (val.startsWith('{"type":"referred"')) return '';
+      const gpa = parseFloat(val);
+      return isNaN(gpa) ? '' : gpa.toFixed(2);
+    }
+  }
   const gpa = parseFloat(val);
   return isNaN(gpa) ? '' : gpa.toFixed(2);
 };
@@ -58,11 +71,22 @@ export default function Calculator() {
     if (totalWeight === 0) {
       setCgpaResult('0.00');
     } else {
-      // If we want exact CGPA proportion based on filled semesters:
-      // totalPoints / totalWeight
-      // e.g. filled only sem1 (5% wait). GPA=4.0 -> (4.0*0.05)/0.05 = 4.00
       setCgpaResult((totalPoints / totalWeight).toFixed(2));
     }
+  };
+
+  const extractGPAFromAPI = (data: any, semNumber: number) => {
+    if (!data || !data.semesterResults) return '';
+    const semData = data.semesterResults.find((s: any) => s.semester === semNumber);
+    if (!semData || !semData.results || semData.results.length === 0) return '';
+    
+    // Check for failed subjects in this semester
+    const failedInThisSem = (data.currentFailedSubjects || []).filter((f: any) => f.originSemester === semNumber);
+    if (failedInThisSem.length > 0) return ''; // Has referred
+
+    const gpa = semData.results[0].cgpa || semData.results[0].gpa;
+    if (gpa === 'Passed') return '';
+    return parseGPA(gpa);
   };
 
   const handleAutofill = async () => {
@@ -73,32 +97,91 @@ export default function Calculator() {
     setError('');
     setFetching(true);
     try {
-      const resultsRef = collection(db, 'results');
-      const q = query(
-        resultsRef,
-        where('rollNumber', '==', rollNumber),
-        where('curriculum', '==', curriculum),
-        where('regulation', '==', autoRegulation)
-      );
-      const snapshot = await getDocs(q);
+      let firebaseResults: any[] = [];
+      try {
+        const resultsRef = collection(db, 'results');
+        const q = query(
+          resultsRef,
+          where('rollNumber', '==', rollNumber)
+          // Removing strict curriculum/regulation match as it could fail due to formatting differences
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+           snapshot.forEach((doc) => {
+               if (doc.data().curriculum === curriculum || doc.data().curriculum === 'Diploma in Engineering') {
+                   firebaseResults.push(doc.data());
+               }
+           });
+        }
+      } catch (dbErr) {
+        console.warn("Firebase query failed:", dbErr);
+      }
 
-      if (snapshot.empty) {
-        setError('No results found for this Roll Number.');
+      let dataToUse: any = null;
+      let isFromApi = false;
+
+      if (firebaseResults.length > 0) {
+        dataToUse = firebaseResults[0];
       } else {
-        const data = snapshot.docs[0].data();
-        const newGpas = [
-          parseGPA(data.semester1),
-          parseGPA(data.semester2),
-          parseGPA(data.semester3),
-          parseGPA(data.semester4),
-          parseGPA(data.semester5),
-          parseGPA(data.semester6),
-          parseGPA(data.semester7),
-          parseGPA(data.semester8),
-        ];
+        // Fallback to API Proxy
+        let mappedCurriculum = curriculum;
+        if (curriculum === 'Diploma in Engineering') mappedCurriculum = 'diploma_in_engineering';
+        if (curriculum === 'Diploma in Textile Engineering') mappedCurriculum = 'diploma_in_textile';
+        if (curriculum === 'Diploma in Agriculture') mappedCurriculum = 'diploma_in_agriculture';
+        if (curriculum === 'Diploma in Fisheries') mappedCurriculum = 'diploma_in_fisheries';
+        if (curriculum === 'Diploma in Forestry') mappedCurriculum = 'diploma_in_forestry';
+        if (curriculum === 'Diploma in Medical Technology') mappedCurriculum = 'diploma_in_medical_technology';
+
+        const apiUrl = `/api/results?roll=${rollNumber}&curriculumId=${mappedCurriculum}&regulation=${autoRegulation}`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('API fetch failed');
+        const resultData = await response.json();
+        
+        if (resultData.success && resultData.data && resultData.data.length > 0) {
+          dataToUse = resultData.data[0];
+          isFromApi = true;
+        } else if (Array.isArray(resultData) && resultData.length > 0) {
+          dataToUse = resultData[0];
+          isFromApi = true;
+        } else if (resultData && resultData.roll) {
+           // Direct single result
+           dataToUse = resultData;
+           isFromApi = true;
+        }
+      }
+
+      if (dataToUse) {
+        let newGpas = Array(8).fill('');
+        
+        if (isFromApi) {
+          newGpas = [
+            extractGPAFromAPI(dataToUse, 1),
+            extractGPAFromAPI(dataToUse, 2),
+            extractGPAFromAPI(dataToUse, 3),
+            extractGPAFromAPI(dataToUse, 4),
+            extractGPAFromAPI(dataToUse, 5),
+            extractGPAFromAPI(dataToUse, 6),
+            extractGPAFromAPI(dataToUse, 7),
+            extractGPAFromAPI(dataToUse, 8),
+          ];
+        } else {
+          newGpas = [
+            parseGPA(dataToUse.semester1),
+            parseGPA(dataToUse.semester2),
+            parseGPA(dataToUse.semester3),
+            parseGPA(dataToUse.semester4),
+            parseGPA(dataToUse.semester5),
+            parseGPA(dataToUse.semester6),
+            parseGPA(dataToUse.semester7),
+            parseGPA(dataToUse.semester8),
+          ];
+        }
+        
         setGpas(newGpas);
         setRegulation(autoRegulation);
         setCgpaResult(null);
+      } else {
+        setError('No results found for this Roll Number.');
       }
     } catch (err) {
       console.error(err);
