@@ -103,11 +103,9 @@ export async function testConnection() {
     console.log(`✅ Successfully connected to Firestore using database: ${firebaseConfig.firestoreDatabaseId}`);
   } catch (error) {
     if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("❌ Please check your Firebase configuration. The client is offline.");
-      console.error("Make sure your VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_DATABASE_ID are correct.");
-      console.error(`Current Database ID being used is: "${firebaseConfig.firestoreDatabaseId}". If your database in Firebase Console has a different name, you must update VITE_FIREBASE_DATABASE_ID in Vercel.`);
+      console.warn("Firebase client is offline. Data will be fetched from cache if available, or fail. Make sure your configuration and database are active.");
     } else {
-      console.warn("⚠️ Firebase connection check failed, but app may still work:", error);
+      console.warn("Firebase connection check failed, but app may still work:", error);
     }
   }
 }
