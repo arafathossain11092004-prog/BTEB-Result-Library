@@ -1,20 +1,25 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+export const config = {
+  runtime: 'edge',
+};
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: Request) {
   try {
-    const type = req.query.type as string;
-    const roll = req.query.roll as string;
-    const instituteCode = req.query.instituteCode as string;
-    const curriculum = req.query.curriculumId as string;
-    const regulation = req.query.regulation as string;
+    const urlParams = new URL(req.url).searchParams;
+    const type = urlParams.get('type') as string;
+    const roll = urlParams.get('roll') as string;
+    const instituteCode = urlParams.get('instituteCode') as string;
+    const curriculum = urlParams.get('curriculumId') as string;
+    const regulation = urlParams.get('regulation') as string;
     
     // Set CORS headers so that client can request this proxy
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
 
     if (req.method === 'OPTIONS') {
-      return res.status(200).end();
+      return new Response(null, { status: 200, headers: corsHeaders });
     }
 
     const fetchFromBteb = async (url: string) => {
@@ -25,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch from BTEB source');
+        throw new Error('Failed to fetch from BTEB source: ' + response.status + ' ' + response.statusText);
       }
       return await response.json();
     };
@@ -39,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (curriculum) apiUrl += `&curriculumId=${curriculum}`;
         if (regulation) apiUrl += `&regulation=${regulation}`;
         const data = await fetchFromBteb(apiUrl);
-        return res.status(200).json(data);
+        return new Response(JSON.stringify(data), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
       } else {
         // Multiple rolls
         const maxRolls = Math.min(rollsList.length, 30); // allow max 30 for group
@@ -63,19 +68,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         });
         
-        return res.status(200).json({ success: true, data: combinedData });
+        return new Response(JSON.stringify({ success: true, data: combinedData }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
       }
     } else if (type === 'institute' && instituteCode) {
         let apiUrl = `https://btebresultszone.com/api/student-results?instituteCode=${instituteCode}`;
         if (curriculum) apiUrl += `&curriculumId=${curriculum}`;
         if (regulation) apiUrl += `&regulation=${regulation}`;
         const data = await fetchFromBteb(apiUrl);
-        return res.status(200).json(data);
+        return new Response(JSON.stringify(data), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     } else {
-       return res.status(400).json({ success: false, error: 'Missing roll or instituteCode' });
+       return new Response(JSON.stringify({ success: false, error: 'Missing roll or instituteCode' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     }
   } catch (error: any) {
     console.error('API proxy error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
   }
 }
