@@ -3,12 +3,17 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 import { getFirestore, doc, getDocFromServer, getDocs, collection, query, where, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
+let dbId = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+if (!dbId || dbId === "123" || dbId === "(default)") {
+  dbId = "(default)";
+}
+
 export const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0079376731",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:637362903014:web:dedd53fdbb46391cb2e827",
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyABpPxXnd4bF5rPtiJ7Ul5GBfjUJR9xCO8",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "gen-lang-client-0079376731.firebaseapp.com",
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)",
+  firestoreDatabaseId: dbId,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "gen-lang-client-0079376731.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "637362903014",
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
