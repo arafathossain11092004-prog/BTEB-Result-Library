@@ -50,9 +50,21 @@ export default function ResultView() {
 
     const fetchResult = async () => {
       try {
-        let apiUrl = `/api/results?roll=${roll}`;
-        if (curriculum) apiUrl += `&curriculumId=${curriculum}`;
-        if (regulation) apiUrl += `&regulation=${regulation}`;
+        let apiUrl = '/api/results?';
+        const queryParams = new URLSearchParams();
+        
+        if (type === 'institute' && instituteCode) {
+          queryParams.append('type', 'institute');
+          queryParams.append('instituteCode', instituteCode);
+        } else if (roll) {
+          queryParams.append('type', type);
+          queryParams.append('roll', roll);
+        }
+
+        if (curriculum) queryParams.append('curriculumId', curriculum);
+        if (regulation) queryParams.append('regulation', regulation);
+
+        apiUrl += queryParams.toString();
 
         const response = await fetch(apiUrl);
         if (!response.ok) {
@@ -81,12 +93,24 @@ export default function ResultView() {
             regulation: item.regulation?.toString() || '',
           };
 
+          const currentFailed = item.currentFailedSubjects || [];
+
           item.semesterResults?.forEach((sem: any) => {
             let valStr = '';
-            if (sem.status === 'passed') {
-              valStr = sem.results?.[0]?.cgpa ? sem.results[0].cgpa.toString() : (sem.results?.[0]?.gpa?.toString() || 'Passed');
+            const failedInThisSem = currentFailed.filter((f: any) => f.originSemester === sem.semester);
+            const latestResult = sem.results?.[0] || {};
+            
+            if (failedInThisSem.length === 0) {
+              let foundGpa = null;
+              for (const r of sem.results || []) {
+                if (r.cgpa || r.gpa) {
+                  foundGpa = r.cgpa || r.gpa;
+                  break;
+                }
+              }
+              valStr = JSON.stringify({ type: 'passed', gpa: foundGpa || 'Passed', date: latestResult.date });
             } else {
-              valStr = JSON.stringify({ type: 'referred', subjects: sem.results?.[0]?.failedSubjects || [], gpa: null });
+              valStr = JSON.stringify({ type: 'referred', subjects: failedInThisSem, gpa: null, date: latestResult.date });
             }
             mapped[`semester${sem.semester}`] = valStr;
           });
@@ -114,42 +138,22 @@ export default function ResultView() {
     window.print();
   };
 
-  const formatSemester = (val: string) => {
-    if (!val || val === '-' || val === 'undefined') return '-';
-    if (val.startsWith('{"type":"referred"')) {
-      try {
-        const parsed = JSON.parse(val);
-        const subjects: any[] = parsed.subjects || [];
-        if (subjects.length > 0) {
-          return (
-            <div className="text-red-600 flex flex-col items-center">
-               <span className="font-bold text-sm">Referred:</span>
-               <ul className="text-xs mt-0.5 list-none text-center">
-                 {subjects.map((sub, i) => <li key={i}>{sub.code} ({sub.type})</li>)}
-               </ul>
-            </div>
-          );
-        }
-        return <span className="text-red-600 font-bold">Referred</span>;
-      } catch (e) {
-        return <span className="text-green-600 font-bold">{val}</span>;
-      }
-    }
-    return <span className="text-green-600 font-bold">{val}</span>;
-  };
-
   const parseSemester = (val: string) => {
     if (!val || val === '-' || val === 'undefined') return null;
-    if (val.startsWith('{"type":"referred"')) {
-      try {
-        const parsed = JSON.parse(val);
+    try {
+      const parsed = JSON.parse(val);
+      if (parsed.type === 'referred') {
         const subjects: any[] = parsed.subjects || [];
-        return { type: 'referred', subjects, total: subjects.length, gpa: parsed.gpa || null };
-      } catch (e) {
-        return { type: 'passed', gpa: val };
+        return { type: 'referred', subjects, total: subjects.length, gpa: parsed.gpa || null, date: parsed.date };
       }
+      return { type: 'passed', gpa: parsed.gpa || null, date: parsed.date };
+    } catch (e) {
+      // In case it's an old format
+      if (val.startsWith('{"type":"referred"')) {
+        return { type: 'referred', subjects: [], total: 0, gpa: null, date: null };
+      }
+      return { type: 'passed', gpa: val, date: null };
     }
-    return { type: 'passed', gpa: val };
   };
 
 
@@ -203,153 +207,175 @@ export default function ResultView() {
         ref={resultRef}
         className="bg-white rounded border border-gray-200 shadow-sm print:shadow-none print:border-transparent p-6 sm:p-10 relative"
       >
-        {results.length === 1 && type === 'individual' ? (
-           <div className="max-w-2xl mx-auto space-y-4">
-              <div className="text-center pb-4">
-                 <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 mb-2"># {results[0].rollNumber}</h1>
-                 <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                   <span className="flex items-center"><BookOpen className="w-4 h-4 mr-1.5"/> {results[0].curriculum || 'Diploma in Engineering'}</span>
-                   <span className="flex items-center"><Calendar className="w-4 h-4 mr-1.5"/> {results[0].regulation ? `Regulation ${results[0].regulation}` : 'Regulation N/A'}</span>
-                 </div>
-                 <div className="flex items-center justify-center text-sm text-gray-600 mt-1.5">
-                   <Building className="w-4 h-4 mr-1.5"/> {results[0].instituteName}
-                 </div>
-              </div>
+        {type === 'individual' ? (
+           <div className="space-y-12">
+             {results.map((resultItem, mapIndex) => (
+               <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4">
+                  <div className="pb-6 border-b border-gray-200">
+                     <div className="text-center mb-8">
+                       <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wider text-gray-800">Academic Result</h2>
+                     </div>
+                     <table className="w-full text-left text-sm sm:text-base">
+                       <tbody>
+                         <tr>
+                           <td className="py-1.5 font-semibold text-gray-600 w-32 sm:w-48 align-top">Roll No</td>
+                           <td className="py-1.5 font-bold text-gray-900 border-b border-gray-100">: {resultItem.rollNumber}</td>
+                         </tr>
+                         <tr>
+                           <td className="py-1.5 font-semibold text-gray-600 align-top">Institute</td>
+                           <td className="py-1.5 text-gray-800 border-b border-gray-100">: {resultItem.instituteName}</td>
+                         </tr>
+                         <tr>
+                           <td className="py-1.5 font-semibold text-gray-600 align-top">Curriculum</td>
+                           <td className="py-1.5 text-gray-800 border-b border-gray-100">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
+                         </tr>
+                         <tr>
+                           <td className="py-1.5 font-semibold text-gray-600 align-top">Regulation</td>
+                           <td className="py-1.5 text-gray-800 border-b border-gray-100">: {resultItem.regulation || 'N/A'}</td>
+                         </tr>
+                       </tbody>
+                     </table>
+                  </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap justify-center gap-2 mb-6 print:hidden" data-html2canvas-ignore="true">
-                <button onClick={() => {
-                   const sems = [
-                     parseSemester(results[0].semester1),
-                     parseSemester(results[0].semester2),
-                     parseSemester(results[0].semester3),
-                     parseSemester(results[0].semester4),
-                     parseSemester(results[0].semester5),
-                     parseSemester(results[0].semester6),
-                     parseSemester(results[0].semester7),
-                     parseSemester(results[0].semester8)
-                   ];
-                   let total = 0;
-                   let count = 0;
-                   let isReferred = false;
-                   for (const s of sems) {
-                     if (s) {
-                       if (s.type === 'referred') isReferred = true;
-                       else if (s.type === 'passed' && !isNaN(Number(s.gpa))) {
-                         total += Number(s.gpa);
-                         count++;
-                       }
-                     }
-                   }
-                   if (isReferred) alert("Cannot calculate CGPA: Student has referred subjects.");
-                   else if (count === 0) alert("Cannot calculate CGPA: No GPA data available.");
-                   else alert(`Approximate Average CGPA: ${(total/count).toFixed(2)}\nNote: Official BTEB CGPA applies weightage per semester.`);
-                }} className="px-3 py-1.5 bg-white border border-gray-200 shadow-sm rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 flex items-center transition-colors">
-                  <Calculator className="w-4 h-4 mr-2"/> CGPA
-                </button>
-                <button onClick={handleDownload} className="px-3 py-1.5 bg-white border border-gray-200 shadow-sm rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 flex items-center transition-colors">
-                   <Download className="w-4 h-4 mr-2"/> Download
-                </button>
-                <button onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: 'Result View: ' + results[0].rollNumber,
-                      url: window.location.href
-                    }).catch(console.error);
-                  } else {
-                    alert('Sharing is not supported on this browser.');
-                  }
-                }} className="px-3 py-1.5 bg-white border border-gray-200 shadow-sm rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 flex items-center transition-colors">
-                   <Share2 className="w-4 h-4 mr-2"/> Share
-                </button>
-              </div>
-
-              {/* Overall referred warning */}
-              {(() => {
-                const semestersList = [
-                  { label: '8th Semester', value: results[0].semester8 },
-                  { label: '7th Semester', value: results[0].semester7 },
-                  { label: '6th Semester', value: results[0].semester6 },
-                  { label: '5th Semester', value: results[0].semester5 },
-                  { label: '4th Semester', value: results[0].semester4 },
-                  { label: '3rd Semester', value: results[0].semester3 },
-                  { label: '2nd Semester', value: results[0].semester2 },
-                  { label: '1st Semester', value: results[0].semester1 },
-                ].filter(s => parseSemester(s.value) !== null);
-
-                const totalReferredCount = semestersList.reduce((acc, curr) => {
-                  const p = parseSemester(curr.value);
-                  return (p && p.type === 'referred') ? acc + p.total : acc;
-                }, 0);
-
-                return (
-                  <>
-                    {totalReferredCount > 0 && (
-                      <div className="bg-red-50 text-red-600 border border-red-200 rounded-lg p-3 text-center mb-6 font-semibold text-sm">
-                        {totalReferredCount} subject{totalReferredCount > 1 ? 's' : ''} yet to pass
-                      </div>
-                    )}
-                    <div className="space-y-4">
-                      {semestersList.map((sem, i) => {
-                         const parsed = parseSemester(sem.value);
-                         if (!parsed) return null;
-                         const isPassed = parsed.type === 'passed';
-                         
-                         return (
-                           <div key={i} className="bg-white border text-left border-gray-200 rounded-xl p-4 shadow-sm break-inside-avoid print:break-inside-avoid">
-                              <div className="flex justify-between items-center mb-3">
-                                 <div className="flex items-center gap-2 font-semibold text-gray-900">
-                                   <GraduationCap className="w-5 h-5 text-blue-600" />
-                                   {sem.label}
-                                 </div>
-                                 {isPassed ? (
-                                   <div className="flex items-center text-green-600 text-sm font-semibold">
-                                     <CheckCircle2 className="w-4 h-4 mr-1.5" /> Passed
-                                   </div>
-                                 ) : (
-                                   <div className="flex items-center text-red-500 text-sm font-semibold">
-                                     <XCircle className="w-4 h-4 mr-1.5" /> {parsed.total} subject{parsed.total > 1 ? 's' : ''} yet to pass
-                                   </div>
-                                 )}
-                              </div>
-                              
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-blue-500 font-medium mb-3 gap-2">
-                                <div className="flex items-center">
-                                   <Calendar className="w-3.5 h-3.5 mr-1" /> Published: N/A
-                                </div>
-                              </div>
-
-                              {isPassed || parsed.gpa ? (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center mb-3">
-                                   <span className="text-gray-500 font-semibold mr-2 text-sm">GPA</span>
-                                   <span className="text-green-600 font-bold text-xl">{parsed.gpa}</span>
-                                </div>
-                              ) : null}
-                              {!isPassed && (
-                                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden text-sm divide-y divide-gray-100">
-                                   {parsed.subjects.map((sub: any, idx: number) => (
-                                     <div key={idx} className="p-3 bg-white flex items-center justify-between">
-                                        <div className="text-gray-900 font-normal">
-                                          <span className="text-purple-700 mr-2">{sub.code}</span>
-                                          {sub.name}
-                                        </div>
-                                        <span className="text-gray-500 font-medium px-2 py-0.5 border border-gray-200 rounded-full bg-white text-xs">
-                                           {sub.type}
-                                        </span>
-                                     </div>
-                                   ))}
-                                   {parsed.subjects.length === 0 && (
-                                     <div className="p-3 text-center text-gray-500 italic">No subject details provided</div>
-                                   )}
-                                </div>
-                              )}
-                           </div>
-                         );
-                      })}
+                  {/* Actions */}
+                  {mapIndex === 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 mb-6 print:hidden py-2" data-html2canvas-ignore="true">
+                      <button onClick={() => {
+                         const sems = [
+                           parseSemester(resultItem.semester1),
+                           parseSemester(resultItem.semester2),
+                           parseSemester(resultItem.semester3),
+                           parseSemester(resultItem.semester4),
+                           parseSemester(resultItem.semester5),
+                           parseSemester(resultItem.semester6),
+                           parseSemester(resultItem.semester7),
+                           parseSemester(resultItem.semester8)
+                         ];
+                         let total = 0;
+                         let count = 0;
+                         let isReferred = false;
+                         for (const s of sems) {
+                           if (s) {
+                             if (s.type === 'referred') isReferred = true;
+                             else if (s.type === 'passed' && !isNaN(Number(s.gpa))) {
+                               total += Number(s.gpa);
+                               count++;
+                             }
+                           }
+                         }
+                         if (isReferred) alert("Cannot calculate CGPA: Student has referred subjects.");
+                         else if (count === 0) alert("Cannot calculate CGPA: No GPA data available.");
+                         else alert(`Approximate Average CGPA: ${(total/count).toFixed(2)}\nNote: Official BTEB CGPA applies weightage per semester.`);
+                      }} className="px-3 py-1.5 bg-white border border-gray-300 shadow-sm rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 flex items-center transition-colors">
+                        <Calculator className="w-4 h-4 mr-2 text-blue-600"/> Estimate CGPA
+                      </button>
+                      <button onClick={handlePrint} className="px-3 py-1.5 bg-white border border-gray-300 shadow-sm rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 flex items-center transition-colors">
+                         <Printer className="w-4 h-4 mr-2 text-blue-600"/> Print
+                      </button>
+                      <button onClick={() => {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: 'Result View: ' + resultItem.rollNumber,
+                            url: window.location.href
+                          }).catch(console.error);
+                        } else {
+                          alert('Sharing is not supported on this browser.');
+                        }
+                      }} className="px-3 py-1.5 bg-white border border-gray-300 shadow-sm rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 flex items-center transition-colors">
+                         <Share2 className="w-4 h-4 mr-2 text-blue-600"/> Share
+                      </button>
                     </div>
-                  </>
-                );
-              })()}
+                  )}
+
+                  {/* Overall referred warning */}
+                  {(() => {
+                    const semestersList = [
+                      { label: '8th Semester', value: resultItem.semester8 },
+                      { label: '7th Semester', value: resultItem.semester7 },
+                      { label: '6th Semester', value: resultItem.semester6 },
+                      { label: '5th Semester', value: resultItem.semester5 },
+                      { label: '4th Semester', value: resultItem.semester4 },
+                      { label: '3rd Semester', value: resultItem.semester3 },
+                      { label: '2nd Semester', value: resultItem.semester2 },
+                      { label: '1st Semester', value: resultItem.semester1 },
+                    ].filter(s => parseSemester(s.value) !== null);
+
+                    const totalReferredCount = semestersList.reduce((acc, curr) => {
+                      const p = parseSemester(curr.value);
+                      return (p && p.type === 'referred') ? acc + p.total : acc;
+                    }, 0);
+
+                    return (
+                      <>
+                        {totalReferredCount > 0 && (
+                          <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4 text-center mb-6 font-semibold shadow-sm">
+                            ⚠️ Student has {totalReferredCount} referred subject{totalReferredCount > 1 ? 's' : ''} in total.
+                          </div>
+                        )}
+                        <div className="mt-8 border border-gray-300 overflow-hidden rounded-md shadow-sm">
+                          <table className="w-full text-left text-sm sm:text-base bg-white">
+                            <thead className="bg-[#f2f2f2] border-b border-gray-300 text-gray-800">
+                              <tr>
+                                <th className="py-3 px-4 font-semibold border-r border-gray-300 w-1/3">Semester</th>
+                                <th className="py-3 px-4 font-semibold">Result</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {semestersList.map((sem, i) => {
+                                 const parsed = parseSemester(sem.value);
+                                 if (!parsed) return null;
+                                 const isPassed = parsed.type === 'passed';
+                                 
+                                 return (
+                                   <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                     <td className="py-3 px-4 border-r border-gray-200 align-top bg-white">
+                                       <div className="font-semibold text-gray-800">{sem.label}</div>
+                                       {parsed.date && (
+                                         <div className="text-xs text-gray-500 mt-1 flex items-center">
+                                            <Calendar className="w-3 h-3 mr-1" />
+                                            {(() => {
+                                              try {
+                                                const [year, month, day] = parsed.date.split('T')[0].split('-');
+                                                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                                return `${day} ${months[parseInt(month, 10) - 1]} ${year}`;
+                                              } catch(e) {
+                                                return parsed.date.split('T')[0];
+                                              }
+                                            })()}
+                                         </div>
+                                       )}
+                                     </td>
+                                     <td className="py-3 px-4 align-top">
+                                        {isPassed || parsed.gpa ? (
+                                          <div className="font-bold text-green-700">Passed <span className="text-black font-semibold mx-1">/</span> GPA: {parsed.gpa}</div>
+                                        ) : (
+                                          <div className="text-red-600 font-medium space-y-1.5">
+                                            <div>Referred ({parsed.total} Subject{parsed.total > 1 ? 's' : ''}):</div>
+                                            <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-800 font-normal">
+                                              {parsed.subjects.map((sub: any, idx: number) => (
+                                                <li key={idx}>
+                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-500 bg-gray-100 px-1 py-0.5 rounded text-xs ml-1 font-semibold">{sub.code || sub.subCode}</span>
+                                                  {' '} ({sub.type === 'T' ? 'Theory' : sub.type === 'P' ? 'Practical' : sub.type})
+                                                </li>
+                                              ))}
+                                              {parsed.subjects.length === 0 && (
+                                                <li className="text-gray-500 italic">No subject details provided</li>
+                                              )}
+                                            </ul>
+                                          </div>
+                                        )}
+                                     </td>
+                                   </tr>
+                                 );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    );
+                  })()}
+               </div>
+             ))}
            </div>
         ) : (
            <div className="space-y-8">

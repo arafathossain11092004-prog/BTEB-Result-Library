@@ -10,9 +10,18 @@ export default function Home() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roll) return;
+    const params = new URLSearchParams();
     
-    const params = new URLSearchParams({ roll });
+    if (!roll) return;
+    params.set('roll', roll);
+    
+    const hasMultipleRows = roll.split(/[,\s\n]+/).filter(Boolean).length > 1;
+    if (hasMultipleRows) {
+      params.set('type', 'group');
+    } else {
+      params.set('type', 'individual');
+    }
+    
     if (curriculum) params.set('curriculum', curriculum);
     if (regulation) params.set('regulation', regulation);
     

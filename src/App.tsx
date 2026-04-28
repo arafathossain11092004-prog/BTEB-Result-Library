@@ -40,7 +40,6 @@ export default function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="result" element={<ResultView />} />
-            <Route path="institute-results" element={<Home isInstitute />} />
             <Route path="exam-routine" element={<Schedules type="routine" />} />
             <Route path="notice-board" element={<Schedules type="notice" />} />
             <Route path="calculator" element={<Calculator />} />
