@@ -171,7 +171,7 @@ export default function Layout() {
             </p>
           </div>
           <p className="text-xs text-gray-400 font-medium">
-            Dev by Arafat Hossain (diploma in graphic design)
+            Dev by Arafat Hossain
           </p>
         </div>
       </footer>

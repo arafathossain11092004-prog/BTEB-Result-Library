@@ -2,8 +2,10 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
+import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
+import { toPng } from 'html-to-image';
+import download from 'downloadjs';
 
 export default function ResultView() {
   const [searchParams] = useSearchParams();
@@ -14,6 +16,9 @@ export default function ResultView() {
   const regulation = searchParams.get('regulation') || '';
   
   const [results, setResults] = useState<any[]>([]);
+  const [selectedResultIndex, setSelectedResultIndex] = useState(0);
+  const [instituteTree, setInstituteTree] = useState<any>(null);
+  const [expandedNodes, setExpandedNodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bannerConfig, setBannerConfig] = useState<{bannerUrl: string, bannerLink: string} | null>(null);
@@ -57,11 +62,7 @@ export default function ResultView() {
         let firebaseResults: any[] = [];
         
         try {
-          if (type === 'institute' && instituteCode) {
-             const q = query(collection(db, 'results'), where('instituteCode', '==', instituteCode));
-             const snap = await getDocs(q);
-             snap.forEach(d => firebaseResults.push({ id: d.id, ...d.data() }));
-          } else if (roll) {
+          if (roll && type !== 'institute') {
              const rollsList = roll.split(/[,\s]+/).map(r => r.trim()).filter(Boolean);
              const chunks = [];
              for (let i = 0; i < rollsList.length; i += 10) {
@@ -77,7 +78,7 @@ export default function ResultView() {
            console.warn("Firebase query failed:", dbErr);
         }
 
-        if (firebaseResults.length > 0) {
+        if (firebaseResults.length > 0 && type !== 'institute') {
            setResults(firebaseResults);
            setLoading(false);
            return;
@@ -107,16 +108,48 @@ export default function ResultView() {
         const json = await response.json();
         
         if (!json.success || !json.data || json.data.length === 0) {
-          setError('No results found for this roll number.');
+          setError('No results found for this query.');
           setLoading(false);
           return;
         }
 
-        const mappedResults = json.data.map((item: any) => {
+        if (type === 'institute') {
+          const tree: any = {};
+          json.data.forEach((student: any) => {
+              const instName = student.institute?.name 
+                ? `${student.institute.name}${student.institute.district ? `, ${student.institute.district}` : ''}`
+                : instituteCode || 'Unknown Institute';
+              if (!tree[instName]) tree[instName] = {};
+
+              student.semesterResults?.forEach((sem: any) => {
+                  const originalResult = sem.results?.find((r: any) => r.republished === false) || sem.results?.[0] || {};
+                  let rawDate = originalResult.date || originalResult.publishDate || sem.date || sem.publishDate || 'Unknown Date';
+                  const dateStr = rawDate !== 'Unknown Date' ? rawDate.split('T')[0] : 'Unknown Date';
+                  
+                  if (!tree[instName][dateStr]) tree[instName][dateStr] = {};
+                  if (!tree[instName][dateStr][sem.semester]) tree[instName][dateStr][sem.semester] = { passed: [], referred: [] };
+
+                  const currentFailed = student.currentFailedSubjects || [];
+                  const failedInThisSem = currentFailed.filter((f: any) => f.originSemester === sem.semester);
+
+                  if (failedInThisSem.length === 0) {
+                      tree[instName][dateStr][sem.semester].passed.push(student.roll);
+                  } else {
+                      tree[instName][dateStr][sem.semester].referred.push(student.roll);
+                  }
+              });
+          });
+          setInstituteTree(tree);
+          setResults([]); // We don't need flat results for institute
+          setLoading(false);
+          return;
+        }
+
+        const mappedResults = json.data.map((item: any, index: number) => {
           const mapped: any = {
-            id: item.roll + '_' + item.curriculumId,
+            id: item.roll + '_' + item.curriculumId + '_' + index,
             rollNumber: item.roll.toString(),
-            instituteName: item.institute?.name || '',
+            instituteName: item.institute?.name ? `${item.institute.name}${item.institute.district ? `, ${item.institute.district}` : ''}` : '',
             curriculum: item.curriculumId === 'diploma_in_engineering' ? 'Diploma in Engineering' : 
                         item.curriculumId === 'diploma_in_textile' ? 'Diploma in Textile Engineering' :
                         item.curriculumId === 'diploma_in_agriculture' ? 'Diploma in Agriculture' :
@@ -131,7 +164,8 @@ export default function ResultView() {
           item.semesterResults?.forEach((sem: any) => {
             let valStr = '';
             const failedInThisSem = currentFailed.filter((f: any) => f.originSemester === sem.semester);
-            const latestResult = sem.results?.[0] || {};
+            const originalResult = sem.results?.find((r: any) => r.republished === false) || sem.results?.[0] || {};
+            const pubDate = originalResult.date || originalResult.publishDate || sem.date || sem.publishDate || null;
             
             if (failedInThisSem.length === 0) {
               let foundGpa = null;
@@ -141,9 +175,9 @@ export default function ResultView() {
                   break;
                 }
               }
-              valStr = JSON.stringify({ type: 'passed', gpa: foundGpa || 'Passed', date: latestResult.date });
+              valStr = JSON.stringify({ type: 'passed', gpa: foundGpa || 'Passed', date: pubDate });
             } else {
-              valStr = JSON.stringify({ type: 'referred', subjects: failedInThisSem, gpa: null, date: latestResult.date });
+              valStr = JSON.stringify({ type: 'referred', subjects: failedInThisSem, gpa: null, date: pubDate });
             }
             mapped[`semester${sem.semester}`] = valStr;
           });
@@ -163,8 +197,33 @@ export default function ResultView() {
     fetchResult();
   }, [roll, instituteCode, type, curriculum, regulation]);
 
-  const handleDownload = () => {
-    window.print();
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => prev.includes(nodeId) ? prev.filter(id => id !== nodeId) : [...prev, nodeId]);
+  };
+
+  const handleDownload = async () => {
+    if (!resultRef.current) return;
+    
+    // Add downloading class
+    const element = resultRef.current;
+    
+    try {
+      const dataUrl = await toPng(element, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        filter: (node) => {
+          if (node instanceof HTMLElement && node.dataset?.html2canvasIgnore === 'true') {
+            return false;
+          }
+          return true;
+        }
+      });
+      download(dataUrl, `Result_${roll || instituteCode || 'group'}.png`);
+    } catch(err) {
+      console.error("Failed to generate image:", err);
+      alert("Failed to download image. Try printing instead.");
+    }
   };
 
   const handlePrint = () => {
@@ -175,6 +234,9 @@ export default function ResultView() {
     if (!val || val === '-' || val === 'undefined') return null;
     try {
       const parsed = JSON.parse(val);
+      if (typeof parsed === 'number' || typeof parsed === 'string') {
+        return { type: 'passed', gpa: String(parsed), date: null };
+      }
       if (parsed.type === 'referred') {
         const subjects: any[] = parsed.subjects || [];
         return { type: 'referred', subjects, total: subjects.length, gpa: parsed.gpa || null, date: parsed.date };
@@ -236,13 +298,34 @@ export default function ResultView() {
         </div>
       </div>
 
+      {type === 'individual' && results.length > 1 && (
+        <div className="mb-4 bg-white p-2 sm:p-3 rounded border border-blue-100 shadow-sm print:hidden">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2 ml-1">Multiple Results Found</div>
+          <div className="flex flex-wrap gap-2">
+            {results.map((r, i) => (
+              <button
+                key={r.id}
+                onClick={() => setSelectedResultIndex(i)}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors whitespace-nowrap ${
+                  selectedResultIndex === i 
+                    ? 'bg-blue-600 text-white shadow' 
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                {r.curriculum}{r.regulation ? ` (${r.regulation})` : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div 
         ref={resultRef}
         className="bg-white rounded border border-gray-200 shadow-sm print:shadow-none print:border-transparent p-6 sm:p-10 relative"
       >
         {type === 'individual' ? (
            <div className="space-y-12">
-             {results.map((resultItem, mapIndex) => (
+             {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
                <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4">
                   <div className="pb-6 border-b border-gray-200">
                      <div className="text-center mb-8">
@@ -368,11 +451,22 @@ export default function ResultView() {
                                             <Calendar className="w-3 h-3 mr-1" />
                                             {(() => {
                                               try {
-                                                const [year, month, day] = parsed.date.split('T')[0].split('-');
-                                                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                                return `${day} ${months[parseInt(month, 10) - 1]} ${year}`;
+                                                const dateStr = parsed.date.split('T')[0];
+                                                if (dateStr.includes('-')) {
+                                                  const parts = dateStr.split('-');
+                                                  // Only handle YYYY-MM-DD
+                                                  if (parts.length === 3 && parts[0].length === 4) {
+                                                    const [year, month, day] = parts;
+                                                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                                    const monthInt = parseInt(month, 10);
+                                                    if (monthInt >= 1 && monthInt <= 12) {
+                                                       return `${day} ${months[monthInt - 1]} ${year}`;
+                                                    }
+                                                  }
+                                                }
+                                                return dateStr;
                                               } catch(e) {
-                                                return parsed.date.split('T')[0];
+                                                return parsed.date;
                                               }
                                             })()}
                                          </div>
@@ -410,14 +504,100 @@ export default function ResultView() {
                </div>
              ))}
            </div>
+        ) : type === 'institute' && instituteTree ? (
+           <div className="space-y-8">
+              <div className="text-center pb-6 border-b border-gray-100">
+                 <div className="inline-flex items-center justify-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                   Institute Results
+                 </div>
+                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+                   {Object.keys(instituteTree)[0] || instituteCode}
+                 </h1>
+                 <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-gray-600">
+                   <span className="flex items-center font-medium"><Building className="w-4 h-4 mr-2 text-blue-500"/> Institute Tree View</span>
+                 </div>
+              </div>
+
+              <div className="text-left space-y-4">
+                 {Object.keys(instituteTree).map((instName) => (
+                    <div key={instName} className="space-y-4">
+                        {Object.keys(instituteTree[instName]).sort((a,b) => new Date(b).getTime() - new Date(a).getTime()).map(dateStr => {
+                             const dateNodeId = `${instName}-${dateStr}`;
+                             const isDateExpanded = expandedNodes.includes(dateNodeId);
+                             return (
+                               <div key={dateNodeId} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                  <button onClick={() => toggleNode(dateNodeId)} className="w-full bg-slate-50 p-4 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer text-left focus:outline-none">
+                                     <div className="flex items-center">
+                                        <Folder className="w-5 h-5 text-blue-400 mr-3" />
+                                        <span className="font-semibold text-gray-800">Publish Date: {dateStr}</span>
+                                     </div>
+                                     {isDateExpanded ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
+                                  </button>
+                                  
+                                  {isDateExpanded && (
+                                     <div className="p-4 bg-white border-t border-gray-200 space-y-4 pl-6">
+                                        {Object.keys(instituteTree[instName][dateStr]).sort((a,b) => Number(b) - Number(a)).map(sem => {
+                                            const semNodeId = `${dateNodeId}-sem${sem}`;
+                                            const isSemExpanded = expandedNodes.includes(semNodeId);
+                                            const passed = instituteTree[instName][dateStr][sem].passed;
+                                            const referred = instituteTree[instName][dateStr][sem].referred;
+                                            
+                                            return (
+                                              <div key={semNodeId} className="border border-gray-100 rounded-md shadow-sm overflow-hidden">
+                                                 <button onClick={() => toggleNode(semNodeId)} className="w-full bg-gray-50 p-3 flex flex-wrap items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer text-left focus:outline-none border-b border-gray-100">
+                                                    <div className="flex items-center">
+                                                       <Folder className="w-4 h-4 text-emerald-400 mr-2" />
+                                                       <span className="font-medium text-gray-700">{sem}th Semester</span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-3 mt-2 sm:mt-0">
+                                                       <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">Passed: {passed.length}</span>
+                                                       <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full font-bold">Referred: {referred.length}</span>
+                                                       {isSemExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                                                    </div>
+                                                 </button>
+                                                 
+                                                 {isSemExpanded && (
+                                                    <div className="p-4 bg-white grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
+                                                       <div>
+                                                          <h4 className="text-sm font-bold text-green-700 mb-2 border-b border-green-100 pb-1">Passed Rolls</h4>
+                                                          <div className="flex flex-wrap gap-1.5">
+                                                             {passed.map((rollNum: string) => (
+                                                                <span key={rollNum} className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 border border-gray-200">{rollNum}</span>
+                                                             ))}
+                                                             {passed.length === 0 && <span className="text-xs text-gray-400 italic">None</span>}
+                                                          </div>
+                                                       </div>
+                                                       <div>
+                                                          <h4 className="text-sm font-bold text-red-700 mb-2 border-b border-red-100 pb-1">Referred Rolls</h4>
+                                                          <div className="flex flex-wrap gap-1.5">
+                                                             {referred.map((rollNum: string) => (
+                                                                <span key={rollNum} className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 border border-gray-200">{rollNum}</span>
+                                                             ))}
+                                                             {referred.length === 0 && <span className="text-xs text-gray-400 italic">None</span>}
+                                                          </div>
+                                                       </div>
+                                                    </div>
+                                                 )}
+                                              </div>
+                                            )
+                                        })}
+                                     </div>
+                                  )}
+                               </div>
+                             );
+                        })}
+                    </div>
+                 ))}
+              </div>
+           </div>
         ) : (
            <div className="space-y-8">
               <div className="text-center pb-6 border-b border-gray-100">
                  <div className="inline-flex items-center justify-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                   {type === 'institute' ? 'Institute Results' : 'Group Results'}
+                   Group Results
                  </div>
                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-                   {type === 'institute' ? results[0]?.instituteName || instituteCode : 'Multiple Roll Results'}
+                   Multiple Roll Results
                  </h1>
                  <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-gray-600">
                    <span className="flex items-center font-medium"><BookOpen className="w-4 h-4 mr-2 text-blue-500"/> {results[0]?.curriculum || 'Diploma in Engineering'}</span>
@@ -488,7 +668,7 @@ export default function ResultView() {
 
         <div className="mt-16 text-center border-t border-gray-200 pt-6">
            <p className="text-xs text-gray-500 font-medium">
-             The information is provided by BTEB Result Hub. This is an electronic copy of the exact board result.
+             The information is provided by BTEB Result Library. This is an electronic copy of the exact board result.
            </p>
            <p className="text-xs text-gray-400 mt-1">
              Generated on: {new Date().toLocaleString()}
