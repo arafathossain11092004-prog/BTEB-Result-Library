@@ -4,13 +4,13 @@ import { getFirestore, doc, getDocFromServer, getDocs, collection, query, where,
 import { getStorage } from 'firebase/storage';
 
 export const firebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0079376731",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:637362903014:web:dedd53fdbb46391cb2e827",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyABpPxXnd4bF5rPtiJ7Ul5GBfjUJR9xCO8",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "gen-lang-client-0079376731.firebaseapp.com",
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "gen-lang-client-0079376731.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "637362903014",
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 
@@ -35,7 +35,9 @@ if (!firebaseConfig.projectId) {
 }
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)"
+  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
@@ -97,6 +99,8 @@ export async function testConnection() {
   } catch (error) {
     if(error instanceof Error && error.message.includes('the client is offline')) {
       console.error("❌ Please check your Firebase configuration. The client is offline.");
+      console.error("Make sure your VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_DATABASE_ID are correct.");
+      console.error(`Current Database ID being used is: "${firebaseConfig.firestoreDatabaseId}". If your database in Firebase Console has a different name, you must update VITE_FIREBASE_DATABASE_ID in Vercel.`);
     } else {
       console.warn("⚠️ Firebase connection check failed, but app may still work:", error);
     }
