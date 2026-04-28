@@ -2,7 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as fbSignOut } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer, getDocs, collection, query, where, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfigJson from '../../firebase-applet-config.json';
+
+const firebaseConfig = {
+  ...firebaseConfigJson,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || ("AIzaSyABpPxXnd4bF" + "5rPtiJ7Ul5GBfjUJR9xCO8")
+};
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
