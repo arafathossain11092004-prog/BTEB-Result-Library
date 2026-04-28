@@ -35,10 +35,6 @@ console.log("Firebase Env Variables Check (Masked):", {
 });
 // ------------------------------------
 
-if (!firebaseConfig.projectId) {
-  console.warn("Firebase environment variables are missing. Please set VITE_FIREBASE_PROJECT_ID and others in your .env.local file.");
-}
-
 export const app = initializeApp(firebaseConfig);
 export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)"
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
@@ -61,33 +57,13 @@ export interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
+  authInfo: any;
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
+    authInfo: { userId: auth.currentUser?.uid },
     operationType,
     path
   }
@@ -99,13 +75,17 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 export async function testConnection() {
   if (!firebaseConfig.projectId) return;
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const testDocRef = doc(db, 'test', 'connection');
+    await getDocFromServer(testDocRef);
     console.log(`✅ Successfully connected to Firestore using database: ${firebaseConfig.firestoreDatabaseId}`);
   } catch (error) {
     if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Firebase client is offline. Data will be fetched from cache if available, or fail. Make sure your configuration and database are active.");
+      console.warn("⚠️ Firebase client is offline. This usually means either:");
+      console.warn("1. Firestore Database has not been created in the Firebase Console yet (Wait 5 mins if you just created it).");
+      console.warn("2. Network is down or a browser extension is blocking the connection.");
     } else {
-      console.warn("Firebase connection check failed, but app may still work:", error);
+      console.warn("⚠️ Firebase connection check returned an error. Connection may still work. Details:");
+      console.warn(error);
     }
   }
 }
