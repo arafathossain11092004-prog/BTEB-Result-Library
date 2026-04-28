@@ -35,7 +35,11 @@ export default function ResultView() {
           }
         }
       } catch (error) {
-        console.error("Error fetching settings:", error);
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+           console.warn("Could not fetch banner settings: Firebase Client is offline. App will continue without it.");
+        } else {
+           console.error("Error fetching settings:", error);
+        }
       }
     };
     fetchSettings();

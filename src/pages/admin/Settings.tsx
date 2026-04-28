@@ -23,7 +23,11 @@ export default function AdminSettings() {
         setBannerLink(data.bannerLink || '');
       }
     } catch (error) {
-      console.error("Error fetching settings:", error);
+      if(error instanceof Error && error.message.includes('the client is offline')) {
+         console.warn("Could not fetch settings: Firebase Client is offline.");
+      } else {
+         console.error("Error fetching settings:", error);
+      }
     } finally {
       setLoading(false);
     }
