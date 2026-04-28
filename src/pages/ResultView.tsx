@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -54,6 +54,35 @@ export default function ResultView() {
 
     const fetchResult = async () => {
       try {
+        let firebaseResults: any[] = [];
+        
+        try {
+          if (type === 'institute' && instituteCode) {
+             const q = query(collection(db, 'results'), where('instituteCode', '==', instituteCode));
+             const snap = await getDocs(q);
+             snap.forEach(d => firebaseResults.push({ id: d.id, ...d.data() }));
+          } else if (roll) {
+             const rollsList = roll.split(/[,\s]+/).map(r => r.trim()).filter(Boolean);
+             const chunks = [];
+             for (let i = 0; i < rollsList.length; i += 10) {
+                 chunks.push(rollsList.slice(i, i + 10));
+             }
+             for (const chunk of chunks) {
+                 const q = query(collection(db, 'results'), where('rollNumber', 'in', chunk));
+                 const snap = await getDocs(q);
+                 snap.forEach(d => firebaseResults.push({ id: d.id, ...d.data() }));
+             }
+          }
+        } catch (dbErr) {
+           console.warn("Firebase query failed:", dbErr);
+        }
+
+        if (firebaseResults.length > 0) {
+           setResults(firebaseResults);
+           setLoading(false);
+           return;
+        }
+
         let apiUrl = '/api/results?';
         const queryParams = new URLSearchParams();
         

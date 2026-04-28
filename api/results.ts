@@ -65,6 +65,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         return res.status(200).json({ success: true, data: combinedData });
       }
+    } else if (type === 'institute' && instituteCode) {
+        let apiUrl = `https://btebresultszone.com/api/student-results?instituteCode=${instituteCode}`;
+        if (curriculum) apiUrl += `&curriculumId=${curriculum}`;
+        if (regulation) apiUrl += `&regulation=${regulation}`;
+        const data = await fetchFromBteb(apiUrl);
+        return res.status(200).json(data);
     } else {
        return res.status(400).json({ success: false, error: 'Missing roll or instituteCode' });
     }
