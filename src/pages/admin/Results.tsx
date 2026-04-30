@@ -407,36 +407,43 @@ export default function AdminResults() {
     try {
       const reader = new FileReader();
       reader.onload = async (evt) => {
-        const bstr = evt.target?.result;
-        const wb = xlsx.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = xlsx.utils.sheet_to_json(ws);
-        
-        let added = 0;
-        for (const row of data as any[]) {
-          if (row.rollNumber && row.instituteName && row.curriculum) {
-             await addDoc(collection(db, 'results'), {
-               curriculum: String(row.curriculum),
-               regulation: row.regulation ? String(row.regulation) : '',
-               rollNumber: String(row.rollNumber),
-               instituteName: String(row.instituteName),
-               semester1: row.semester1 ? String(row.semester1) : '',
-               semester2: row.semester2 ? String(row.semester2) : '',
-               semester3: row.semester3 ? String(row.semester3) : '',
-               semester4: row.semester4 ? String(row.semester4) : '',
-               semester5: row.semester5 ? String(row.semester5) : '',
-               semester6: row.semester6 ? String(row.semester6) : '',
-               semester7: row.semester7 ? String(row.semester7) : '',
-               semester8: row.semester8 ? String(row.semester8) : '',
-               createdAt: Date.now(),
-               updatedAt: Date.now()
-             });
-             added++;
+        try {
+          const bstr = evt.target?.result;
+          const wb = xlsx.read(bstr, { type: 'binary' });
+          const wsname = wb.SheetNames[0];
+          const ws = wb.Sheets[wsname];
+          const data = xlsx.utils.sheet_to_json(ws);
+          
+          let added = 0;
+          for (const row of data as any[]) {
+            if (row.rollNumber && row.instituteName && row.curriculum) {
+               await addDoc(collection(db, 'results'), {
+                 curriculum: String(row.curriculum),
+                 regulation: row.regulation ? String(row.regulation) : '',
+                 rollNumber: String(row.rollNumber),
+                 instituteName: String(row.instituteName),
+                 instituteCode: row.instituteCode ? String(row.instituteCode) : '',
+                 semester1: row.semester1 ? String(row.semester1) : '',
+                 semester2: row.semester2 ? String(row.semester2) : '',
+                 semester3: row.semester3 ? String(row.semester3) : '',
+                 semester4: row.semester4 ? String(row.semester4) : '',
+                 semester5: row.semester5 ? String(row.semester5) : '',
+                 semester6: row.semester6 ? String(row.semester6) : '',
+                 semester7: row.semester7 ? String(row.semester7) : '',
+                 semester8: row.semester8 ? String(row.semester8) : '',
+                 createdAt: Date.now(),
+                 updatedAt: Date.now()
+               });
+               added++;
+            }
           }
+          alert(`Successfully imported ${added} results.`);
+        } catch (err) {
+          console.error("Error parsing/uploading Excel data:", err);
+          alert("Error parsing/uploading data. Please check the console.");
+        } finally {
+          fetchResults();
         }
-        alert(`Successfully imported ${added} results.`);
-        fetchResults();
       };
       reader.readAsBinaryString(file);
     } catch (error) {
@@ -504,7 +511,7 @@ export default function AdminResults() {
             <h2 className="text-lg font-bold text-gray-900 mb-4">{isEditing ? 'Edit Result' : 'Add New Result'}</h2>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum/Exam *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum/Exam <span className="text-red-500">*</span></label>
             <select required value={curriculum} onChange={e => setCurriculum(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
               <option value="" disabled>Select Curriculum</option>
               <option value="Diploma in Engineering">Diploma in Engineering</option>

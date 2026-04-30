@@ -7,8 +7,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import Home from './pages/Home';
+import InstituteResults from './pages/InstituteResults';
+import GroupResults from './pages/GroupResults';
 import ResultView from './pages/ResultView';
-import Schedules from './pages/Schedules';
 import Calculator from './pages/Calculator';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -39,9 +40,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+            <Route path="institute-results" element={<InstituteResults />} />
+            <Route path="group-results" element={<GroupResults />} />
+            <Route path="institute/:instituteCode" element={<ResultView />} />
             <Route path="result" element={<ResultView />} />
-            <Route path="exam-routine" element={<Schedules type="routine" />} />
-            <Route path="notice-board" element={<Schedules type="notice" />} />
             <Route path="calculator" element={<Calculator />} />
             <Route path="admin/login" element={<AdminLogin />} />
             <Route 

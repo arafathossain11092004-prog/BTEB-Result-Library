@@ -265,7 +265,7 @@ export default function Calculator() {
           
           <div className="space-y-4 flex-1">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum / Exam *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum / Exam <span className="text-red-500">*</span></label>
               <select
                 value={curriculum}
                 onChange={(e) => setCurriculum(e.target.value)}
@@ -284,7 +284,7 @@ export default function Calculator() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Regulation *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Regulation <span className="text-red-500">*</span></label>
               <select
                 value={autoRegulation}
                 onChange={(e) => setAutoRegulation(e.target.value)}
@@ -297,7 +297,7 @@ export default function Calculator() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={rollNumber}

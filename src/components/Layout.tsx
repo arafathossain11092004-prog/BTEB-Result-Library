@@ -39,13 +39,9 @@ export default function Layout() {
                   <Building2 className="w-4 h-4 mr-2" />
                   Institute Results
                 </Link>
-                <Link to="/exam-routine" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
-                  <CalendarRange className="w-4 h-4 mr-2" />
-                  Exam Routine
-                </Link>
-                <Link to="/notice-board" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Notice Board
+                <Link to="/group-results" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
+                  <Users className="w-4 h-4 mr-2" />
+                  Group Results
                 </Link>
                 <Link to="/calculator" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
                   <Calculator className="w-4 h-4 mr-2" />
@@ -74,7 +70,7 @@ export default function Layout() {
               )}
               {user && (
                 <button
-                  onClick={signOut}
+                  onClick={() => signOut().catch(console.error)}
                   className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors bg-gray-100"
                   title="Sign out"
                 >
@@ -117,11 +113,8 @@ export default function Layout() {
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/institute-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-gray-400" /> Institute Results
               </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/exam-routine" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <CalendarRange className="w-5 h-5 text-gray-400" /> Exam Routine
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/notice-board" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <FileText className="w-5 h-5 text-gray-400" /> Notice Board
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/group-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                <Users className="w-5 h-5 text-gray-400" /> Group Results
               </Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/calculator" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-gray-400" /> CGPA Calculator
@@ -139,7 +132,7 @@ export default function Layout() {
                   </Link>
                 )}
                 {user && (
-                  <button onClick={() => { signOut(); setIsMobileMenuOpen(false); }} className="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <button onClick={() => { signOut().catch(console.error); setIsMobileMenuOpen(false); }} className="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                     <LogOut className="w-5 h-5" /> Sign out
                   </button>
                 )}

@@ -1,30 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion } from "motion/react";
+import { Lock, CheckCircle, GraduationCap, FileCheck } from 'lucide-react';
 
-export default function Home() {
+export default function GroupResults() {
   const navigate = useNavigate();
-  const [curriculum, setCurriculum] = useState('diploma_in_engineering');
-  const [regulation, setRegulation] = useState('2022');
-  const [roll, setRoll] = useState('');
+  const [curriculum, setCurriculum] = useState('');
+  const [regulation, setRegulation] = useState('0');
+  const [startRoll, setStartRoll] = useState('');
+  const [endRoll, setEndRoll] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams();
+    if (!startRoll || !endRoll) return;
+
+    const start = parseInt(startRoll, 10);
+    const end = parseInt(endRoll, 10);
     
-    if (!roll) return;
-    params.set('roll', roll);
-    
-    const hasMultipleRows = roll.split(/[,\s\n]+/).filter(Boolean).length > 1;
-    if (hasMultipleRows) {
-      params.set('type', 'group');
-    } else {
-      params.set('type', 'individual');
+    if (isNaN(start) || isNaN(end) || start > end) {
+      alert("Invalid roll range. Start roll must be less than or equal to end roll.");
+      return;
     }
     
+    if (end - start > 150) {
+      alert("Please select a range of maximum 150 rolls at a time.");
+      return;
+    }
+
+    const rolls = [];
+    for (let i = start; i <= end; i++) {
+      rolls.push(i.toString());
+    }
+    
+    const params = new URLSearchParams();
+    params.set('roll', rolls.join(','));
+    params.set('type', 'group');
     if (curriculum) params.set('curriculum', curriculum);
     if (regulation) params.set('regulation', regulation);
-    
+
     navigate(`/result?${params.toString()}`);
   };
 
@@ -32,10 +45,10 @@ export default function Home() {
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-0">
       <div className="text-center mb-10">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">
-          BTEB Result Check
+          Group Result Check
         </h1>
         <p className="text-lg text-gray-500 max-w-lg mx-auto">
-          Get your 100% accurate Polytechnic results down below.
+          Check multiple results at once!
         </p>
       </div>
 
@@ -87,7 +100,7 @@ export default function Home() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Regulation
+              Regulation <span className="text-gray-400 ml-0.5 text-xs font-normal">(Optional)</span>
             </label>
             <div className="relative">
               <select 
@@ -95,7 +108,7 @@ export default function Home() {
                 onChange={(e) => setRegulation(e.target.value)}
                 className="w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg appearance-none bg-white"
               >
-                <option value="">Any</option>
+                <option value="0">Any / Auto (Default)</option>
                 <option value="2022">2022</option>
                 <option value="2016">2016</option>
                 <option value="2010">2010</option>
@@ -108,25 +121,40 @@ export default function Home() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5 border-b border-transparent">
-              Roll Number <span className="text-red-500">*</span>
-            </label>
-            <input 
-              type="text" 
-              required
-              value={roll}
-              onChange={(e) => setRoll(e.target.value)}
-              placeholder="Enter roll number (e.g. 921514)"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 border-b border-transparent">
+                Start Roll <span className="text-red-500">*</span>
+              </label>
+              <input 
+                type="text" 
+                required
+                value={startRoll}
+                onChange={(e) => setStartRoll(e.target.value)}
+                placeholder="936300"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 border-b border-transparent">
+                End Roll <span className="text-red-500">*</span>
+              </label>
+              <input 
+                type="text" 
+                required
+                value={endRoll}
+                onChange={(e) => setEndRoll(e.target.value)}
+                placeholder="936366"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
           </div>
 
           <button 
             type="submit"
-            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
-            View Result
+            Get Group Results
           </button>
         </form>
       </motion.div>

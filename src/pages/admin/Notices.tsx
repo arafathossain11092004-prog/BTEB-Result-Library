@@ -55,18 +55,24 @@ export default function AdminNotices() {
           alert("Failed to upload the file.");
         }, 
         async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          await addDoc(collection(db, 'notices'), {
-            title,
-            pdfUrl: downloadURL,
-            storagePath: fileRef.fullPath,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          });
-          setShowForm(false);
-          setTitle(''); setFile(null); setUploadProgress(0);
-          fetchNotices();
-          setSaving(false);
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            await addDoc(collection(db, 'notices'), {
+              title,
+              pdfUrl: downloadURL,
+              storagePath: fileRef.fullPath,
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            });
+            setShowForm(false);
+            setTitle(''); setFile(null); setUploadProgress(0);
+            fetchNotices();
+          } catch (uploadError) {
+            console.error("Error finalizing upload or saving doc:", uploadError);
+            alert("Failed to save notice to database.");
+          } finally {
+            setSaving(false);
+          }
         }
       );
     } catch (error) {

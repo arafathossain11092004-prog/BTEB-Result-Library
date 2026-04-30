@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle, ChevronDown, ChevronRight, Folder } from 'lucide-react';
@@ -9,16 +9,24 @@ import download from 'downloadjs';
 
 export default function ResultView() {
   const [searchParams] = useSearchParams();
+  const params = useParams<{ instituteCode?: string }>();
   const roll = searchParams.get('roll');
-  const instituteCode = searchParams.get('instituteCode');
-  const type = searchParams.get('type') || 'individual';
-  const curriculum = searchParams.get('curriculum') || '';
-  const regulation = searchParams.get('regulation') || '';
+  const instituteCode = params.instituteCode || searchParams.get('instituteCode');
+  const type = params.instituteCode ? 'institute' : (searchParams.get('type') || 'individual');
+  const curriculum = searchParams.get('curriculum') || 'diploma_in_engineering';
+  const regulation = searchParams.get('regulation') || '2022';
   
   const [results, setResults] = useState<any[]>([]);
   const [selectedResultIndex, setSelectedResultIndex] = useState(0);
+  const [instituteDates, setInstituteDates] = useState<any[]>([]);
+  const [instituteName, setInstituteName] = useState<string | null>(null);
+  const [institutePDFs, setInstitutePDFs] = useState<string[]>([]);
+  const [activeDateStr, setActiveDateStr] = useState<string | null>(null);
+  const [loadingPdfs, setLoadingPdfs] = useState(false);
   const [instituteTree, setInstituteTree] = useState<any>(null);
   const [expandedNodes, setExpandedNodes] = useState<string[]>([]);
+  const [selectedPublishDate, setSelectedPublishDate] = useState<string | null>(null);
+  const [selectedFileKey, setSelectedFileKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bannerConfig, setBannerConfig] = useState<{bannerUrl: string, bannerLink: string} | null>(null);
@@ -51,6 +59,8 @@ export default function ResultView() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!roll && !instituteCode) {
       setError('Invalid search parameters.');
       setLoading(false);
@@ -58,6 +68,27 @@ export default function ResultView() {
     }
 
     const fetchResult = async () => {
+      setLoading(true);
+      setError('');
+      
+      if (type === 'institute') {
+        try {
+          const res = await fetch(`/api/bteb/institute-results/${instituteCode}`);
+          const json = await res.json();
+          if (!isMounted) return;
+          if (json.success && json.data) {
+             setInstituteDates(json.data);
+             if (json.instituteName) setInstituteName(json.instituteName);
+          } else {
+             setError(json.error || 'Failed to load institute results');
+          }
+        } catch(e) {
+          if (!isMounted) return;
+          setError('Failed to fetch institute results');
+        }
+        setLoading(false);
+        return;
+      }
       try {
         let firebaseResults: any[] = [];
         
@@ -83,11 +114,15 @@ export default function ResultView() {
            console.warn("Firebase query failed:", dbErr);
         }
 
-        if (firebaseResults.length > 0 && type !== 'institute') {
-           setSelectedResultIndex(0);
-           setResults(firebaseResults);
-           setLoading(false);
-           return;
+        if (firebaseResults.length > 0 && roll && type !== 'institute') {
+             const requestedRolls = roll.split(/[,\s]+/).map(r => r.trim()).filter(Boolean);
+             if (firebaseResults.length === requestedRolls.length) {
+                 if (!isMounted) return;
+                 setSelectedResultIndex(0);
+                 setResults([...firebaseResults]);
+                 setLoading(false);
+                 return;
+             }
         }
 
         let apiUrl = '/api/results?';
@@ -107,11 +142,20 @@ export default function ResultView() {
         apiUrl += queryParams.toString();
 
         const response = await fetch(apiUrl);
+        if (!isMounted) return;
         if (!response.ok) {
-          throw new Error('Failed to fetch from server');
+          let errorMsg = 'Failed to fetch from server';
+          try {
+             const errJson = await response.json();
+             if (errJson && errJson.error) {
+                errorMsg = errJson.error;
+             }
+          } catch(e) {}
+          throw new Error(errorMsg);
         }
 
         const json = await response.json();
+        if (!isMounted) return;
         
         if (!json.success || !json.data || json.data.length === 0) {
           setError('No results found for this query.');
@@ -119,32 +163,122 @@ export default function ResultView() {
           return;
         }
 
+        const getCurriculumName = (id: string) => {
+          const map: Record<string, string> = {
+            'diploma_in_engineering': 'Diploma In Engineering',
+            'diploma_in_engineering_army': 'Diploma In Engineering (Army)',
+            'diploma_in_engineering_naval': 'Diploma In Engineering (Naval)',
+            'diploma_in_textile': 'Diploma In Textile Engineering',
+            'diploma_in_tourism': 'Diploma In Tourism And Hospitality',
+            'diploma_in_agriculture': 'Diploma In Agriculture',
+            'diploma_in_fisheries': 'Diploma In Fisheries',
+            'diploma_in_forestry': 'Diploma In Forestry',
+            'diploma_in_livestock': 'Diploma In Livestock',
+            'certificate_in_marine_trade': 'Certificate In Marine Trade',
+            'diploma_in_marine': 'Diploma In Marine Engineering', // fallback
+            'diploma_in_medical_technology': 'Diploma In Medical Technology',
+            'advanced_certificate_course': 'Advanced Certificate Course',
+            'national_skill_standard_basic': 'National Skill Standard Basic Certificate Course',
+            'one_year_certificate': 'One Year Certificate Course',
+            'diploma_in_commerce': 'Diploma In Commerce',
+            'certificate_in_medical_ultrasound': 'Certificate In Medical Ultrasound',
+            'hsc_bm': 'HSC (Business Management)',
+            'hsc_voc': 'HSC (Vocational)',
+          };
+          if (map[id]) return map[id];
+          return id ? id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown Curriculum';
+        };
+
+        // Process tree structure for institute type
         if (type === 'institute') {
           const tree: any = {};
           json.data.forEach((student: any) => {
-              const instName = student.institute?.name 
+              // Extract data regardless of if it's from Firebase (flat) or BTEB proxy (nested)
+              const instName = student.instituteName || (student.institute?.name 
                 ? `${student.institute.name}${student.institute.district ? `, ${student.institute.district}` : ''}`
-                : instituteCode || 'Unknown Institute';
+                : instituteCode || 'Unknown Institute');
+                
               if (!tree[instName]) tree[instName] = {};
 
-              student.semesterResults?.forEach((sem: any) => {
-                  const originalResult = sem.results?.find((r: any) => r.republished === false) || sem.results?.[0] || {};
-                  let rawDate = originalResult.date || originalResult.publishDate || sem.date || sem.publishDate || 'Unknown Date';
-                  const dateStr = rawDate !== 'Unknown Date' ? rawDate.split('T')[0] : 'Unknown Date';
-                  
-                  if (!tree[instName][dateStr]) tree[instName][dateStr] = {};
-                  if (!tree[instName][dateStr][sem.semester]) tree[instName][dateStr][sem.semester] = { passed: [], referred: [] };
+              const currId = student.curriculumId || student.curriculum || 'unknown';
+              const currName = getCurriculumName(currId);
+              const reg = student.regulation ? student.regulation.toString() : 'Unknown Regulation';
 
-                  const currentFailed = student.currentFailedSubjects || [];
-                  const failedInThisSem = currentFailed.filter((f: any) => f.originSemester === sem.semester);
+              // If nested BTEB server results
+              if (student.semesterResults && student.semesterResults.length > 0) {
+                 student.semesterResults.forEach((sem: any) => {
+                     const originalResult = sem.results?.find((r: any) => r.republished === false) || sem.results?.[0] || {};
+                     let rawDate = originalResult.date || originalResult.publishDate || sem.date || sem.publishDate || 'Unknown Date';
+                     const dateStr = rawDate !== 'Unknown Date' ? rawDate.split('T')[0] : 'Unknown Date';
+                     
+                     if (!tree[instName][dateStr]) tree[instName][dateStr] = {};
+                     const fileKey = `${currName}__${reg}__${sem.semester}`;
+                     if (!tree[instName][dateStr][fileKey]) {
+                        tree[instName][dateStr][fileKey] = {
+                            curriculumName: currName,
+                            regulation: reg,
+                            semester: sem.semester,
+                            passed: [],
+                            referred: []
+                        };
+                     }
 
-                  if (failedInThisSem.length === 0) {
-                      tree[instName][dateStr][sem.semester].passed.push(student.roll);
-                  } else {
-                      tree[instName][dateStr][sem.semester].referred.push(student.roll);
-                  }
-              });
+                     const currentFailed = student.currentFailedSubjects || [];
+                     const failedInThisSem = currentFailed.filter((f: any) => f.originSemester === sem.semester);
+
+                     if (failedInThisSem.length === 0) {
+                         tree[instName][dateStr][fileKey].passed.push(student.roll || student.rollNumber);
+                     } else {
+                         const failedSubCodes = failedInThisSem.map((f: any) => f.subCode || f.code || f.subName);
+                         tree[instName][dateStr][fileKey].referred.push({
+                             roll: student.roll || student.rollNumber,
+                             subjects: failedSubCodes
+                         });
+                     }
+                 });
+              } else {
+                 // Flat Firebase style results
+                 const dateStr = student.createdAt ? new Date(student.createdAt).toISOString().split('T')[0] : 'Unknown Date';
+                 if (!tree[instName][dateStr]) tree[instName][dateStr] = {};
+
+                 const sems = Object.keys(student).filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))));
+                 sems.forEach(semKey => {
+                     const semNum = semKey.replace('semester', '');
+                     const resultStr = student[semKey] || '';
+                     if (!resultStr) return; // Skip empty semesters
+                     
+                     const fileKey = `${currName}__${reg}__${semNum}`;
+                     if (!tree[instName][dateStr][fileKey]) {
+                        tree[instName][dateStr][fileKey] = {
+                            curriculumName: currName,
+                            regulation: reg,
+                            semester: semNum,
+                            passed: [],
+                            referred: []
+                        };
+                     }
+
+                     const isFailed = resultStr.toLowerCase().includes('fail') || resultStr.toLowerCase().includes('referred') || resultStr.toLowerCase().includes('ref');
+                     if (!isFailed && resultStr.trim() !== '') {
+                         tree[instName][dateStr][fileKey].passed.push(student.rollNumber || student.roll);
+                     } else if (isFailed) {
+                         // Fallback for flat structure, try to parse subjects from string if possible.
+                         // Often it looks like "Referred: 1234, 5678" or similar
+                         let subjects: string[] = [];
+                         if (resultStr.includes('{') && resultStr.includes('}')) {
+                             const match = resultStr.match(/\{([^}]+)\}/);
+                             if (match) subjects = match[1].split(',').map(s => s.trim());
+                         }
+                         tree[instName][dateStr][fileKey].referred.push({
+                             roll: student.rollNumber || student.roll,
+                             subjects: subjects
+                         });
+                     }
+                 });
+              }
           });
+          
+          if (!isMounted) return;
           setInstituteTree(tree);
           setResults([]); // We don't need flat results for institute
           setLoading(false);
@@ -152,32 +286,6 @@ export default function ResultView() {
         }
 
         const mappedResults = json.data.map((item: any, index: number) => {
-          const getCurriculumName = (id: string) => {
-            const map: Record<string, string> = {
-              'diploma_in_engineering': 'Diploma In Engineering',
-              'diploma_in_engineering_army': 'Diploma In Engineering (Army)',
-              'diploma_in_engineering_naval': 'Diploma In Engineering (Naval)',
-              'diploma_in_textile': 'Diploma In Textile Engineering',
-              'diploma_in_tourism': 'Diploma In Tourism And Hospitality',
-              'diploma_in_agriculture': 'Diploma In Agriculture',
-              'diploma_in_fisheries': 'Diploma In Fisheries',
-              'diploma_in_forestry': 'Diploma In Forestry',
-              'diploma_in_livestock': 'Diploma In Livestock',
-              'certificate_in_marine_trade': 'Certificate In Marine Trade',
-              'diploma_in_marine': 'Diploma In Marine Engineering', // fallback
-              'diploma_in_medical_technology': 'Diploma In Medical Technology',
-              'advanced_certificate_course': 'Advanced Certificate Course',
-              'national_skill_standard_basic': 'National Skill Standard Basic Certificate Course',
-              'one_year_certificate': 'One Year Certificate Course',
-              'diploma_in_commerce': 'Diploma In Commerce',
-              'certificate_in_medical_ultrasound': 'Certificate In Medical Ultrasound',
-              'hsc_bm': 'HSC (Business Management)',
-              'hsc_voc': 'HSC (Vocational)',
-            };
-            if (map[id]) return map[id];
-            return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          };
-
           const mapped: any = {
             id: item.roll + '_' + item.curriculumId + '_' + index,
             rollNumber: item.roll.toString(),
@@ -225,17 +333,23 @@ export default function ResultView() {
           return mapped;
         });
 
+        if (!isMounted) return;
         setSelectedResultIndex(0);
         setResults(mappedResults);
       } catch (err) {
+        if (!isMounted) return;
         console.error(err);
         setError('Failed to fetch results. Please try again later.');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchResult();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [roll, instituteCode, type, curriculum, regulation]);
 
   const toggleNode = (nodeId: string) => {
@@ -243,6 +357,65 @@ export default function ResultView() {
   };
 
   const handleDownload = async () => {
+    if (type === 'group') {
+      try {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        let headers = ["Roll Number", "Curriculum", "Regulation", "Institute"];
+        
+        // Find all possible semester keys across all results
+        const allSems = new Set<string>();
+        results.forEach(r => {
+          Object.keys(r).filter(k => k.startsWith('semester')).forEach(k => allSems.add(k));
+        });
+        const semKeys = Array.from(allSems).sort((a, b) => parseInt(a.replace('semester', '')) - parseInt(b.replace('semester', '')));
+        
+        semKeys.forEach(k => {
+          headers.push(k.replace('semester', 'Sem '));
+        });
+        
+        csvContent += headers.join(",") + "\n";
+        
+        results.forEach(r => {
+          let row = [
+            r.rollNumber || r.roll || "",
+            r.curriculum || "",
+            r.regulation || "",
+            `"${(r.instituteName || (r.institute && r.institute.name) || "").replace(/"/g, '""')}"`
+          ];
+          
+          semKeys.forEach(k => {
+            if (r[k]) {
+              const parsed = parseSemester(r[k]);
+              if (parsed) {
+                if (parsed.type === 'passed') {
+                  row.push("GPA " + parsed.gpa);
+                } else {
+                  row.push("Fail (" + parsed.total + ")");
+                }
+              } else {
+                row.push("N/A");
+              }
+            } else {
+              row.push("");
+            }
+          });
+          
+          csvContent += row.join(",") + "\n";
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `group_results_${new Date().getTime()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      } catch (err) {
+        console.error("Failed to generate CSV:", err);
+      }
+    }
+
     if (!resultRef.current) return;
     
     // Add downloading class
@@ -265,6 +438,26 @@ export default function ResultView() {
       console.error("Failed to generate image:", err);
       alert("Failed to download image. Try printing instead.");
     }
+  };
+
+  const loadInstitutePdfs = async (dateStr: string) => {
+    if (activeDateStr === dateStr) {
+      setActiveDateStr(null);
+      return; // toggle off
+    }
+    setActiveDateStr(dateStr);
+    setLoadingPdfs(true);
+    setInstitutePDFs([]);
+    try {
+      const res = await fetch(`/api/bteb/institute-results/${instituteCode}/${dateStr}`);
+      const json = await res.json();
+      if (json.success && json.pdfs) {
+        setInstitutePDFs(json.pdfs);
+      }
+    } catch(e) {
+      console.error(e);
+    }
+    setLoadingPdfs(false);
   };
 
   const handlePrint = () => {
@@ -324,18 +517,22 @@ export default function ResultView() {
           Back
         </button>
         <div className="flex gap-2">
-          <button 
-            onClick={handleDownload}
-            className="inline-flex items-center px-4 py-2 border border-blue-600 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Download className="w-4 h-4 mr-2 hidden sm:block" /> Download
-          </button>
-          <button 
-            onClick={handlePrint}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            <Printer className="w-4 h-4 mr-2 hidden sm:block" /> Print
-          </button>
+          {type !== 'institute' && (
+            <>
+              <button 
+                onClick={handleDownload}
+                className="inline-flex items-center px-4 py-2 border border-blue-600 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Download className="w-4 h-4 mr-2 hidden sm:block" /> {type === 'group' ? 'Download CSV' : 'Download Image'}
+              </button>
+              <button 
+                onClick={handlePrint}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <Printer className="w-4 h-4 mr-2 hidden sm:block" /> Print
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -362,7 +559,7 @@ export default function ResultView() {
 
       <div 
         ref={resultRef}
-        className="bg-white rounded border border-gray-200 shadow-sm print:shadow-none print:border-transparent p-6 sm:p-10 relative"
+        className={`bg-white rounded border border-gray-200 shadow-sm print:shadow-none print:border-transparent relative ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10'}`}
       >
         {type === 'individual' ? (
            <div className="space-y-12">
@@ -523,13 +720,13 @@ export default function ResultView() {
                                           <div className="text-red-600 font-medium space-y-1.5">
                                             <div>Referred ({parsed.total} Subject{parsed.total > 1 ? 's' : ''}):</div>
                                             <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-800 font-normal">
-                                              {parsed.subjects.map((sub: any, idx: number) => (
+                                              {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
                                                 <li key={idx}>
                                                   {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-500 bg-gray-100 px-1 py-0.5 rounded text-xs ml-1 font-semibold">{sub.code || sub.subCode}</span>
                                                   {' '} ({sub.type === 'T' ? 'Theory' : sub.type === 'P' ? 'Practical' : sub.type})
                                                 </li>
                                               ))}
-                                              {parsed.subjects.length === 0 && (
+                                              {(!parsed.subjects || parsed.subjects.length === 0) && (
                                                 <li className="text-gray-500 italic">No subject details provided</li>
                                               )}
                                             </ul>
@@ -548,93 +745,113 @@ export default function ResultView() {
                </div>
              ))}
            </div>
-        ) : type === 'institute' && instituteTree ? (
-           <div className="space-y-8">
-              <div className="text-center pb-6 border-b border-gray-100">
-                 <div className="inline-flex items-center justify-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                   Institute Results
+        ) : type === 'institute' ? (
+           <div className="w-full space-y-8">
+              <div className="flex flex-col items-center p-10 bg-white border border-gray-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8 relative overflow-hidden">
+                 <div className="absolute top-0 right-0 p-8 opacity-[0.02] transform translate-x-1/4 -translate-y-1/4"><Building className="w-64 h-64" /></div>
+                 <div className="inline-flex items-center justify-center bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-100 shadow-sm relative z-10">
+                   Institute Analytics
                  </div>
-                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-                   {Object.keys(instituteTree)[0] || instituteCode}
+                 <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3 relative z-10 text-center tracking-tight">
+                   {instituteName || `Institute ${instituteCode}`}
                  </h1>
-                 <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-gray-600">
-                   <span className="flex items-center font-medium"><Building className="w-4 h-4 mr-2 text-blue-500"/> Institute Tree View</span>
-                 </div>
+                 <p className="text-gray-500 text-lg max-w-xl mx-auto text-center relative z-10">
+                   Explore historical result data, pass rates, and official PDF documents. All data is synchronized securely.
+                 </p>
               </div>
 
-              <div className="text-left space-y-4">
-                 {Object.keys(instituteTree).map((instName) => (
-                    <div key={instName} className="space-y-4">
-                        {Object.keys(instituteTree[instName]).sort((a,b) => new Date(b).getTime() - new Date(a).getTime()).map(dateStr => {
-                             const dateNodeId = `${instName}-${dateStr}`;
-                             const isDateExpanded = expandedNodes.includes(dateNodeId);
-                             return (
-                               <div key={dateNodeId} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                                  <button onClick={() => toggleNode(dateNodeId)} className="w-full bg-slate-50 p-4 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer text-left focus:outline-none">
-                                     <div className="flex items-center">
-                                        <Folder className="w-5 h-5 text-blue-400 mr-3" />
-                                        <span className="font-semibold text-gray-800">Publish Date: {dateStr}</span>
+              {instituteDates.length === 0 ? (
+                <div className="text-center py-12">
+                   <p className="text-gray-500">No dates available or still loading...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  {instituteDates.map((item, idx) => (
+                    <div key={idx} className="bg-white border text-left border-gray-200/60 shadow-sm rounded-2xl overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all">
+                      <button 
+                        onClick={() => loadInstitutePdfs(item.dateStr)}
+                        className="w-full text-left p-5 flex flex-col justify-between focus:outline-none focus:bg-gray-50/50"
+                      >
+                         <div className="w-full">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-indigo-500" />
+                                <div className="text-sm font-semibold text-gray-900">{item.dateStr}</div>
+                              </div>
+                              <div className="shrink-0 flex items-center justify-center w-8 h-8 bg-gray-50 rounded-full text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                {activeDateStr === item.dateStr ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
+                              </div>
+                            </div>
+                            
+                            {item.stats.passed && (
+                              <div className="mt-4 space-y-2">
+                                <div className="flex items-center justify-between text-xs text-gray-600">
+                                   <span className="font-medium">Pass Rate</span>
+                                   <span className="font-bold text-gray-900">{item.stats.passed.split(' ')[0]}</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
+                                   <div className="h-full bg-emerald-500 transition-all duration-1000 ease-out" style={{ width: item.stats.passed.split(' ')[0] }}></div>
+                                   {item.stats.failed && (
+                                     <div className="h-full bg-red-400 transition-all duration-1000 ease-out" style={{ width: item.stats.failed.split(' ')[0] }}></div>
+                                   )}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-6 mt-5 pt-4 border-t border-gray-100">
+                               {item.stats.passed && (
+                                 <div className="text-sm">
+                                   <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Passed</span>
+                                   <span className="font-bold text-gray-900">{item.stats.passed.match(/\((\d+)\)/)?.[1] || '-'}</span>
+                                 </div>
+                               )}
+                               {item.stats.failed && (
+                                 <div className="text-sm">
+                                   <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Failed</span>
+                                   <span className="font-bold text-gray-900">{item.stats.failed.match(/\((\d+)\)/)?.[1] || '-'}</span>
+                                 </div>
+                               )}
+                               {item.stats.total && (
+                                 <div className="text-sm">
+                                   <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Total</span>
+                                   <span className="font-bold text-gray-900">{item.stats.total}</span>
+                                 </div>
+                               )}
+                            </div>
+                         </div>
+                      </button>
+
+                      {activeDateStr === item.dateStr && (
+                        <div className="border-t border-gray-100 p-5 bg-slate-50/50">
+                           {loadingPdfs ? (
+                             <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-indigo-500 animate-spin" /></div>
+                           ) : institutePDFs.length === 0 ? (
+                             <div className="text-center text-gray-500 text-sm py-4">No PDF files found for this date.</div>
+                           ) : (
+                             <div className="space-y-3">
+                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Result Files ({institutePDFs.length})</h4>
+                                {institutePDFs.map((pdf, pidx) => (
+                                  <a key={pidx} href={pdf} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white border border-gray-200 p-3 rounded-xl hover:border-indigo-400 hover:shadow text-left transition-all group">
+                                     <div className="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                                       <Folder className="w-5 h-5" />
                                      </div>
-                                     {isDateExpanded ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
-                                  </button>
-                                  
-                                  {isDateExpanded && (
-                                     <div className="p-4 bg-white border-t border-gray-200 space-y-4 pl-6">
-                                        {Object.keys(instituteTree[instName][dateStr]).sort((a,b) => Number(b) - Number(a)).map(sem => {
-                                            const semNodeId = `${dateNodeId}-sem${sem}`;
-                                            const isSemExpanded = expandedNodes.includes(semNodeId);
-                                            const passed = instituteTree[instName][dateStr][sem].passed;
-                                            const referred = instituteTree[instName][dateStr][sem].referred;
-                                            
-                                            return (
-                                              <div key={semNodeId} className="border border-gray-100 rounded-md shadow-sm overflow-hidden">
-                                                 <button onClick={() => toggleNode(semNodeId)} className="w-full bg-gray-50 p-3 flex flex-wrap items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer text-left focus:outline-none border-b border-gray-100">
-                                                    <div className="flex items-center">
-                                                       <Folder className="w-4 h-4 text-emerald-400 mr-2" />
-                                                       <span className="font-medium text-gray-700">
-                                                         {sem === '1' ? '1st' : sem === '2' ? '2nd' : sem === '3' ? '3rd' : sem + 'th'} Sem/Year
-                                                       </span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-3 mt-2 sm:mt-0">
-                                                       <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">Passed: {passed.length}</span>
-                                                       <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full font-bold">Referred: {referred.length}</span>
-                                                       {isSemExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                                                    </div>
-                                                 </button>
-                                                 
-                                                 {isSemExpanded && (
-                                                    <div className="p-4 bg-white grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
-                                                       <div>
-                                                          <h4 className="text-sm font-bold text-green-700 mb-2 border-b border-green-100 pb-1">Passed Rolls</h4>
-                                                          <div className="flex flex-wrap gap-1.5">
-                                                             {passed.map((rollNum: string) => (
-                                                                <span key={rollNum} className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 border border-gray-200">{rollNum}</span>
-                                                             ))}
-                                                             {passed.length === 0 && <span className="text-xs text-gray-400 italic">None</span>}
-                                                          </div>
-                                                       </div>
-                                                       <div>
-                                                          <h4 className="text-sm font-bold text-red-700 mb-2 border-b border-red-100 pb-1">Referred Rolls</h4>
-                                                          <div className="flex flex-wrap gap-1.5">
-                                                             {referred.map((rollNum: string) => (
-                                                                <span key={rollNum} className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 border border-gray-200">{rollNum}</span>
-                                                             ))}
-                                                             {referred.length === 0 && <span className="text-xs text-gray-400 italic">None</span>}
-                                                          </div>
-                                                       </div>
-                                                    </div>
-                                                 )}
-                                              </div>
-                                            )
-                                        })}
+                                     <div className="flex-1 overflow-hidden">
+                                       <div className="font-medium text-sm text-gray-800 truncate">{pdf.split('/').pop()}</div>
+                                       <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">Official BTEB Document</div>
                                      </div>
-                                  )}
-                               </div>
-                             );
-                        })}
+                                     <div className="text-gray-300 group-hover:text-indigo-600 transition-colors">
+                                       <Download className="w-4 h-4" />
+                                     </div>
+                                  </a>
+                                ))}
+                             </div>
+                           )}
+                        </div>
+                      )}
                     </div>
-                 ))}
-              </div>
+                  ))}
+                </div>
+              )}
            </div>
         ) : (
            <div className="space-y-8">
@@ -651,72 +868,94 @@ export default function ResultView() {
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 mx-auto lg:grid-cols-3 gap-5">
-                 {results.map((r) => {
-                   const sems = Object.keys(r)
-                     .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
-                     .map(k => r[k]);
-                   let referredCount = 0;
-                   
-                   for (let i = 0; i < sems.length; i++) {
-                     const parsed = parseSemester(sems[i]);
-                     if (parsed && parsed.type === 'referred') {
-                       referredCount += parsed.total;
-                     }
-                   }
-                   
-                   const validSemKeys = Object.keys(r)
-                     .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))) && parseSemester(r[k]) !== null)
-                     .sort((a, b) => parseInt(b.replace('semester', '')) - parseInt(a.replace('semester', '')));
-                   const highestSemKey = validSemKeys[0];
-                   
-                   const sHighest = highestSemKey ? parseSemester(r[highestSemKey]) : null;
-                   const sHighestLabel = highestSemKey ? `Sem ${highestSemKey.replace('semester', '')}` : 'Latest';
+              <div className="space-y-8 max-w-[100vw] overflow-x-auto mx-auto pb-4">
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-w-[800px]">
+                   <table className="w-full text-left text-sm bg-white whitespace-nowrap">
+                     <thead className="bg-[#f8fafc] border-b border-gray-200 text-gray-500 tracking-wider text-[11px] font-bold">
+                       <tr>
+                         <th className="py-4 px-5 border-r border-gray-100 uppercase">Roll No & Institute</th>
+                         {(() => {
+                           // Find all possible semester keys across all results
+                           const allSems = new Set<number>();
+                           results.forEach(r => {
+                             Object.keys(r)
+                               .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
+                               .forEach(k => allSems.add(parseInt(k.replace('semester', ''))));
+                           });
+                           const sortedSems = Array.from(allSems).sort((a, b) => a - b);
+                           
+                           return sortedSems.map(semNum => (
+                             <th key={semNum} className="py-4 px-3 border-r border-gray-100 text-center uppercase">
+                               {semNum === 1 ? '1st' : semNum === 2 ? '2nd' : semNum === 3 ? '3rd' : `${semNum}th`} Sem
+                             </th>
+                           ));
+                         })()}
+                       </tr>
+                     </thead>
+                     <tbody className="divide-y divide-gray-100 border-t border-gray-100">
+                       {results.map((r) => {
+                         // Find all possible semester keys across all results again for row mapping
+                         const allSems = new Set<number>();
+                         results.forEach(res => {
+                           Object.keys(res)
+                             .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
+                             .forEach(k => allSems.add(parseInt(k.replace('semester', ''))));
+                         });
+                         const sortedSems = Array.from(allSems).sort((a, b) => a - b);
 
-                   const sHighestDisplay = sHighest ? (
-                     sHighest.type === 'passed' ? (
-                       <span className="text-green-600">{sHighest.gpa}</span>
-                     ) : (
-                       <span className="text-red-600">{sHighest.total} Sub</span>
-                     )
-                   ) : '-';
-
-                   return (
-                     <div key={r.id} className="bg-white border text-left border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col group print:break-inside-avoid print:shadow-none">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent -mr-8 -mt-8 opacity-60 rounded-full transition-transform group-hover:scale-110"></div>
-                        
-                        <div className="flex justify-between items-start mb-5 relative z-10">
-                           <div>
-                             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5 opacity-80">Roll Number</p>
-                             <h3 className="text-2xl font-black text-gray-900 tracking-tight leading-none">{r.rollNumber}</h3>
-                           </div>
-                           <div className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide shadow-sm border ${referredCount > 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                             {referredCount > 0 ? 'Referred' : 'Passed'}
-                           </div>
-                        </div>
-
-                        {type === 'group' && (
-                          <div className="flex items-center text-xs text-gray-500 mb-5 line-clamp-2 relative z-10 font-medium">
-                             <Building className="w-3.5 h-3.5 mr-2 flex-shrink-0 text-gray-400" />
-                             <span className="line-clamp-2">{r.instituteName}</span>
-                          </div>
-                        )}
-
-                        <div className="mt-auto grid grid-cols-2 gap-3 pt-4 border-t border-gray-100 relative z-10">
-                           <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
-                              <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider mb-1">{sHighestLabel} Result</p>
-                              <div className="font-bold text-base text-gray-800">{sHighestDisplay}</div>
-                           </div>
-                           <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
-                              <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider mb-1">Total Due</p>
-                              <div className={`font-bold text-base ${referredCount > 0 ? 'text-red-500' : 'text-gray-800'}`}>
-                                {referredCount > 0 ? referredCount : '-'}
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                   );
-                 })}
+                         return (
+                           <tr key={r.id || r.rollNumber} className="hover:bg-blue-50/20 transition-colors">
+                             <td className="py-4 px-5 border-r border-gray-50 align-top max-w-[250px]">
+                               <div className="flex items-center gap-3">
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-gray-900 text-base leading-tight mb-1">{r.rollNumber || r.roll || '--'}</div>
+                                    <div className="text-[11px] text-gray-500 font-medium truncate flex items-center gap-1.5" title={r.instituteName}>
+                                       <Building className="w-3 h-3 shrink-0" />
+                                       <span className="truncate">{r.instituteName || (r.institute && r.institute.name) || 'Unknown Institute'}</span>
+                                    </div>
+                                  </div>
+                               </div>
+                             </td>
+                             {sortedSems.map(semNum => {
+                               const semData = r[`semester${semNum}`];
+                               const parsed = semData ? parseSemester(semData) : null;
+                               
+                               return (
+                                 <td key={semNum} className="py-2 px-3 border-r border-gray-50 align-middle text-center w-[120px]">
+                                   {parsed ? (
+                                     parsed.type === 'passed' ? (
+                                       <div className="inline-flex text-center items-center justify-center px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm border border-emerald-100/50 shadow-sm w-[80px]">
+                                         {parsed.gpa}
+                                       </div>
+                                     ) : (
+                                       <div className="group relative inline-flex flex-col items-center justify-center">
+                                         <div className="px-2 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] uppercase border border-red-100/50 shadow-sm tracking-wider cursor-help">
+                                           Fail ({parsed.total})
+                                         </div>
+                                         <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded p-2 z-50 pointer-events-none">
+                                            <div className="font-semibold mb-1 border-b border-gray-700 pb-1">Failed Subjects:</div>
+                                            <ul className="text-left list-disc pl-3">
+                                              {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
+                                                <li key={idx} className="truncate">
+                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-300 ml-1 text-[10px]">({sub.code || sub.subCode})</span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                         </div>
+                                       </div>
+                                     )
+                                   ) : (
+                                     <span className="text-gray-300 font-medium">-</span>
+                                   )}
+                                 </td>
+                               );
+                             })}
+                           </tr>
+                         );
+                       })}
+                     </tbody>
+                   </table>
+                 </div>
               </div>
            </div>
         )}
