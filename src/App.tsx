@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import Home from './pages/Home';
-import InstituteResults from './pages/InstituteResults';
+import IndividualResults from './pages/IndividualResults';
 import GroupResults from './pages/GroupResults';
 import ResultView from './pages/ResultView';
 import Calculator from './pages/Calculator';
@@ -40,9 +40,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
-            <Route path="institute-results" element={<InstituteResults />} />
+            <Route path="individual-results" element={<IndividualResults />} />
             <Route path="group-results" element={<GroupResults />} />
-            <Route path="institute/:instituteCode" element={<ResultView />} />
             <Route path="result" element={<ResultView />} />
             <Route path="calculator" element={<Calculator />} />
             <Route path="admin/login" element={<AdminLogin />} />

@@ -31,13 +31,9 @@ export default function Layout() {
                 </span>
               </Link>
               <nav className="hidden lg:ml-8 lg:flex lg:space-x-4">
-                <Link to="/" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
+                <Link to="/individual-results" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
                   <Search className="w-4 h-4 mr-2" />
                   Individual Results
-                </Link>
-                <Link to="/institute-results" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Institute Results
                 </Link>
                 <Link to="/group-results" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
                   <Users className="w-4 h-4 mr-2" />
@@ -107,11 +103,8 @@ export default function Layout() {
             className="lg:hidden bg-white border-b border-gray-200 overflow-hidden"
           >
             <div className="px-4 pt-2 pb-4 space-y-1">
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/individual-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                 <Search className="w-5 h-5 text-gray-400" /> Individual Results
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/institute-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-gray-400" /> Institute Results
               </Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/group-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                 <Users className="w-5 h-5 text-gray-400" /> Group Results

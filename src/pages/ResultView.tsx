@@ -317,13 +317,15 @@ export default function ResultView() {
             
             if (failedInThisSem.length === 0) {
               let foundGpa = null;
+              let foundCgpa = null;
               for (const r of sem.results || []) {
-                if (r.cgpa || r.gpa) {
+                if (r.gpa) foundGpa = r.gpa;
+                if (r.cgpa) foundCgpa = r.cgpa;
+                if (!foundGpa && !foundCgpa && (r.cgpa || r.gpa)) {
                   foundGpa = r.cgpa || r.gpa;
-                  break;
                 }
               }
-              valStr = JSON.stringify({ type: 'passed', gpa: foundGpa || 'Passed', date: pubDate });
+              valStr = JSON.stringify({ type: 'passed', gpa: foundGpa || 'Passed', cgpa: foundCgpa, date: pubDate });
             } else {
               valStr = JSON.stringify({ type: 'referred', subjects: failedInThisSem, gpa: null, date: pubDate });
             }
@@ -469,19 +471,19 @@ export default function ResultView() {
     try {
       const parsed = JSON.parse(val);
       if (typeof parsed === 'number' || typeof parsed === 'string') {
-        return { type: 'passed', gpa: String(parsed), date: null };
+        return { type: 'passed', gpa: String(parsed), cgpa: null, date: null };
       }
       if (parsed.type === 'referred') {
         const subjects: any[] = parsed.subjects || [];
-        return { type: 'referred', subjects, total: subjects.length, gpa: parsed.gpa || null, date: parsed.date };
+        return { type: 'referred', subjects, total: subjects.length, gpa: parsed.gpa || null, cgpa: parsed.cgpa || null, date: parsed.date };
       }
-      return { type: 'passed', gpa: parsed.gpa || null, date: parsed.date };
+      return { type: 'passed', gpa: parsed.gpa || null, cgpa: parsed.cgpa || null, date: parsed.date };
     } catch (e) {
       // In case it's an old format
       if (val.startsWith('{"type":"referred"')) {
-        return { type: 'referred', subjects: [], total: 0, gpa: null, date: null };
+        return { type: 'referred', subjects: [], total: 0, gpa: null, cgpa: null, date: null };
       }
-      return { type: 'passed', gpa: val, date: null };
+      return { type: 'passed', gpa: val, cgpa: null, date: null };
     }
   };
 
@@ -510,24 +512,30 @@ export default function ResultView() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto pb-10 mt-6 lg:px-4">
-      <div className="mb-4 flex gap-2 justify-between items-center bg-gray-50 p-3 rounded border border-gray-200 print:hidden flex-wrap">
+    <div className="relative min-h-[calc(100vh-4rem)] bg-slate-50 font-sans px-4 sm:px-6 py-6 sm:py-8 overflow-x-hidden w-full">
+      {/* Background patterns */}
+      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/4 z-0 w-[400px] h-[400px] bg-indigo-100/40 rounded-full blur-[80px] pointer-events-none"></div>
+
+      <div className="relative z-10 max-w-5xl mx-auto pb-10 mt-2 lg:px-4">
+        <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {type !== 'institute' && (
             <>
               <button 
                 onClick={handleDownload}
-                className="inline-flex items-center px-4 py-2 border border-blue-600 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-900 hover:bg-black transition-colors shadow-md shadow-slate-900/10"
               >
                 <Download className="w-4 h-4 mr-2 hidden sm:block" /> {type === 'group' ? 'Download CSV' : 'Download Image'}
               </button>
               <button 
                 onClick={handlePrint}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
               >
                 <Printer className="w-4 h-4 mr-2 hidden sm:block" /> Print
               </button>
@@ -559,8 +567,9 @@ export default function ResultView() {
 
       <div 
         ref={resultRef}
-        className={`bg-white rounded border border-gray-200 shadow-sm print:shadow-none print:border-transparent relative ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10'}`}
+        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10'}`}
       >
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80 rounded-t-3xl print:hidden"></div>
         {type === 'individual' ? (
            <div className="space-y-12">
              {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
@@ -593,7 +602,7 @@ export default function ResultView() {
 
                   {/* Actions */}
                   {mapIndex === 0 && (
-                    <div className="flex flex-wrap justify-center gap-2 mb-6 print:hidden py-2" data-html2canvas-ignore="true">
+                    <div className="flex flex-wrap justify-center gap-3 mb-6 print:hidden py-2" data-html2canvas-ignore="true">
                       <button onClick={() => {
                          const sems = Object.keys(resultItem)
                            .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
@@ -636,7 +645,7 @@ export default function ResultView() {
 
                   {/* Overall referred warning */}
                   {(() => {
-                    const semestersList = Object.keys(resultItem)
+                    const semestersList =  Object.keys(resultItem)
                       .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
                       .map(k => {
                         const semNum = parseInt(k.replace('semester', ''));
@@ -662,8 +671,15 @@ export default function ResultView() {
                       return (p && p.type === 'referred') ? acc + p.total : acc;
                     }, 0);
 
+                    const cgpaValue = semestersList.map(s => parseSemester(s.value)).find(p => p && p.cgpa)?.cgpa;
+
                     return (
                       <>
+                        {cgpaValue && (
+                          <div className="bg-green-50 text-green-700 border border-green-200 rounded p-4 text-center mb-6 font-bold text-lg shadow-sm">
+                            Congratulation Your Total CGPA is : {cgpaValue}
+                          </div>
+                        )}
                         {totalReferredCount > 0 && (
                           <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4 text-center mb-6 font-semibold shadow-sm">
                             ⚠️ Student has {totalReferredCount} referred subject{totalReferredCount > 1 ? 's' : ''} in total.
@@ -715,7 +731,14 @@ export default function ResultView() {
                                      </td>
                                      <td className="py-3 px-4 align-top">
                                         {isPassed || parsed.gpa ? (
-                                          <div className="font-bold text-green-700">Passed <span className="text-black font-semibold mx-1">/</span> GPA: {parsed.gpa}</div>
+                                          <div className="font-bold border border-green-200 text-green-700 bg-green-50 inline-flex items-center px-2 py-1 rounded">
+                                            Passed
+                                            {parsed.gpa && parsed.gpa !== 'Passed' && (
+                                              <>
+                                                <span className="text-black font-semibold mx-1">/</span> GPA: {parsed.gpa}
+                                              </>
+                                            )}
+                                          </div>
                                         ) : (
                                           <div className="text-red-600 font-medium space-y-1.5">
                                             <div>Referred ({parsed.total} Subject{parsed.total > 1 ? 's' : ''}):</div>
@@ -986,6 +1009,7 @@ export default function ResultView() {
           )}
         </motion.div>
       )}
+      </div>
     </div>
   );
 }

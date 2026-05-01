@@ -1,135 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Users, Calculator, ArrowRight, GraduationCap } from 'lucide-react';
+import { collection, doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [curriculum, setCurriculum] = useState('diploma_in_engineering');
-  const [regulation, setRegulation] = useState('2022');
-  const [roll, setRoll] = useState('');
+  const [banner, setBanner] = useState<{ url: string; link: string } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    
-    if (!roll) return;
-    params.set('roll', roll);
-    
-    const hasMultipleRows = roll.split(/[,\s\n]+/).filter(Boolean).length > 1;
-    if (hasMultipleRows) {
-      params.set('type', 'group');
-    } else {
-      params.set('type', 'individual');
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'general');
+        const docSnap = await getDoc(docRef);
+        if (isMounted && docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.bannerUrl) {
+            setBanner({ url: data.bannerUrl, link: data.bannerLink || '' });
+          }
+        }
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+           // Silently ignore offline error for settings fetch
+        } else {
+           console.error("Error fetching settings:", error);
+        }
+      }
+    };
+    fetchSettings().catch(error => {
+       console.error("Unhandled promise rejection in fetchSettings:", error);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const features = [
+    {
+      title: "Individual Result",
+      description: "Quickly view detailed individual polytechnic results for any semester.",
+      icon: <Search className="w-8 h-8" strokeWidth={1.5} />,
+      color: "blue",
+      path: "/individual-results"
+    },
+    {
+      title: "Group Result",
+      description: "Check multiple results at once using a roll number range.",
+      icon: <Users className="w-8 h-8" strokeWidth={1.5} />,
+      color: "indigo",
+      path: "/group-results"
+    },
+    {
+      title: "CGPA Calculator",
+      description: "Calculate your final CGPA using semester-wise weights automatically.",
+      icon: <Calculator className="w-8 h-8" strokeWidth={1.5} />,
+      color: "emerald",
+      path: "/calculator"
     }
-    
-    if (curriculum) params.set('curriculum', curriculum);
-    if (regulation) params.set('regulation', regulation);
-    
-    navigate(`/result?${params.toString()}`);
-  };
+  ];
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-0">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">
-          BTEB Result Check
-        </h1>
-        <p className="text-lg text-gray-500 max-w-lg mx-auto">
-          Get your 100% accurate Polytechnic results down below.
-        </p>
-      </div>
+    <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden bg-slate-50 font-sans px-4 sm:px-6 py-12">
+      {/* Background patterns */}
+      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/4 z-0 w-[400px] h-[400px] bg-indigo-100/40 rounded-full blur-[80px] pointer-events-none"></div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="max-w-md mx-auto bg-white shadow-sm sm:rounded-xl border border-gray-200 p-6 sm:p-8"
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5 border-b border-transparent">
-              Curriculum / Exam <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select 
-                value={curriculum}
-                onChange={(e) => setCurriculum(e.target.value)}
-                required
-                className="w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg appearance-none bg-white"
-              >
-                <option value="" disabled>Select Curriculum / Exam</option>
-                <option value="diploma_in_engineering">Diploma In Engineering</option>
-                <option value="diploma_in_engineering_army">Diploma In Engineering (Army)</option>
-                <option value="diploma_in_engineering_naval">Diploma In Engineering (Naval)</option>
-                <option value="diploma_in_textile">Diploma In Textile Engineering</option>
-                <option value="diploma_in_tourism">Diploma In Tourism And Hospitality</option>
-                <option value="diploma_in_agriculture">Diploma In Agriculture</option>
-                <option value="diploma_in_fisheries">Diploma In Fisheries</option>
-                <option value="diploma_in_forestry">Diploma In Forestry</option>
-                <option value="diploma_in_livestock">Diploma In Livestock</option>
-                <option value="certificate_in_marine_trade">Certificate In Marine Trade</option>
-                <option value="diploma_in_medical_technology">Diploma In Medical Technology</option>
-                <option value="advanced_certificate_course">Advanced Certificate Course</option>
-                <option value="national_skill_standard_basic">National Skill Standard Basic Certificate Course</option>
-                <option value="one_year_certificate">One Year Certificate Course</option>
-                <option value="diploma_in_commerce">Diploma In Commerce</option>
-                <option value="certificate_in_medical_ultrasound">Certificate In Medical Ultrasound</option>
-                <option value="hsc_bm">HSC (Business Management)</option>
-                <option value="hsc_voc">HSC (Vocational)</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Regulation
-            </label>
-            <div className="relative">
-              <select 
-                value={regulation}
-                onChange={(e) => setRegulation(e.target.value)}
-                className="w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg appearance-none bg-white"
-              >
-                <option value="">Any</option>
-                <option value="2022">2022</option>
-                <option value="2016">2016</option>
-                <option value="2010">2010</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5 border-b border-transparent">
-              Roll Number <span className="text-red-500">*</span>
-            </label>
-            <input 
-              type="text" 
-              required
-              value={roll}
-              onChange={(e) => setRoll(e.target.value)}
-              placeholder="Enter roll number (e.g. 921514)"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+      <div className="relative z-10 w-full max-w-5xl mb-8">
+        <div className="text-center mb-16">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="w-20 h-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-600/20 rotate-3 transition-transform hover:rotate-0"
           >
-            View Result
-          </button>
-        </form>
-      </motion.div>
+            <GraduationCap className="w-10 h-10" strokeWidth={1.5} />
+          </motion.div>
+          <motion.h1 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="text-5xl sm:text-6xl font-extrabold text-slate-900 tracking-tight mb-4"
+          >
+            BTEB <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Result</span> Portal
+          </motion.h1>
+          <motion.p 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="text-slate-500 text-xl max-w-2xl mx-auto font-medium"
+          >
+            A powerful, fast, and easy-to-use platform to get your Polytechnic results accurately.
+          </motion.p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          {features.map((feature, idx) => (
+            <motion.div
+              key={feature.title}
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 + (idx * 0.1), duration: 0.6, type: "spring", bounce: 0.4 }}
+              onClick={() => navigate(feature.path)}
+            >
+              <div className="bg-white/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 rounded-3xl border border-white/60 p-8 h-full relative cursor-pointer group hover:-translate-y-2 transition-all duration-300">
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80 rounded-t-3xl"></div>
+                
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 
+                  ${feature.color === 'blue' ? 'bg-blue-50 text-blue-600' : 
+                    feature.color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
+                    'bg-emerald-50 text-emerald-600'} 
+                  group-hover:scale-110 transition-transform duration-300`}>
+                  {feature.icon}
+                </div>
+                
+                <h3 className="text-2xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                <p className="text-slate-500 font-medium mb-8 flex-1">
+                  {feature.description}
+                </p>
+
+                <div className="mt-auto flex items-center text-sm font-bold text-slate-900">
+                  <span className="group-hover:text-blue-600 transition-colors">Start Check</span>
+                  <ArrowRight className="w-4 h-4 ml-2 max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 text-blue-600" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {banner && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="mt-12 w-full max-w-4xl mx-auto rounded-3xl overflow-hidden shadow-2xl shadow-slate-200/50 border border-white/60 relative group"
+          >
+            {banner.link ? (
+              <a href={banner.link} target="_blank" rel="noopener noreferrer" className="block relative">
+                <img src={banner.url} alt="Advertisement" className="w-full h-auto object-cover max-h-[300px] scale-100 group-hover:scale-105 transition-transform duration-700" />
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300"></div>
+              </a>
+            ) : (
+              <img src={banner.url} alt="Advertisement" className="w-full h-auto object-cover max-h-[300px]" />
+            )}
+            <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+              Ad
+            </div>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

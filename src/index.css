@@ -25,3 +25,9 @@
     @apply font-heading tracking-tight;
   }
 }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

@@ -91,4 +91,4 @@ export async function testConnection() {
 }
 
 // Call on startup
-testConnection();
+testConnection().catch(console.error);

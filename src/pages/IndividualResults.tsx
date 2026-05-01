@@ -1,43 +1,31 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from "motion/react";
-import { Users, BookOpen, Calendar, Hash, ArrowRight, Search } from 'lucide-react';
+import { motion } from 'motion/react';
+import { GraduationCap, BookOpen, Calendar, Hash, ArrowRight, Search } from 'lucide-react';
 
-export default function GroupResults() {
+export default function IndividualResults() {
   const navigate = useNavigate();
-  const [curriculum, setCurriculum] = useState('');
-  const [regulation, setRegulation] = useState('');
-  const [startRoll, setStartRoll] = useState('');
-  const [endRoll, setEndRoll] = useState('');
+  const [curriculum, setCurriculum] = useState('diploma_in_engineering');
+  const [regulation, setRegulation] = useState('2022');
+  const [roll, setRoll] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startRoll || !endRoll) return;
-
-    const start = parseInt(startRoll, 10);
-    const end = parseInt(endRoll, 10);
-    
-    if (isNaN(start) || isNaN(end) || start > end) {
-      alert("Invalid roll range. Start roll must be less than or equal to end roll.");
-      return;
-    }
-    
-    if (end - start > 150) {
-      alert("Please select a range of maximum 150 rolls at a time.");
-      return;
-    }
-
-    const rolls = [];
-    for (let i = start; i <= end; i++) {
-      rolls.push(i.toString());
-    }
-    
     const params = new URLSearchParams();
-    params.set('roll', rolls.join(','));
-    params.set('type', 'group');
+    
+    if (!roll) return;
+    params.set('roll', roll);
+    
+    const hasMultipleRows = roll.split(/[,\s\n]+/).filter(Boolean).length > 1;
+    if (hasMultipleRows) {
+      params.set('type', 'group');
+    } else {
+      params.set('type', 'individual');
+    }
+    
     if (curriculum) params.set('curriculum', curriculum);
     if (regulation) params.set('regulation', regulation);
-
+    
     navigate(`/result?${params.toString()}`);
   };
 
@@ -57,7 +45,7 @@ export default function GroupResults() {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-600/20 rotate-3 transition-transform hover:rotate-0"
           >
-            <Users className="w-8 h-8" strokeWidth={1.5} />
+            <GraduationCap className="w-8 h-8" strokeWidth={1.5} />
           </motion.div>
           <motion.h1 
             initial={{ y: 20, opacity: 0 }}
@@ -65,7 +53,7 @@ export default function GroupResults() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-3"
           >
-            Group <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Result</span> Check
+            BTEB <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Result</span> Portal
           </motion.h1>
           <motion.p 
             initial={{ y: 20, opacity: 0 }}
@@ -73,7 +61,7 @@ export default function GroupResults() {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="text-slate-500 text-lg sm:text-xl font-medium"
           >
-            Check multiple results at once!
+            Instant, accurate polytechnic results.
           </motion.p>
         </div>
 
@@ -116,7 +104,7 @@ export default function GroupResults() {
                   <option value="certificate_in_marine_trade">Certificate In Marine Trade</option>
                   <option value="diploma_in_medical_technology">Diploma In Medical Technology</option>
                   <option value="advanced_certificate_course">Advanced Certificate Course</option>
-                  <option value="national_skill_standard_basic">National Skill Standard Basic Certificate Course</option>
+                  <option value="national_skill_standard_basic">National Skill Standard Basic Certificate</option>
                   <option value="one_year_certificate">One Year Certificate Course</option>
                   <option value="diploma_in_commerce">Diploma In Commerce</option>
                   <option value="certificate_in_medical_ultrasound">Certificate In Medical Ultrasound</option>
@@ -154,43 +142,24 @@ export default function GroupResults() {
               </div>
             </div>
 
-            {/* Roll Number Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 block">
-                  Start Roll <span className="text-slate-400 ml-1 font-normal">*</span>
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <Hash className="w-5 h-5" />
-                  </div>
-                  <input 
-                    type="text" 
-                    required
-                    value={startRoll}
-                    onChange={(e) => setStartRoll(e.target.value)}
-                    placeholder="936300"
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border border-slate-200 text-slate-900 text-base rounded-xl transition duration-200 ease-in-out focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-400"
-                  />
+            {/* Roll Number Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                <span>Roll Number</span>
+                <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Required</span>
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <Hash className="w-5 h-5" />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 block">
-                  End Roll <span className="text-slate-400 ml-1 font-normal">*</span>
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <Hash className="w-5 h-5" />
-                  </div>
-                  <input 
-                    type="text" 
-                    required
-                    value={endRoll}
-                    onChange={(e) => setEndRoll(e.target.value)}
-                    placeholder="936366"
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border border-slate-200 text-slate-900 text-base rounded-xl transition duration-200 ease-in-out focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-400"
-                  />
-                </div>
+                <input 
+                  type="text" 
+                  required
+                  value={roll}
+                  onChange={(e) => setRoll(e.target.value)}
+                  placeholder="e.g. 921514 (Supports multiple comma-separated)"
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border border-slate-200 text-slate-900 text-base rounded-xl transition duration-200 ease-in-out focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-400"
+                />
               </div>
             </div>
 
@@ -202,7 +171,7 @@ export default function GroupResults() {
               >
                 <span className="relative z-10 flex items-center gap-2">
                   <Search className="w-5 h-5" />
-                  Get Group Results
+                  View Result
                   <ArrowRight className="w-5 h-5 transform group-hover:translate-x-1.5 transition-transform duration-300" />
                 </span>
                 {/* Subtle shine effect on hover */}
@@ -226,4 +195,3 @@ export default function GroupResults() {
     </div>
   );
 }
-
