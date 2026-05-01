@@ -20,7 +20,7 @@ export default function Booklists() {
 
   const fetchBooklists = async () => {
     try {
-      const q = query(collection(db, 'booklists'), orderBy('createdAt', 'asc'));
+      const q = query(collection(db, 'booklists'), limit(1000));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBooklists(data);

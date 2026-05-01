@@ -26,12 +26,12 @@ export default function AdminBooklists() {
   const fetchBooklists = async () => {
     setLoading(true);
     try {
-      // Order by createdAt descending for recent entries
-      const q = query(collection(db, 'booklists'), orderBy('createdAt', 'desc'), limit(100));
+      // Fetch without orderBy to prevent index requirement issues
+      const q = query(collection(db, 'booklists'), limit(100));
       const snapshot = await getDocs(q);
       setBooklists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
-      console.error(error);
+      console.error("Fetch Error:", error);
     } finally {
       setLoading(false);
     }
@@ -84,9 +84,8 @@ export default function AdminBooklists() {
       setSubjects([{ subjectName: '', subjectCode: '' }]);
       fetchBooklists().catch(console.error);
     } catch (error) {
-      try {
-        handleFirestoreError(error, OperationType.CREATE, 'booklists');
-      } catch (e) {}
+      alert("Failed to save: " + (error instanceof Error ? error.message : String(error)));
+      console.error("Save Error:", error);
     } finally {
       setSaving(false);
     }
