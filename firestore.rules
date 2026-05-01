@@ -120,9 +120,13 @@ service cloud.firestore {
       allow get: if isValidId(booklistId);
       allow list: if true; 
       
-      allow create: if isEffectiveAdmin();
+      allow create: if isEffectiveAdmin()
+                    && isValidId(booklistId)
+                    && isValidBooklist(incoming());
                     
-      allow update: if isEffectiveAdmin();
+      allow update: if isEffectiveAdmin()
+                    && isValidId(booklistId)
+                    && isValidBooklist(incoming());
                     
       allow delete: if isEffectiveAdmin() && isValidId(booklistId);
     }
