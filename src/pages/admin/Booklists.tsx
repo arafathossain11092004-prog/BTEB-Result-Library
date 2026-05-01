@@ -85,7 +85,9 @@ export default function AdminBooklists() {
       fetchBooklists().catch(console.error);
     } catch (error) {
       alert("Failed to save. See console for details.");
-      handleFirestoreError(error, OperationType.CREATE, 'booklists');
+      try {
+        handleFirestoreError(error, OperationType.CREATE, 'booklists');
+      } catch (e) {}
     } finally {
       setSaving(false);
     }
