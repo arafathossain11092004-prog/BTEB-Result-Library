@@ -84,8 +84,13 @@ export default function AdminBooklists() {
       setSubjects([{ subjectName: '', subjectCode: '' }]);
       fetchBooklists().catch(console.error);
     } catch (error) {
-      alert("Failed to save: " + (error instanceof Error ? error.message : String(error)));
-      console.error("Save Error:", error);
+      if (error instanceof Error) {
+        alert("Failed to save: " + error.message + "\nData size: " + Object.keys({...subjects[0]}).length);
+        console.error("Save Error:", error.message, error.stack);
+      } else {
+        alert("Failed to save: " + String(error));
+        console.error("Save Error:", error);
+      }
     } finally {
       setSaving(false);
     }
