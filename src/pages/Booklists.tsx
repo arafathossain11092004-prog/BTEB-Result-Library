@@ -3,7 +3,7 @@ import { collection, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BookCopy, Printer, ChevronRight, BookOpen, Layers, GraduationCap, Building2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 export default function Booklists() {
   const [booklists, setBooklists] = useState<any[]>([]);
@@ -90,15 +90,14 @@ export default function Booklists() {
     const printContent = document.getElementById('print-booklist-container');
     if (printContent) {
       try {
-        const canvas = await html2canvas(printContent, {
-          scale: 2, // Higher resolution
-          backgroundColor: '#ffffff',
-          logging: false
+        const dataUrl = await toPng(printContent, {
+          quality: 1.0,
+          pixelRatio: 2,
+          backgroundColor: '#ffffff'
         });
         
-        const image = canvas.toDataURL("image/png");
         const link = document.createElement('a');
-        link.href = image;
+        link.href = dataUrl;
         link.download = `${activeDepartment}-${activeSemester}-Booklist.png`;
         link.click();
       } catch (err) {
