@@ -11,6 +11,7 @@ import IndividualResults from './pages/IndividualResults';
 import GroupResults from './pages/GroupResults';
 import ResultView from './pages/ResultView';
 import Calculator from './pages/Calculator';
+import ExamRoutines from './pages/ExamRoutines';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminResults from './pages/admin/Results';
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="group-results" element={<GroupResults />} />
             <Route path="result" element={<ResultView />} />
             <Route path="calculator" element={<Calculator />} />
+            <Route path="exam-routines" element={<ExamRoutines />} />
             <Route path="admin/login" element={<AdminLogin />} />
             <Route 
               path="admin" 

@@ -43,6 +43,10 @@ export default function Layout() {
                   <Calculator className="w-4 h-4 mr-2" />
                   CGPA Calculator
                 </Link>
+                <Link to="/exam-routines" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
+                  <CalendarRange className="w-4 h-4 mr-2" />
+                  Exam Routines
+                </Link>
               </nav>
             </div>
             
@@ -111,6 +115,9 @@ export default function Layout() {
               </Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/calculator" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-gray-400" /> CGPA Calculator
+              </Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/exam-routines" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                <CalendarRange className="w-5 h-5 text-gray-400" /> Exam Routines
               </Link>
               
               <div className="border-t border-gray-100 my-2 pt-2">

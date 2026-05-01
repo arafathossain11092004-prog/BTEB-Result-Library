@@ -16,7 +16,7 @@ export default function AdminUsers() {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchAdmins();
+    fetchAdmins().catch(console.error);
   }, []);
 
   const fetchAdmins = async () => {
@@ -54,7 +54,7 @@ export default function AdminUsers() {
       setShowForm(false);
       setEmail('');
       setPassword('');
-      fetchAdmins();
+      fetchAdmins().catch(console.error);
     } catch (error: any) {
        console.error("User creation error", error);
        if (error.code === 'auth/operation-not-allowed') {
@@ -75,9 +75,11 @@ export default function AdminUsers() {
     if (confirm(`Are you sure you want to remove ${adminEmail} from admins?\n\nNote: This only restricts dashboard access. It does not delete their Firebase Auth account.`)) {
        try {
          await deleteDoc(doc(db, 'admins', id));
-         fetchAdmins();
+         fetchAdmins().catch(console.error);
        } catch (error) {
-         handleFirestoreError(error, OperationType.DELETE, `admins/${id}`);
+         try {
+           handleFirestoreError(error, OperationType.DELETE, `admins/${id}`);
+         } catch (e) {}
        }
     }
   };

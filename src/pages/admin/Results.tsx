@@ -272,7 +272,7 @@ export default function AdminResults() {
   }, [results]);
 
   useEffect(() => {
-    fetchResults();
+    fetchResults().catch(console.error);
   }, []);
 
   const handleRollBlur = async () => {
@@ -380,9 +380,11 @@ export default function AdminResults() {
       setIsEditing(false);
       setEditId(null);
       
-      fetchResults();
+      fetchResults().catch(console.error);
     } catch (error) {
-      handleFirestoreError(error, isEditing ? OperationType.UPDATE : OperationType.CREATE, 'results');
+      try {
+        handleFirestoreError(error, isEditing ? OperationType.UPDATE : OperationType.CREATE, 'results');
+      } catch (e) {}
     } finally {
       setSaving(false);
     }
@@ -392,9 +394,11 @@ export default function AdminResults() {
     if (confirm('Are you sure you want to delete this result?')) {
       try {
         await deleteDoc(doc(db, 'results', id));
-        fetchResults();
+        fetchResults().catch(console.error);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `results/${id}`);
+        try {
+          handleFirestoreError(error, OperationType.DELETE, `results/${id}`);
+        } catch (e) {}
       }
     }
   };
@@ -442,7 +446,7 @@ export default function AdminResults() {
           console.error("Error parsing/uploading Excel data:", err);
           alert("Error parsing/uploading data. Please check the console.");
         } finally {
-          fetchResults();
+          fetchResults().catch(console.error);
         }
       };
       reader.readAsBinaryString(file);
@@ -477,9 +481,11 @@ export default function AdminResults() {
                        c++;
                      }
                      alert(`Deleted ${c} results.`);
-                     fetchResults();
+                     fetchResults().catch(console.error);
                    } catch (error) {
-                     handleFirestoreError(error, OperationType.DELETE, 'results/all');
+                     try {
+                       handleFirestoreError(error, OperationType.DELETE, 'results/all');
+                     } catch (e) {}
                      setLoading(false);
                    }
                  }

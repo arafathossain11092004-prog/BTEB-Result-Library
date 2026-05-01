@@ -16,7 +16,7 @@ export default function AdminExamRoutines() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchRoutines();
+    fetchRoutines().catch(console.error);
   }, []);
 
   const fetchRoutines = async () => {
@@ -69,9 +69,11 @@ export default function AdminExamRoutines() {
       setDepartment('');
       setCustomDepartment('');
       setSubjects([{ subjectName: '', subjectCode: '', date: '', time: '' }]);
-      fetchRoutines();
+      fetchRoutines().catch(console.error);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'examRoutines');
+      try {
+        handleFirestoreError(error, OperationType.CREATE, 'examRoutines');
+      } catch (e) {}
     } finally {
       setSaving(false);
     }
@@ -81,9 +83,11 @@ export default function AdminExamRoutines() {
     if (confirm('Are you sure you want to delete this routine?')) {
       try {
         await deleteDoc(doc(db, 'examRoutines', id));
-        fetchRoutines();
+        fetchRoutines().catch(console.error);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `examRoutines/${id}`);
+        try {
+          handleFirestoreError(error, OperationType.DELETE, `examRoutines/${id}`);
+        } catch (e) {}
       }
     }
   };

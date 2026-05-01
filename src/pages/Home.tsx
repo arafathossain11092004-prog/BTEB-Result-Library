@@ -22,7 +22,9 @@ export default function Home() {
           }
         }
       } catch (error) {
-        if(error instanceof Error && error.message.includes('the client is offline')) {
+        if(error instanceof Error && String(error.message).includes('the client is offline')) {
+           // Silently ignore offline error for settings fetch
+        } else if (String(error).includes('the client is offline')) {
            // Silently ignore offline error for settings fetch
         } else {
            console.error("Error fetching settings:", error);
@@ -60,13 +62,13 @@ export default function Home() {
   ];
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden bg-slate-50 font-sans px-4 sm:px-6 py-12">
+    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center overflow-x-hidden bg-slate-50 font-sans px-4 sm:px-6 py-12">
       {/* Background patterns */}
       <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
       <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/4 z-0 w-[400px] h-[400px] bg-indigo-100/40 rounded-full blur-[80px] pointer-events-none"></div>
 
-      <div className="relative z-10 w-full max-w-5xl mb-8">
+      <div className="relative z-10 w-full max-w-5xl my-auto mb-8">
         <div className="text-center mb-16">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
@@ -137,14 +139,14 @@ export default function Home() {
           >
             {banner.link ? (
               <a href={banner.link} target="_blank" rel="noopener noreferrer" className="block relative">
-                <img src={banner.url} alt="Advertisement" className="w-full h-auto object-cover max-h-[300px] scale-100 group-hover:scale-105 transition-transform duration-700" />
+                <img src={banner.url} alt="Highlight" className="w-full h-auto object-cover max-h-[300px] scale-100 group-hover:scale-105 transition-transform duration-700" />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300"></div>
               </a>
             ) : (
-              <img src={banner.url} alt="Advertisement" className="w-full h-auto object-cover max-h-[300px]" />
+              <img src={banner.url} alt="Highlight" className="w-full h-auto object-cover max-h-[300px]" />
             )}
             <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
-              Ad
+              Sponsored
             </div>
           </motion.div>
         )}

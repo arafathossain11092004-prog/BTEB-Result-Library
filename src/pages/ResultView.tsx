@@ -48,14 +48,16 @@ export default function ResultView() {
           }
         }
       } catch (error) {
-        if(error instanceof Error && error.message.includes('the client is offline')) {
+        if(error instanceof Error && String(error.message).includes('the client is offline')) {
+           console.warn("Could not fetch banner settings: Firebase Client is offline. App will continue without it.");
+        } else if (String(error).includes('the client is offline')) {
            console.warn("Could not fetch banner settings: Firebase Client is offline. App will continue without it.");
         } else {
            console.error("Error fetching settings:", error);
         }
       }
     };
-    fetchSettings();
+    fetchSettings().catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -347,7 +349,7 @@ export default function ResultView() {
       }
     };
 
-    fetchResult();
+    fetchResult().catch(console.error);
     
     return () => {
       isMounted = false;
@@ -1002,10 +1004,10 @@ export default function ResultView() {
         >
           {bannerConfig.bannerLink ? (
              <a href={bannerConfig.bannerLink} target="_blank" rel="noopener noreferrer" className="block w-full">
-                <img src={bannerConfig.bannerUrl} alt="Ad Banner" className="w-full object-cover" />
+                <img src={bannerConfig.bannerUrl} alt="Highlight" className="w-full object-cover" />
              </a>
           ) : (
-             <img src={bannerConfig.bannerUrl} alt="Ad Banner" className="w-full object-cover" />
+             <img src={bannerConfig.bannerUrl} alt="Highlight" className="w-full object-cover" />
           )}
         </motion.div>
       )}

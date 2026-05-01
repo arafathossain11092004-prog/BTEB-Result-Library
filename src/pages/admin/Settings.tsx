@@ -27,7 +27,9 @@ export default function AdminSettings() {
         setBannerLink(data.bannerLink || '');
       }
     } catch (error) {
-      if(error instanceof Error && error.message.includes('the client is offline')) {
+      if(error instanceof Error && String(error.message).includes('the client is offline')) {
+         console.warn("Could not fetch settings: Firebase Client is offline.");
+      } else if (String(error).includes('the client is offline')) {
          console.warn("Could not fetch settings: Firebase Client is offline.");
       } else {
          console.error("Error fetching settings:", error);
@@ -45,7 +47,7 @@ export default function AdminSettings() {
     
     try {
       if (imageFile) {
-        const fileRef = ref(storage, `banners/${Date.now()}_${imageFile.name}`);
+        const fileRef = ref(storage, `promos/${Date.now()}_${imageFile.name}`);
         const uploadTask = uploadBytesResumable(fileRef, imageFile);
         
         await new Promise((resolve, reject) => {
@@ -56,9 +58,13 @@ export default function AdminSettings() {
             },
             (error) => reject(error),
             async () => {
-              finalImageUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              setBannerUrl(finalImageUrl);
-              resolve(null);
+              try {
+                finalImageUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                setBannerUrl(finalImageUrl);
+                resolve(null);
+              } catch (e) {
+                reject(e);
+              }
             }
           );
         });
@@ -74,7 +80,11 @@ export default function AdminSettings() {
       setImageFile(null);
       setUploadProgress(0);
     } catch (error) {
-       handleFirestoreError(error, OperationType.WRITE, 'settings/general');
+       try {
+         handleFirestoreError(error, OperationType.WRITE, 'settings/general');
+       } catch (fsError) {
+         console.error(fsError);
+       }
     } finally {
       setSaving(false);
     }

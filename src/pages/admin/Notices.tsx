@@ -17,7 +17,7 @@ export default function AdminNotices() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    fetchNotices();
+    fetchNotices().catch(console.error);
   }, []);
 
   const fetchNotices = async () => {
@@ -66,7 +66,7 @@ export default function AdminNotices() {
             });
             setShowForm(false);
             setTitle(''); setFile(null); setUploadProgress(0);
-            fetchNotices();
+            fetchNotices().catch(console.error);
           } catch (uploadError) {
             console.error("Error finalizing upload or saving doc:", uploadError);
             alert("Failed to save notice to database.");
@@ -76,7 +76,9 @@ export default function AdminNotices() {
         }
       );
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'notices');
+      try {
+        handleFirestoreError(error, OperationType.CREATE, 'notices');
+      } catch (e) {}
       setSaving(false);
     }
   };
@@ -89,9 +91,11 @@ export default function AdminNotices() {
            await deleteObject(fileRef).catch(console.error); // Ignore error if file doesn't exist
          }
          await deleteDoc(doc(db, 'notices', id));
-         fetchNotices();
+         fetchNotices().catch(console.error);
        } catch (error) {
-         handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
+         try {
+           handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
+         } catch (e) {}
        }
     }
   };
