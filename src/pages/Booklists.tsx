@@ -89,11 +89,25 @@ export default function Booklists() {
   const handleDownloadPNG = async () => {
     const printContent = document.getElementById('booklist-card');
     if (printContent) {
+      const originalWidth = printContent.style.width;
+      const originalMaxWidth = printContent.style.maxWidth;
+      const tableWrapper = printContent.querySelector('.table-wrapper') as HTMLElement;
+      const origOverflow = tableWrapper ? tableWrapper.style.overflow : '';
+      
+      // Force wider constraints to ensure desktop-like styling for PNG and prevent clamping
+      printContent.style.width = '800px';
+      printContent.style.maxWidth = '800px';
+      if (tableWrapper) tableWrapper.style.overflow = 'visible';
+
       try {
         const dataUrl = await toPng(printContent, {
           quality: 1.0,
           pixelRatio: 2,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          style: {
+            width: '800px', // Force the exact width for rendering
+            fontFamily: 'sans-serif' // Fallback to ensure text matches UI
+          }
         });
         
         const link = document.createElement('a');
@@ -102,6 +116,10 @@ export default function Booklists() {
         link.click();
       } catch (err) {
         console.error("Error generating screenshot", err);
+      } finally {
+        printContent.style.width = originalWidth;
+        printContent.style.maxWidth = originalMaxWidth;
+        if (tableWrapper) tableWrapper.style.overflow = origOverflow;
       }
     }
   };
@@ -269,12 +287,37 @@ export default function Booklists() {
             ) : (
               <motion.div
                 key="content"
-                id="booklist-card"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden"
+                className="flex flex-col gap-6"
               >
+                {/* Action Bar */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 sm:px-6 rounded-2xl border border-slate-100 shadow-sm print:hidden gap-4">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                       <BookCopy className="w-5 h-5 text-blue-500" />
+                       Booklist Explorer
+                    </h3>
+                    <div className="flex flex-wrap w-full sm:w-auto gap-2">
+                      <button
+                        onClick={handlePrint}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                      >
+                        <Printer className="w-4 h-4" /> Print
+                      </button>
+                      <button
+                        onClick={handleDownloadPNG}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
+                      >
+                        <Download className="w-4 h-4" /> Download PNG
+                      </button>
+                    </div>
+                </div>
+
+                <div
+                  id="booklist-card"
+                  className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative"
+                >
                 <div className="bg-slate-900 p-6 sm:p-8 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                     <BookOpen className="w-32 h-32" />
@@ -295,31 +338,15 @@ export default function Booklists() {
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-8">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                    <h3 className="text-xl font-bold text-gray-800">Subjects</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={handlePrint}
-                        className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-                      >
-                        <Printer className="w-4 h-4" /> Print
-                      </button>
-                      <button
-                        onClick={handleDownloadPNG}
-                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
-                      >
-                        <Download className="w-4 h-4" /> Download PNG
-                      </button>
-                    </div>
-                  </div>
+                <div className="p-6 sm:p-8 bg-white">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6">Subjects</h3>
 
                   {filteredSubjects.length === 0 ? (
                     <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
                       <p className="text-slate-500">No subjects found for this selection.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto sm:overflow-visible rounded-2xl border border-gray-200 shadow-sm">
+                    <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-2xl border border-gray-200 shadow-sm">
                       <table className="w-full text-left border-collapse min-w-[300px]">
                         <thead className="bg-slate-50 border-b border-gray-200 text-slate-600">
                           <tr>
@@ -349,6 +376,7 @@ export default function Booklists() {
                       </table>
                     </div>
                   )}
+                </div>
                 </div>
               </motion.div>
             )}
