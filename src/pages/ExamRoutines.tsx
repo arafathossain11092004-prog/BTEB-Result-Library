@@ -89,18 +89,22 @@ export default function ExamRoutines() {
   const handleDownloadPNG = async () => {
     const printContent = document.getElementById('print-routine-container');
     if (printContent) {
-      // Temporarily make it visible for html2canvas
-      printContent.classList.remove('hidden');
-      printContent.classList.remove('print:block');
-      printContent.classList.remove('fixed');
-      printContent.classList.remove('inset-0');
-      printContent.style.display = 'block';
-      printContent.style.position = 'absolute';
-      printContent.style.top = '-9999px';
-      printContent.style.width = '800px';
+      // Create a clone to avoid reflows and class toggling issues
+      const clone = printContent.cloneNode(true) as HTMLElement;
+      clone.classList.remove('hidden');
+      clone.classList.remove('print:block');
+      clone.classList.remove('fixed');
+      clone.classList.remove('inset-0');
+      clone.style.display = 'block';
+      clone.style.position = 'absolute';
+      clone.style.top = '-9999px';
+      clone.style.left = '-9999px';
+      clone.style.width = '800px';
+      
+      document.body.appendChild(clone);
       
       try {
-        const canvas = await html2canvas(printContent, {
+        const canvas = await html2canvas(clone, {
           scale: 2, // Higher resolution
           backgroundColor: '#ffffff',
           logging: false
@@ -114,15 +118,7 @@ export default function ExamRoutines() {
       } catch (err) {
         console.error("Error generating screenshot", err);
       } finally {
-        // Restore classes and styles
-        printContent.classList.add('hidden');
-        printContent.classList.add('print:block');
-        printContent.classList.add('fixed');
-        printContent.classList.add('inset-0');
-        printContent.style.display = '';
-        printContent.style.position = '';
-        printContent.style.top = '';
-        printContent.style.width = '';
+        document.body.removeChild(clone);
       }
     }
   };
