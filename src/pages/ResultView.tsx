@@ -564,34 +564,34 @@ export default function ResultView() {
 
       <div 
         ref={resultRef}
-        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10 print:p-0'}`}
+        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10 print:p-4'}`}
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80 rounded-t-3xl print:hidden"></div>
         {type === 'individual' ? (
-           <div className="space-y-12 print:space-y-0">
+           <div className="space-y-12 print:space-y-6">
              {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
-               <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4 print:space-y-1">
-                  <div className="pb-6 print:pb-1 border-b border-gray-200">
-                     <div className="text-center mb-8 print:mb-1">
-                       <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wider text-gray-800 print:text-base">Academic Result</h2>
+               <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4 print:space-y-4">
+                  <div className="pb-6 print:pb-4 border-b border-gray-200">
+                     <div className="text-center mb-8 print:mb-4">
+                       <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wider text-gray-800 print:text-xl">Academic Result</h2>
                      </div>
-                     <table className="w-full text-left text-sm sm:text-base print:text-[10px]">
+                     <table className="w-full text-left text-sm sm:text-base print:text-sm">
                        <tbody>
                          <tr>
-                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 w-32 sm:w-48 align-top">Roll No</td>
-                           <td className="py-1.5 print:py-0 font-bold text-gray-900 border-b border-gray-100">: {resultItem.rollNumber}</td>
+                           <td className="py-1.5 print:py-1 font-semibold text-gray-600 w-32 sm:w-48 align-top">Roll No</td>
+                           <td className="py-1.5 print:py-1 font-bold text-gray-900 border-b border-gray-100">: {resultItem.rollNumber}</td>
                          </tr>
                          <tr>
-                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 align-top">Institute</td>
-                           <td className="py-1.5 print:py-0 text-gray-800 border-b border-gray-100">: {resultItem.instituteName}</td>
+                           <td className="py-1.5 print:py-1 font-semibold text-gray-600 align-top">Institute</td>
+                           <td className="py-1.5 print:py-1 text-gray-800 border-b border-gray-100">: {resultItem.instituteName}</td>
                          </tr>
                          <tr>
-                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 align-top">Curriculum</td>
-                           <td className="py-1.5 print:py-0 text-gray-800 border-b border-gray-100">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
+                           <td className="py-1.5 print:py-1 font-semibold text-gray-600 align-top">Curriculum</td>
+                           <td className="py-1.5 print:py-1 text-gray-800 border-b border-gray-100">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
                          </tr>
                          <tr>
-                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 align-top">Regulation</td>
-                           <td className="py-1.5 print:py-0 text-gray-800 border-b border-gray-100">: {resultItem.regulation || 'N/A'}</td>
+                           <td className="py-1.5 print:py-1 font-semibold text-gray-600 align-top">Regulation</td>
+                           <td className="py-1.5 print:py-1 text-gray-800 border-b border-gray-100">: {resultItem.regulation || 'N/A'}</td>
                          </tr>
                        </tbody>
                      </table>
@@ -673,21 +673,21 @@ export default function ResultView() {
                     return (
                       <>
                         {cgpaValue && (
-                          <div className="bg-green-50 text-green-700 border border-green-200 rounded p-4 print:p-1 text-center mb-6 print:mb-1 font-bold text-lg print:text-xs shadow-sm print:shadow-none">
+                          <div className="bg-green-50 text-green-700 border border-green-200 rounded p-4 print:p-2 text-center mb-6 print:mb-2 font-bold text-lg print:text-sm shadow-sm print:shadow-none">
                             Congratulation Your Total CGPA is : {cgpaValue}
                           </div>
                         )}
                         {totalReferredCount > 0 && (
-                          <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4 print:p-1 text-center mb-6 print:mb-1 font-semibold print:text-[10px] shadow-sm print:shadow-none">
+                          <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4 print:p-2 text-center mb-6 print:mb-2 font-semibold print:text-xs shadow-sm print:shadow-none">
                             ⚠️ Student has {totalReferredCount} referred subject{totalReferredCount > 1 ? 's' : ''} in total.
                           </div>
                         )}
-                        <div className="mt-8 print:mt-1 border border-gray-300 overflow-hidden rounded-md shadow-sm print:shadow-none">
-                          <table className="w-full text-left text-sm sm:text-base print:text-[10px] bg-white">
+                        <div className="mt-8 print:mt-2 border border-gray-300 overflow-hidden rounded-md shadow-sm print:shadow-none">
+                          <table className="w-full text-left text-sm sm:text-base print:text-sm bg-white">
                             <thead className="bg-[#f2f2f2] border-b border-gray-300 text-gray-800">
                               <tr>
-                                <th className="py-3 px-4 print:py-0.5 print:px-1 font-semibold border-r border-gray-300 w-1/3">Semester</th>
-                                <th className="py-3 px-4 print:py-0.5 print:px-1 font-semibold">Result</th>
+                                <th className="py-3 px-4 print:py-1.5 print:px-2 font-semibold border-r border-gray-300 w-1/3">Semester</th>
+                                <th className="py-3 px-4 print:py-1.5 print:px-2 font-semibold">Result</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
@@ -698,11 +698,11 @@ export default function ResultView() {
                                  
                                  return (
                                    <tr key={i} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
-                                     <td className="py-3 px-4 print:py-0.5 print:px-1 border-r border-gray-200 align-top bg-white">
+                                     <td className="py-3 px-4 print:py-1.5 print:px-2 border-r border-gray-200 align-top bg-white">
                                        <div className="font-semibold text-gray-800">{sem.label}</div>
                                        {parsed.date && (
-                                         <div className="text-xs print:text-[8px] text-gray-500 mt-1 print:mt-0 flex items-center">
-                                            <Calendar className="w-3 h-3 print:w-2 print:h-2 mr-1" />
+                                         <div className="text-xs print:text-[10px] text-gray-500 mt-1 flex items-center">
+                                            <Calendar className="w-3 h-3 print:w-3 print:h-3 mr-1" />
                                             {(() => {
                                               try {
                                                 const dateStr = parsed.date.split('T')[0];
@@ -726,9 +726,9 @@ export default function ResultView() {
                                          </div>
                                        )}
                                      </td>
-                                     <td className="py-3 px-4 print:py-0.5 print:px-1 align-top">
+                                     <td className="py-3 px-4 print:py-1.5 print:px-2 align-top">
                                         {isPassed || parsed.gpa ? (
-                                          <div className="font-bold border border-green-200 text-green-700 bg-green-50 inline-flex items-center px-2 py-1 print:px-1 print:py-0 rounded">
+                                          <div className="font-bold border border-green-200 text-green-700 bg-green-50 inline-flex items-center px-2 py-1 rounded">
                                             Passed
                                             {parsed.gpa && parsed.gpa !== 'Passed' && (
                                               <>
@@ -758,6 +758,10 @@ export default function ResultView() {
                               })}
                             </tbody>
                           </table>
+                        </div>
+
+                        <div className="hidden print:block text-center text-[10px] text-gray-500 mt-4 pt-4 border-t border-gray-200">
+                          Printed from <strong className="text-gray-700">BTEB Result Library</strong> &bull; {window.location.origin}
                         </div>
                       </>
                     );
