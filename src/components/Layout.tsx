@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LogOut, LayoutDashboard, Search, FileText, Users, Building2, CalendarRange, Calculator, Menu, X, Lock } from 'lucide-react';
+import { LogOut, LayoutDashboard, Search, FileText, Users, Building2, CalendarRange, Calculator, Menu, X, Lock, BookCopy } from 'lucide-react';
 import { signOut } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function Layout() {
   const { user, isAdmin } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
 
   // Close mobile menu when route changes
@@ -16,9 +17,20 @@ export default function Layout() {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className={cn(
+        "sticky top-0 z-50 transition-all duration-300",
+        isScrolled ? "bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm" : "bg-white border-b border-transparent"
+      )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -46,6 +58,10 @@ export default function Layout() {
                 <Link to="/exam-routines" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
                   <CalendarRange className="w-4 h-4 mr-2" />
                   Exam Routines
+                </Link>
+                <Link to="/booklists" className="text-gray-600 hover:text-blue-700 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-600 text-sm font-medium transition-colors">
+                  <BookCopy className="w-4 h-4 mr-2" />
+                  Booklists
                 </Link>
               </nav>
             </div>
@@ -119,6 +135,9 @@ export default function Layout() {
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/exam-routines" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                 <CalendarRange className="w-5 h-5 text-gray-400" /> Exam Routines
               </Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/booklists" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                <BookCopy className="w-5 h-5 text-gray-400" /> Booklists
+              </Link>
               
               <div className="border-t border-gray-100 my-2 pt-2">
                 {!user && (
@@ -153,19 +172,38 @@ export default function Layout() {
         </motion.div>
       </main>
 
-      <footer className="bg-white border-t border-gray-200 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="text-center md:text-left">
-            <p className="text-sm font-medium text-gray-900">
+      <footer className="bg-white border-t border-gray-100 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-lg">
+                B
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 tracking-tight">BTEB Result Library</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Diploma Results in Bangladesh</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-600 font-medium">
+              <Link to="/individual-results" className="hover:text-blue-600 transition-colors">Individual</Link>
+              <Link to="/group-results" className="hover:text-blue-600 transition-colors">Group</Link>
+              <Link to="/calculator" className="hover:text-blue-600 transition-colors">CGPA</Link>
+              <Link to="/exam-routines" className="hover:text-blue-600 transition-colors">Routines</Link>
+              <Link to="/booklists" className="hover:text-blue-600 transition-colors">Booklists</Link>
+            </div>
+          </div>
+          
+          <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-gray-500">
               © {new Date().getFullYear()} BTEB Result Library. All rights reserved.
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Diploma Result in Bangladesh
-            </p>
+            <div className="flex items-center gap-2 text-sm text-gray-400 text-slate-500">
+              <span>Developed with</span>
+              <span className="text-red-500">❤</span>
+              <span>by Arafat Hossain</span>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 font-medium">
-            Dev by Arafat Hossain
-          </p>
         </div>
       </footer>
     </div>

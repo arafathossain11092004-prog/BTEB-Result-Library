@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Folder, FolderOpen, FileText, Download, Printer } from 'lucide-react';
+import { Folder, FolderOpen, BookCopy, Download, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import html2canvas from 'html2canvas';
 
-export default function ExamRoutines() {
-  const [routines, setRoutines] = useState<any[]>([]);
+export default function Booklists() {
+  const [booklists, setBooklists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const [expandedSem, setExpandedSem] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchRoutines().catch(console.error);
+    fetchBooklists().catch(console.error);
   }, []);
 
-  const fetchRoutines = async () => {
+  const fetchBooklists = async () => {
     try {
-      const q = query(collection(db, 'examRoutines'), orderBy('date', 'asc'));
+      const q = query(collection(db, 'booklists'), orderBy('createdAt', 'asc'));
       const snapshot = await getDocs(q);
-      setRoutines(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setBooklists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
       console.error(error);
     } finally {
@@ -27,7 +27,7 @@ export default function ExamRoutines() {
     }
   };
 
-  const grouped = routines.reduce((acc, curr) => {
+  const grouped = booklists.reduce((acc, curr) => {
     if (!acc[curr.department]) acc[curr.department] = { code: curr.departmentCode || '', semesters: {} };
     if (!acc[curr.department].semesters[curr.semester]) acc[curr.department].semesters[curr.semester] = [];
     acc[curr.department].semesters[curr.semester].push(curr);
@@ -35,7 +35,7 @@ export default function ExamRoutines() {
   }, {});
 
   const handlePrint = (dept: string, sem: string) => {
-    const printContent = document.getElementById(`routine-${dept}-${sem}`);
+    const printContent = document.getElementById(`booklist-${dept}-${sem}`);
     if (printContent) {
       const originalContents = document.body.innerHTML;
       document.body.innerHTML = printContent.innerHTML;
@@ -46,7 +46,7 @@ export default function ExamRoutines() {
   };
 
   const handleDownloadPNG = async (dept: string, sem: string) => {
-    const printContent = document.getElementById(`routine-${dept}-${sem}`);
+    const printContent = document.getElementById(`booklist-${dept}-${sem}`);
     if (printContent) {
       // Temporarily make it visible for html2canvas
       printContent.parentElement!.classList.remove('hidden');
@@ -64,7 +64,7 @@ export default function ExamRoutines() {
         const image = canvas.toDataURL("image/png");
         const link = document.createElement('a');
         link.href = image;
-        link.download = `${dept}-${sem}-Routine.png`;
+        link.download = `${dept}-${sem}-Booklist.png`;
         link.click();
       } catch (err) {
         console.error("Error generating screenshot", err);
@@ -82,7 +82,7 @@ export default function ExamRoutines() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-blue-700">
         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-        <p className="mt-4 font-medium text-gray-600">Loading routines...</p>
+        <p className="mt-4 font-medium text-gray-600">Loading booklists...</p>
       </div>
     );
   }
@@ -91,13 +91,13 @@ export default function ExamRoutines() {
     <div className="flex flex-col items-center w-full px-4 sm:px-6 py-12 font-sans">
       <div className="w-full max-w-4xl space-y-8">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center print:hidden">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Exam Routines</h1>
-          <p className="text-gray-500">Browse and download exam schedules by department and semester.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Booklists</h1>
+          <p className="text-gray-500">Browse and download booklists by department and semester.</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden print:hidden">
           {Object.keys(grouped).length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No exam routines found.</div>
+            <div className="p-8 text-center text-gray-500">No booklists found.</div>
           ) : (
             <ul className="divide-y divide-gray-100">
               {Object.keys(grouped).map(dept => (
@@ -158,7 +158,7 @@ export default function ExamRoutines() {
                                 >
                                   <div className="bg-white border text-left border-gray-200 rounded-xl overflow-hidden mt-2 p-4">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                                      <h3 className="font-bold text-gray-800">{dept} - {sem} Semester Routine</h3>
+                                      <h3 className="font-bold text-gray-800">{dept} - {sem} Semester Booklist</h3>
                                       <div className="flex gap-2 w-full sm:w-auto">
                                         <button
                                           onClick={() => handlePrint(dept, sem)}
@@ -178,21 +178,19 @@ export default function ExamRoutines() {
                                       <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 text-gray-700 uppercase text-[11px] tracking-wider">
                                           <tr>
-                                            <th className="px-4 py-3 border-b font-semibold">Date & Day</th>
-                                            <th className="px-4 py-3 border-b font-semibold">Time</th>
                                             <th className="px-4 py-3 border-b font-semibold">Subject Name</th>
-                                            <th className="px-4 py-3 border-b font-semibold">Code</th>
+                                            <th className="px-4 py-3 border-b font-semibold">Subject Code</th>
                                           </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
                                           {grouped[dept].semesters[sem].map((subject: any) => (
                                             <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
-                                              <td className="px-4 py-3 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{subject.date}</div>
-                                                {subject.day && <div className="text-xs text-gray-500 mt-0.5">{subject.day}</div>}
+                                              <td className="px-4 py-3 font-medium text-gray-800">
+                                                <div className="flex gap-2 items-center">
+                                                  <BookCopy className="w-4 h-4 text-gray-400" />
+                                                  {subject.subjectName}
+                                                </div>
                                               </td>
-                                              <td className="px-4 py-3 whitespace-nowrap text-gray-700">{subject.time}</td>
-                                              <td className="px-4 py-3 font-medium text-gray-800">{subject.subjectName}</td>
                                               <td className="px-4 py-3">
                                                 <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">
                                                   {subject.subjectCode}
@@ -222,20 +220,18 @@ export default function ExamRoutines() {
         <div className="hidden">
           {Object.keys(grouped).map(dept => 
             Object.keys(grouped[dept].semesters).map(sem => (
-              <div key={`print-${dept}-${sem}`} id={`routine-${dept}-${sem}`} className="bg-white p-8" style={{ width: '800px', display: 'none' }}>
+              <div key={`print-${dept}-${sem}`} id={`booklist-${dept}-${sem}`} className="bg-white p-8" style={{ width: '800px', display: 'none' }}>
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-50 text-blue-700 font-bold text-2xl mb-3">
                     B
                   </div>
-                  <h1 className="text-2xl font-bold mb-2 text-gray-900">Exam Routine</h1>
+                  <h1 className="text-2xl font-bold mb-2 text-gray-900">Booklist</h1>
                   <h2 className="text-xl font-semibold text-gray-700">{dept} - {sem} Semester</h2>
                   {grouped[dept].code && <p className="text-sm text-gray-500 mt-1">Department Code: {grouped[dept].code}</p>}
                 </div>
                 <table className="w-full text-sm text-left border-collapse border border-gray-300">
                   <thead className="bg-gray-100 text-gray-800">
                     <tr>
-                      <th className="px-4 py-3 border border-gray-300 font-semibold">Date & Day</th>
-                      <th className="px-4 py-3 border border-gray-300 font-semibold">Time</th>
                       <th className="px-4 py-3 border border-gray-300 font-semibold">Subject Name</th>
                       <th className="px-4 py-3 border border-gray-300 font-semibold">Subject Code</th>
                     </tr>
@@ -243,11 +239,6 @@ export default function ExamRoutines() {
                   <tbody>
                     {grouped[dept].semesters[sem].map((subject: any) => (
                       <tr key={`print-row-${subject.id}`} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 border border-gray-300">
-                          <span className="font-medium">{subject.date}</span>
-                          {subject.day && <span className="text-gray-500 block text-xs">{subject.day}</span>}
-                        </td>
-                        <td className="px-4 py-3 border border-gray-300">{subject.time}</td>
                         <td className="px-4 py-3 border border-gray-300 font-medium">{subject.subjectName}</td>
                         <td className="px-4 py-3 border border-gray-300 font-mono text-gray-600">{subject.subjectCode}</td>
                       </tr>

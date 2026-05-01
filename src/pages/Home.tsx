@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, Calculator, ArrowRight, GraduationCap } from 'lucide-react';
+import { Search, Users, Calculator, ArrowRight, GraduationCap, CalendarRange, BookCopy } from 'lucide-react';
 import { collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -43,32 +43,46 @@ export default function Home() {
       description: "Quickly view detailed individual polytechnic results for any semester.",
       icon: <Search className="w-8 h-8" strokeWidth={1.5} />,
       color: "blue",
-      path: "/individual-results"
+      path: "/individual-results",
+      actionText: "Start Check"
     },
     {
       title: "Group Result",
       description: "Check multiple results at once using a roll number range.",
       icon: <Users className="w-8 h-8" strokeWidth={1.5} />,
       color: "indigo",
-      path: "/group-results"
+      path: "/group-results",
+      actionText: "Start Check"
     },
     {
       title: "CGPA Calculator",
       description: "Calculate your final CGPA using semester-wise weights automatically.",
       icon: <Calculator className="w-8 h-8" strokeWidth={1.5} />,
       color: "emerald",
-      path: "/calculator"
+      path: "/calculator",
+      actionText: "Calculate"
+    },
+    {
+      title: "Exam Routines",
+      description: "Browse and download your upcoming exam schedules.",
+      icon: <CalendarRange className="w-8 h-8" strokeWidth={1.5} />,
+      color: "purple",
+      path: "/exam-routines",
+      actionText: "View Routines"
+    },
+    {
+      title: "Booklists",
+      description: "Find complete semester-wise subject and book code lists.",
+      icon: <BookCopy className="w-8 h-8" strokeWidth={1.5} />,
+      color: "pink",
+      path: "/booklists",
+      actionText: "Browse Books"
     }
   ];
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center overflow-x-hidden bg-slate-50 font-sans px-4 sm:px-6 py-12">
-      {/* Background patterns */}
-      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/4 z-0 w-[400px] h-[400px] bg-indigo-100/40 rounded-full blur-[80px] pointer-events-none"></div>
-
-      <div className="relative z-10 w-full max-w-5xl my-auto mb-8">
+    <div className="flex flex-col items-center w-full px-4 sm:px-6 py-12 font-sans">
+      <div className="w-full max-w-5xl my-auto mb-8">
         <div className="text-center mb-16">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
@@ -96,7 +110,7 @@ export default function Home() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 justify-center">
           {features.map((feature, idx) => (
             <motion.div
               key={feature.title}
@@ -105,13 +119,15 @@ export default function Home() {
               transition={{ delay: 0.3 + (idx * 0.1), duration: 0.6, type: "spring", bounce: 0.4 }}
               onClick={() => navigate(feature.path)}
             >
-              <div className="bg-white/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 rounded-3xl border border-white/60 p-8 h-full relative cursor-pointer group hover:-translate-y-2 transition-all duration-300">
+              <div className="bg-white/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 rounded-3xl border border-white/60 p-8 h-full flex flex-col relative cursor-pointer group hover:-translate-y-2 transition-all duration-300">
                 <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80 rounded-t-3xl"></div>
                 
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shrink-0
                   ${feature.color === 'blue' ? 'bg-blue-50 text-blue-600' : 
                     feature.color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
-                    'bg-emerald-50 text-emerald-600'} 
+                    feature.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : 
+                    feature.color === 'purple' ? 'bg-purple-50 text-purple-600' :
+                    'bg-pink-50 text-pink-600'} 
                   group-hover:scale-110 transition-transform duration-300`}>
                   {feature.icon}
                 </div>
@@ -121,8 +137,8 @@ export default function Home() {
                   {feature.description}
                 </p>
 
-                <div className="mt-auto flex items-center text-sm font-bold text-slate-900">
-                  <span className="group-hover:text-blue-600 transition-colors">Start Check</span>
+                <div className="mt-auto flex items-center text-sm font-bold text-slate-900 pt-4">
+                  <span className="group-hover:text-blue-600 transition-colors">{feature.actionText}</span>
                   <ArrowRight className="w-4 h-4 ml-2 max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 text-blue-600" />
                 </div>
               </div>

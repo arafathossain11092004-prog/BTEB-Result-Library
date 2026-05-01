@@ -12,10 +12,12 @@ import GroupResults from './pages/GroupResults';
 import ResultView from './pages/ResultView';
 import Calculator from './pages/Calculator';
 import ExamRoutines from './pages/ExamRoutines';
+import Booklists from './pages/Booklists';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminResults from './pages/admin/Results';
 import AdminExamRoutines from './pages/admin/ExamRoutines';
+import AdminBooklists from './pages/admin/Booklists';
 import AdminNotices from './pages/admin/Notices';
 import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
@@ -46,6 +48,7 @@ export default function App() {
             <Route path="result" element={<ResultView />} />
             <Route path="calculator" element={<Calculator />} />
             <Route path="exam-routines" element={<ExamRoutines />} />
+            <Route path="booklists" element={<Booklists />} />
             <Route path="admin/login" element={<AdminLogin />} />
             <Route 
               path="admin" 
@@ -58,6 +61,10 @@ export default function App() {
             <Route 
               path="admin/schedules" 
               element={<AdminRoute><AdminExamRoutines /></AdminRoute>} 
+            />
+            <Route 
+              path="admin/booklists" 
+              element={<AdminRoute><AdminBooklists /></AdminRoute>} 
             />
             <Route 
               path="admin/notices" 

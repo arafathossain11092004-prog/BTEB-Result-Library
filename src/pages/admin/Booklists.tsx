@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, addDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
-import { Plus, Trash2, Loader2, CalendarRange, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, BookCopy, X } from 'lucide-react';
 
-export default function AdminExamRoutines() {
-  const [routines, setRoutines] = useState<any[]>([]);
+export default function AdminBooklists() {
+  const [booklists, setBooklists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
@@ -12,20 +12,21 @@ export default function AdminExamRoutines() {
   const [department, setDepartment] = useState('');
   const [customDepartment, setCustomDepartment] = useState('');
   const [departmentCode, setDepartmentCode] = useState('');
-  const [subjects, setSubjects] = useState([{ subjectName: '', subjectCode: '', date: '', day: '', time: '' }]);
+  const [subjects, setSubjects] = useState([{ subjectName: '', subjectCode: '' }]);
   
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchRoutines().catch(console.error);
+    fetchBooklists().catch(console.error);
   }, []);
 
-  const fetchRoutines = async () => {
+  const fetchBooklists = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'examRoutines'), orderBy('date', 'desc'), limit(100));
+      // Order by createdAt descending for recent entries
+      const q = query(collection(db, 'booklists'), orderBy('createdAt', 'desc'), limit(100));
       const snapshot = await getDocs(q);
-      setRoutines(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setBooklists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
       console.error(error);
     } finally {
@@ -34,7 +35,7 @@ export default function AdminExamRoutines() {
   };
 
   const handleAddSubjectField = () => {
-    setSubjects([...subjects, { subjectName: '', subjectCode: '', date: '', day: '', time: '' }]);
+    setSubjects([...subjects, { subjectName: '', subjectCode: '' }]);
   };
 
   const handleRemoveSubjectField = (index: number) => {
@@ -54,7 +55,7 @@ export default function AdminExamRoutines() {
       const finalDept = department === 'Other' ? customDepartment : department;
       const batch = writeBatch(db);
       subjects.forEach(subject => {
-         const newDocRef = doc(collection(db, 'examRoutines'));
+         const newDocRef = doc(collection(db, 'booklists'));
          batch.set(newDocRef, {
            semester,
            department: finalDept,
@@ -71,11 +72,11 @@ export default function AdminExamRoutines() {
       setDepartment('');
       setCustomDepartment('');
       setDepartmentCode('');
-      setSubjects([{ subjectName: '', subjectCode: '', date: '', day: '', time: '' }]);
-      fetchRoutines().catch(console.error);
+      setSubjects([{ subjectName: '', subjectCode: '' }]);
+      fetchBooklists().catch(console.error);
     } catch (error) {
       try {
-        handleFirestoreError(error, OperationType.CREATE, 'examRoutines');
+        handleFirestoreError(error, OperationType.CREATE, 'booklists');
       } catch (e) {}
     } finally {
       setSaving(false);
@@ -83,13 +84,13 @@ export default function AdminExamRoutines() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this routine?')) {
+    if (confirm('Are you sure you want to delete this book?')) {
       try {
-        await deleteDoc(doc(db, 'examRoutines', id));
-        fetchRoutines().catch(console.error);
+        await deleteDoc(doc(db, 'booklists', id));
+        fetchBooklists().catch(console.error);
       } catch (error) {
         try {
-          handleFirestoreError(error, OperationType.DELETE, `examRoutines/${id}`);
+          handleFirestoreError(error, OperationType.DELETE, `booklists/${id}`);
         } catch (e) {}
       }
     }
@@ -99,18 +100,18 @@ export default function AdminExamRoutines() {
     <div className="max-w-5xl mx-auto space-y-6 lg:px-0 px-4">
       <div className="flex justify-between items-center border-b border-gray-200 pb-6 mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Exam Routines</h1>
-          <p className="text-sm text-gray-500">Add or remove exam routines by semester.</p>
+          <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Booklists</h1>
+          <p className="text-sm text-gray-500">Add or remove booklists by semester.</p>
         </div>
         <button
           onClick={() => {
             setShowForm(!showForm);
-            setSubjects([{ subjectName: '', subjectCode: '', date: '', time: '' }]);
+            setSubjects([{ subjectName: '', subjectCode: '' }]);
           }}
           className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Subject
+          Add Subjects
         </button>
       </div>
 
@@ -152,7 +153,7 @@ export default function AdminExamRoutines() {
 
           <div className="space-y-4">
             {subjects.map((subject, index) => (
-              <div key={index} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end p-4 bg-gray-50 rounded-xl border border-gray-100 relative">
+              <div key={index} className="flex gap-4 items-end p-4 bg-gray-50 rounded-xl border border-gray-100 relative">
                 {subjects.length > 1 && (
                    <button 
                      type="button" 
@@ -163,28 +164,13 @@ export default function AdminExamRoutines() {
                      <X className="w-4 h-4" />
                    </button>
                 )}
-                <div className="lg:col-span-3">
+                <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Subject Name *</label>
                   <input required type="text" value={subject.subjectName} onChange={e => handleSubjectChange(index, 'subjectName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm" />
                 </div>
-                <div className="lg:col-span-2">
+                <div className="w-1/3">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Subject Code *</label>
                   <input required type="text" value={subject.subjectCode} onChange={e => handleSubjectChange(index, 'subjectCode', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm" />
-                </div>
-                <div className="lg:col-span-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
-                  <input required type="date" value={subject.date} onChange={e => handleSubjectChange(index, 'date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm" />
-                </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Day *</label>
-                  <select required value={subject.day} onChange={e => handleSubjectChange(index, 'day', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
-                    <option value="">Select Day</option>
-                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => <option key={day} value={day}>{day}</option>)}
-                  </select>
-                </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Time *</label>
-                  <input required type="time" value={subject.time} onChange={e => handleSubjectChange(index, 'time', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm" />
                 </div>
               </div>
             ))}
@@ -221,16 +207,15 @@ export default function AdminExamRoutines() {
                 <th className="py-3 px-4 font-medium">Semester</th>
                 <th className="py-3 px-4 font-medium">Department</th>
                 <th className="py-3 px-4 font-medium">Subject</th>
-                <th className="py-3 px-4 font-medium hidden sm:table-cell">Code</th>
-                <th className="py-3 px-4 font-medium">Date, Day & Time</th>
+                <th className="py-3 px-4 font-medium">Code</th>
                 <th className="py-3 px-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {routines.length === 0 ? (
-                 <tr><td colSpan={6} className="py-8 text-center text-gray-500">No routines found.</td></tr>
+              {booklists.length === 0 ? (
+                 <tr><td colSpan={5} className="py-8 text-center text-gray-500">No booklists found.</td></tr>
               ) : (
-                routines.map(r => (
+                booklists.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4 text-gray-900 font-medium">{r.semester}</td>
                     <td className="py-3 px-4 text-gray-600">
@@ -238,10 +223,7 @@ export default function AdminExamRoutines() {
                       {r.departmentCode && <span className="block text-xs text-blue-600 font-semibold">{r.departmentCode}</span>}
                     </td>
                     <td className="py-3 px-4 text-gray-900">{r.subjectName}</td>
-                    <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{r.subjectCode}</td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {r.date} {r.day && `(${r.day})`} <span className="text-gray-400">at</span> {r.time}
-                    </td>
+                    <td className="py-3 px-4 text-gray-600">{r.subjectCode}</td>
                     <td className="py-3 px-4 text-right">
                       <button onClick={() => handleDelete(r.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
                         <Trash2 className="w-4 h-4" />
@@ -257,4 +239,3 @@ export default function AdminExamRoutines() {
     </div>
   );
 }
-

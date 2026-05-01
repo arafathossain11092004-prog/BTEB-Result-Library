@@ -514,13 +514,8 @@ export default function ResultView() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] bg-slate-50 font-sans px-4 sm:px-6 py-6 sm:py-8 overflow-x-hidden w-full">
-      {/* Background patterns */}
-      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/4 z-0 w-[400px] h-[400px] bg-indigo-100/40 rounded-full blur-[80px] pointer-events-none"></div>
-
-      <div className="relative z-10 max-w-5xl mx-auto pb-10 mt-2 lg:px-4">
+    <div className="w-full font-sans px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
+      <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4">
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />

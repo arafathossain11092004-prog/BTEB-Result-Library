@@ -63,13 +63,8 @@ export default function AdminLogin() {
   if (loading) return null;
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden bg-slate-50 font-sans px-4 sm:px-6">
-      {/* Background patterns */}
-      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/4 z-0 w-[400px] h-[400px] bg-indigo-100/40 rounded-full blur-[80px] pointer-events-none"></div>
-
-      <div className="relative z-10 w-full max-w-md pb-12 mt-8 sm:mt-0">
+    <div className="flex flex-col items-center justify-center w-full px-4 sm:px-6 py-12 font-sans">
+      <div className="w-full max-w-md pb-12 mt-8 sm:mt-0">
         <div className="text-center mb-10">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
