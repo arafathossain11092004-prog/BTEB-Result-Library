@@ -89,22 +89,8 @@ export default function Booklists() {
   const handleDownloadPNG = async () => {
     const printContent = document.getElementById('print-booklist-container');
     if (printContent) {
-      // Create a clone to avoid reflows and class toggling issues
-      const clone = printContent.cloneNode(true) as HTMLElement;
-      clone.classList.remove('hidden');
-      clone.classList.remove('print:block');
-      clone.classList.remove('fixed');
-      clone.classList.remove('inset-0');
-      clone.style.display = 'block';
-      clone.style.position = 'absolute';
-      clone.style.top = '-9999px';
-      clone.style.left = '-9999px';
-      clone.style.width = '800px';
-      
-      document.body.appendChild(clone);
-      
       try {
-        const canvas = await html2canvas(clone, {
+        const canvas = await html2canvas(printContent, {
           scale: 2, // Higher resolution
           backgroundColor: '#ffffff',
           logging: false
@@ -117,8 +103,6 @@ export default function Booklists() {
         link.click();
       } catch (err) {
         console.error("Error generating screenshot", err);
-      } finally {
-        document.body.removeChild(clone);
       }
     }
   };
@@ -373,7 +357,7 @@ export default function Booklists() {
       </div>
 
       {/* Print View Layout */}
-      <div id="print-booklist-container" className="hidden print:block fixed inset-0 bg-white z-[9999] p-10">
+      <div id="print-booklist-container" className="absolute -left-[9999px] top-0 w-[800px] bg-white p-10 print:static print:w-auto print:block">
         <div className="text-center mb-10 pb-6 border-b-2 border-gray-800">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Booklist</h1>
           <h2 className="text-xl font-bold text-gray-800 mb-2">{activeCurriculum}</h2>
