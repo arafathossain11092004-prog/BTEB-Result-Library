@@ -11,6 +11,7 @@ export default function ExamRoutines() {
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const [expandedSem, setExpandedSem] = useState<string | null>(null);
 
+  const [activeCurriculum, setActiveCurriculum] = useState<string | null>(null);
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +25,9 @@ export default function ExamRoutines() {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRoutines(data);
       
+      const currs = Array.from(new Set(data.map((r: any) => r.curriculum || 'Unknown'))).sort().reverse();
+      if (currs.length > 0) setActiveCurriculum(currs[0]);
+
       const regs = Array.from(new Set(data.map((r: any) => r.regulation || 'Unknown'))).sort().reverse();
       if (regs.length > 0) setActiveRegulation(regs[0]);
     } catch (error) {
@@ -33,8 +37,21 @@ export default function ExamRoutines() {
     }
   };
 
-  const filteredRoutines = routines.filter(r => (r.regulation || 'Unknown') === activeRegulation);
-  const regulations = Array.from(new Set(routines.map(r => r.regulation || 'Unknown'))).sort().reverse();
+  useEffect(() => {
+    if (activeCurriculum && routines.length > 0) {
+      const regsForCurr = Array.from(new Set(routines.filter(r => (r.curriculum || 'Unknown') === activeCurriculum).map(r => r.regulation || 'Unknown'))).sort().reverse();
+      if (!regsForCurr.includes(activeRegulation || '')) {
+        setActiveRegulation(regsForCurr.length > 0 ? regsForCurr[0] : null);
+      }
+    }
+  }, [activeCurriculum, routines]);
+
+  const filteredRoutines = routines.filter(
+    r => (r.curriculum || 'Unknown') === activeCurriculum && (r.regulation || 'Unknown') === activeRegulation
+  );
+  
+  const curriculums = Array.from(new Set(routines.map(r => r.curriculum || 'Unknown'))).sort().reverse();
+  const regulations = Array.from(new Set(routines.filter(r => (r.curriculum || 'Unknown') === activeCurriculum).map(r => r.regulation || 'Unknown'))).sort().reverse();
 
   const grouped = filteredRoutines.reduce((acc, curr) => {
     if (!acc[curr.department]) acc[curr.department] = { code: curr.departmentCode || '', semesters: {} };
@@ -101,30 +118,55 @@ export default function ExamRoutines() {
       <div className="w-full max-w-4xl space-y-8">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center print:hidden">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Exam Routines</h1>
-          <p className="text-gray-500">Browse and download exam schedules by department and semester.</p>
-        </div>
+          <p className="text-gray-500 mb-6">Browse and download exam schedules by department and semester.</p>
 
-        {regulations.length > 0 && (
-          <div className="flex justify-center gap-2 mb-6 print:hidden">
-            {regulations.map(reg => (
-              <button
-                key={reg}
-                onClick={() => {
-                  setActiveRegulation(reg);
-                  setExpandedDept(null);
-                  setExpandedSem(null);
-                }}
-                className={`px-6 py-2 rounded-full font-medium text-sm transition-all ${
-                  activeRegulation === reg 
-                    ? 'bg-blue-600 text-white shadow-md' 
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {reg === 'Unknown' ? 'Other' : `${reg} Probidhan`}
-              </button>
-            ))}
+          <div className="flex flex-col gap-4">
+            {curriculums.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2">
+                {curriculums.map(curr => (
+                  <button
+                    key={curr}
+                    onClick={() => {
+                      setActiveCurriculum(curr);
+                      setActiveRegulation(null); // will effect in useEffect or next render
+                      setExpandedDept(null);
+                      setExpandedSem(null);
+                    }}
+                    className={`px-5 py-2 rounded-xl font-medium text-sm transition-all ${
+                      activeCurriculum === curr 
+                        ? 'bg-slate-900 text-white shadow-md' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {curr === 'Unknown' ? 'Other Curriculum' : curr}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {regulations.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2">
+                {regulations.map(reg => (
+                  <button
+                    key={reg}
+                    onClick={() => {
+                      setActiveRegulation(reg);
+                      setExpandedDept(null);
+                      setExpandedSem(null);
+                    }}
+                    className={`px-5 py-2 rounded-xl font-medium text-sm transition-all ${
+                      activeRegulation === reg 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {reg === 'Unknown' ? 'Other Regulation' : `${reg} Probidhan`}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden print:hidden">
           {Object.keys(grouped).length === 0 ? (

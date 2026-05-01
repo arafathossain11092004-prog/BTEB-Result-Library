@@ -18,8 +18,6 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminResults from './pages/admin/Results';
 import AdminExamRoutines from './pages/admin/ExamRoutines';
 import AdminBooklists from './pages/admin/Booklists';
-import AdminNotices from './pages/admin/Notices';
-import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
 
 import { ReactNode } from 'react';
@@ -65,14 +63,6 @@ export default function App() {
             <Route 
               path="admin/booklists" 
               element={<AdminRoute><AdminBooklists /></AdminRoute>} 
-            />
-            <Route 
-              path="admin/notices" 
-              element={<AdminRoute><AdminNotices /></AdminRoute>} 
-            />
-            <Route 
-              path="admin/users" 
-              element={<AdminRoute><AdminUsers /></AdminRoute>} 
             />
             <Route 
               path="admin/settings" 

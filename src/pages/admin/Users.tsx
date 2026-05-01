@@ -88,7 +88,7 @@ export default function AdminUsers() {
     <div className="max-w-4xl mx-auto space-y-6 lg:px-0 px-4">
       <div className="flex justify-between items-center border-b border-gray-200 pb-6 mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Admins</h1>
+          <h2 className="text-xl font-bold font-heading text-gray-900">Manage Admins</h2>
           <p className="text-sm text-gray-500">Add or remove administrator access.</p>
         </div>
         <button

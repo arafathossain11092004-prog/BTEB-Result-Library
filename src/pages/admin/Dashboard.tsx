@@ -28,22 +28,6 @@ export default function AdminDashboard() {
       bg: 'bg-pink-50',
     },
     {
-      title: 'Notice Board',
-      description: 'Upload PDF notices for the portal.',
-      icon: FileText,
-      to: '/admin/notices',
-      color: 'text-orange-600',
-      bg: 'bg-orange-50',
-    },
-    {
-      title: 'Manage Admins',
-      description: 'Add or remove administrator access.',
-      icon: ShieldCheck,
-      to: '/admin/users',
-      color: 'text-green-600',
-      bg: 'bg-green-50',
-    },
-    {
       title: 'System Settings',
       description: 'Configure banner images and application preferences.',
       icon: Settings,
@@ -57,7 +41,7 @@ export default function AdminDashboard() {
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-500">Welcome to the BTEB Result Hub admin control panel.</p>
+        <p className="text-gray-500">Welcome to the BTEB Result Library admin control panel.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

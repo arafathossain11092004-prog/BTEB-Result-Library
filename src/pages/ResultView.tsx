@@ -514,8 +514,8 @@ export default function ResultView() {
   }
 
   return (
-    <div className="w-full font-sans px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
-      <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4">
+    <div className="w-full font-sans px-4 sm:px-6 py-6 sm:py-8 lg:py-10 print:py-0 print:px-0 print:m-0">
+      <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0">
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -564,34 +564,34 @@ export default function ResultView() {
 
       <div 
         ref={resultRef}
-        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10'}`}
+        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10 print:p-0'}`}
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80 rounded-t-3xl print:hidden"></div>
         {type === 'individual' ? (
-           <div className="space-y-12">
+           <div className="space-y-12 print:space-y-0">
              {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
-               <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4">
-                  <div className="pb-6 border-b border-gray-200">
-                     <div className="text-center mb-8">
-                       <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wider text-gray-800">Academic Result</h2>
+               <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4 print:space-y-1">
+                  <div className="pb-6 print:pb-1 border-b border-gray-200">
+                     <div className="text-center mb-8 print:mb-1">
+                       <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wider text-gray-800 print:text-base">Academic Result</h2>
                      </div>
-                     <table className="w-full text-left text-sm sm:text-base">
+                     <table className="w-full text-left text-sm sm:text-base print:text-[10px]">
                        <tbody>
                          <tr>
-                           <td className="py-1.5 font-semibold text-gray-600 w-32 sm:w-48 align-top">Roll No</td>
-                           <td className="py-1.5 font-bold text-gray-900 border-b border-gray-100">: {resultItem.rollNumber}</td>
+                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 w-32 sm:w-48 align-top">Roll No</td>
+                           <td className="py-1.5 print:py-0 font-bold text-gray-900 border-b border-gray-100">: {resultItem.rollNumber}</td>
                          </tr>
                          <tr>
-                           <td className="py-1.5 font-semibold text-gray-600 align-top">Institute</td>
-                           <td className="py-1.5 text-gray-800 border-b border-gray-100">: {resultItem.instituteName}</td>
+                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 align-top">Institute</td>
+                           <td className="py-1.5 print:py-0 text-gray-800 border-b border-gray-100">: {resultItem.instituteName}</td>
                          </tr>
                          <tr>
-                           <td className="py-1.5 font-semibold text-gray-600 align-top">Curriculum</td>
-                           <td className="py-1.5 text-gray-800 border-b border-gray-100">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
+                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 align-top">Curriculum</td>
+                           <td className="py-1.5 print:py-0 text-gray-800 border-b border-gray-100">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
                          </tr>
                          <tr>
-                           <td className="py-1.5 font-semibold text-gray-600 align-top">Regulation</td>
-                           <td className="py-1.5 text-gray-800 border-b border-gray-100">: {resultItem.regulation || 'N/A'}</td>
+                           <td className="py-1.5 print:py-0 font-semibold text-gray-600 align-top">Regulation</td>
+                           <td className="py-1.5 print:py-0 text-gray-800 border-b border-gray-100">: {resultItem.regulation || 'N/A'}</td>
                          </tr>
                        </tbody>
                      </table>
@@ -673,21 +673,21 @@ export default function ResultView() {
                     return (
                       <>
                         {cgpaValue && (
-                          <div className="bg-green-50 text-green-700 border border-green-200 rounded p-4 text-center mb-6 font-bold text-lg shadow-sm">
+                          <div className="bg-green-50 text-green-700 border border-green-200 rounded p-4 print:p-1 text-center mb-6 print:mb-1 font-bold text-lg print:text-xs shadow-sm print:shadow-none">
                             Congratulation Your Total CGPA is : {cgpaValue}
                           </div>
                         )}
                         {totalReferredCount > 0 && (
-                          <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4 text-center mb-6 font-semibold shadow-sm">
+                          <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4 print:p-1 text-center mb-6 print:mb-1 font-semibold print:text-[10px] shadow-sm print:shadow-none">
                             ⚠️ Student has {totalReferredCount} referred subject{totalReferredCount > 1 ? 's' : ''} in total.
                           </div>
                         )}
-                        <div className="mt-8 border border-gray-300 overflow-hidden rounded-md shadow-sm">
-                          <table className="w-full text-left text-sm sm:text-base bg-white">
+                        <div className="mt-8 print:mt-1 border border-gray-300 overflow-hidden rounded-md shadow-sm print:shadow-none">
+                          <table className="w-full text-left text-sm sm:text-base print:text-[10px] bg-white">
                             <thead className="bg-[#f2f2f2] border-b border-gray-300 text-gray-800">
                               <tr>
-                                <th className="py-3 px-4 font-semibold border-r border-gray-300 w-1/3">Semester</th>
-                                <th className="py-3 px-4 font-semibold">Result</th>
+                                <th className="py-3 px-4 print:py-0.5 print:px-1 font-semibold border-r border-gray-300 w-1/3">Semester</th>
+                                <th className="py-3 px-4 print:py-0.5 print:px-1 font-semibold">Result</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
@@ -697,12 +697,12 @@ export default function ResultView() {
                                  const isPassed = parsed.type === 'passed';
                                  
                                  return (
-                                   <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                     <td className="py-3 px-4 border-r border-gray-200 align-top bg-white">
+                                   <tr key={i} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
+                                     <td className="py-3 px-4 print:py-0.5 print:px-1 border-r border-gray-200 align-top bg-white">
                                        <div className="font-semibold text-gray-800">{sem.label}</div>
                                        {parsed.date && (
-                                         <div className="text-xs text-gray-500 mt-1 flex items-center">
-                                            <Calendar className="w-3 h-3 mr-1" />
+                                         <div className="text-xs print:text-[8px] text-gray-500 mt-1 print:mt-0 flex items-center">
+                                            <Calendar className="w-3 h-3 print:w-2 print:h-2 mr-1" />
                                             {(() => {
                                               try {
                                                 const dateStr = parsed.date.split('T')[0];
@@ -726,9 +726,9 @@ export default function ResultView() {
                                          </div>
                                        )}
                                      </td>
-                                     <td className="py-3 px-4 align-top">
+                                     <td className="py-3 px-4 print:py-0.5 print:px-1 align-top">
                                         {isPassed || parsed.gpa ? (
-                                          <div className="font-bold border border-green-200 text-green-700 bg-green-50 inline-flex items-center px-2 py-1 rounded">
+                                          <div className="font-bold border border-green-200 text-green-700 bg-green-50 inline-flex items-center px-2 py-1 print:px-1 print:py-0 rounded">
                                             Passed
                                             {parsed.gpa && parsed.gpa !== 'Passed' && (
                                               <>

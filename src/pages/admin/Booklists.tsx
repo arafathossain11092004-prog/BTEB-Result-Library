@@ -12,6 +12,8 @@ export default function AdminBooklists() {
   const [department, setDepartment] = useState('');
   const [customDepartment, setCustomDepartment] = useState('');
   const [departmentCode, setDepartmentCode] = useState('');
+  const [curriculum, setCurriculum] = useState('');
+  const [customCurriculum, setCustomCurriculum] = useState('');
   const [regulation, setRegulation] = useState('');
   const [subjects, setSubjects] = useState([{ subjectName: '', subjectCode: '' }]);
   
@@ -54,10 +56,12 @@ export default function AdminBooklists() {
     setSaving(true);
     try {
       const finalDept = department === 'Other' ? customDepartment : department;
+      const finalCurr = curriculum === 'Other' ? customCurriculum : curriculum;
       const batch = writeBatch(db);
       subjects.forEach(subject => {
          const newDocRef = doc(collection(db, 'booklists'));
          batch.set(newDocRef, {
+           curriculum: finalCurr,
            regulation,
            semester,
            department: finalDept,
@@ -70,6 +74,8 @@ export default function AdminBooklists() {
       await batch.commit();
 
       setShowForm(false);
+      setCurriculum('');
+      setCustomCurriculum('');
       setRegulation('');
       setSemester('');
       setDepartment('');
@@ -125,6 +131,28 @@ export default function AdminBooklists() {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum *</label>
+              <select required value={curriculum} onChange={e => setCurriculum(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                 <option value="">Select Curriculum</option>
+                 <option value="Diploma in Engineering">Diploma in Engineering</option>
+                 <option value="Diploma in Textile Engineering">Diploma in Textile Engineering</option>
+                 <option value="Diploma in Agriculture">Diploma in Agriculture</option>
+                 <option value="Diploma in Fisheries">Diploma in Fisheries</option>
+                 <option value="Diploma in Forestry">Diploma in Forestry</option>
+                 <option value="Diploma in Livestock">Diploma in Livestock</option>
+                 <option value="Basic Trade (360 hrs)">Basic Trade (360 hrs)</option>
+                 <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {curriculum === 'Other' && (
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Other Curriculum *</label>
+                <input required type="text" value={customCurriculum} onChange={e => setCustomCurriculum(e.target.value)} placeholder="Enter curriculum name" className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              </div>
+            )}
+
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Regulation *</label>
               <select required value={regulation} onChange={e => setRegulation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
@@ -215,6 +243,7 @@ export default function AdminBooklists() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 text-left">
               <tr>
+                <th className="py-3 px-4 font-medium">Curriculum</th>
                 <th className="py-3 px-4 font-medium">Regulation</th>
                 <th className="py-3 px-4 font-medium">Semester</th>
                 <th className="py-3 px-4 font-medium">Department</th>
@@ -225,10 +254,11 @@ export default function AdminBooklists() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {booklists.length === 0 ? (
-                 <tr><td colSpan={6} className="py-8 text-center text-gray-500">No booklists found.</td></tr>
+                 <tr><td colSpan={7} className="py-8 text-center text-gray-500">No booklists found.</td></tr>
               ) : (
                 booklists.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{r.curriculum || 'N/A'}</td>
                     <td className="py-3 px-4 text-gray-900 font-medium">{r.regulation || 'N/A'}</td>
                     <td className="py-3 px-4 text-gray-900 font-medium">{r.semester}</td>
                     <td className="py-3 px-4 text-gray-600">
