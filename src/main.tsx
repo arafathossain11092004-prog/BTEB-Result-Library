@@ -5,7 +5,7 @@ import './index.css';
 
 // Global Error Handler for Unhandled Rejections and Runtime Errors
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled Promise Rejection:', event.reason);
+  console.error('Unhandled Promise Rejection:', event.reason || event);
   // Optionally, you can send this error to your monitoring service
 });
 
