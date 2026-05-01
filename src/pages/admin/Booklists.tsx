@@ -12,6 +12,7 @@ export default function AdminBooklists() {
   const [department, setDepartment] = useState('');
   const [customDepartment, setCustomDepartment] = useState('');
   const [departmentCode, setDepartmentCode] = useState('');
+  const [regulation, setRegulation] = useState('');
   const [subjects, setSubjects] = useState([{ subjectName: '', subjectCode: '' }]);
   
   const [saving, setSaving] = useState(false);
@@ -57,6 +58,7 @@ export default function AdminBooklists() {
       subjects.forEach(subject => {
          const newDocRef = doc(collection(db, 'booklists'));
          batch.set(newDocRef, {
+           regulation,
            semester,
            department: finalDept,
            departmentCode,
@@ -68,6 +70,7 @@ export default function AdminBooklists() {
       await batch.commit();
 
       setShowForm(false);
+      setRegulation('');
       setSemester('');
       setDepartment('');
       setCustomDepartment('');
@@ -122,6 +125,14 @@ export default function AdminBooklists() {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Regulation *</label>
+              <select required value={regulation} onChange={e => setRegulation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                 <option value="">Select Regulation</option>
+                 {['2022', '2016', '2010'].map(r => <option key={r} value={r}>{r} Probidhan</option>)}
+              </select>
+            </div>
+            
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Semester *</label>
               <select required value={semester} onChange={e => setSemester(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
@@ -204,6 +215,7 @@ export default function AdminBooklists() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 text-left">
               <tr>
+                <th className="py-3 px-4 font-medium">Regulation</th>
                 <th className="py-3 px-4 font-medium">Semester</th>
                 <th className="py-3 px-4 font-medium">Department</th>
                 <th className="py-3 px-4 font-medium">Subject</th>
@@ -213,10 +225,11 @@ export default function AdminBooklists() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {booklists.length === 0 ? (
-                 <tr><td colSpan={5} className="py-8 text-center text-gray-500">No booklists found.</td></tr>
+                 <tr><td colSpan={6} className="py-8 text-center text-gray-500">No booklists found.</td></tr>
               ) : (
                 booklists.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{r.regulation || 'N/A'}</td>
                     <td className="py-3 px-4 text-gray-900 font-medium">{r.semester}</td>
                     <td className="py-3 px-4 text-gray-600">
                       {r.department || 'N/A'}

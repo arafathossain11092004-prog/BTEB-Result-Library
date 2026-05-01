@@ -34,6 +34,8 @@ export default function Calculator() {
   const [regulation, setRegulation] = useState<string>('2022');
   const [gpas, setGpas] = useState<string[]>(Array(8).fill(''));
   const [cgpaResult, setCgpaResult] = useState<string | null>(null);
+  const [earnedPoints, setEarnedPoints] = useState<string | null>(null);
+  const [completionPercentage, setCompletionPercentage] = useState<number | null>(null);
 
   // Autofill states
   const [curriculum, setCurriculum] = useState('');
@@ -47,11 +49,15 @@ export default function Calculator() {
     newGpas[index] = value;
     setGpas(newGpas);
     setCgpaResult(null); // hide result on change
+    setEarnedPoints(null);
+    setCompletionPercentage(null);
   };
 
   const resetCalculator = () => {
     setGpas(Array(8).fill(''));
     setCgpaResult(null);
+    setEarnedPoints(null);
+    setCompletionPercentage(null);
   };
 
   const calculateCGPA = () => {
@@ -71,8 +77,12 @@ export default function Calculator() {
 
     if (totalWeight === 0) {
       setCgpaResult('0.00');
+      setEarnedPoints('0.00');
+      setCompletionPercentage(0);
     } else {
       setCgpaResult((totalPoints / totalWeight).toFixed(2));
+      setEarnedPoints(totalPoints.toFixed(3)); // use 3 decimals for intermediate
+      setCompletionPercentage(Math.round(totalWeight * 100));
     }
   };
 
@@ -181,6 +191,8 @@ export default function Calculator() {
         setGpas(newGpas);
         setRegulation(autoRegulation);
         setCgpaResult(null);
+        setEarnedPoints(null);
+        setCompletionPercentage(null);
       } else {
         setError('No results found for this Roll Number.');
       }
@@ -280,14 +292,38 @@ export default function Calculator() {
             ))}
           </div>
 
-          {cgpaResult !== null && (
+          {cgpaResult !== null && completionPercentage !== null && earnedPoints !== null && (
              <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
-               className="mb-8 p-6 bg-gradient-to-tr from-blue-50 to-indigo-50 border border-blue-100/60 rounded-2xl text-center shadow-inner"
+               className="mb-8 p-6 bg-gradient-to-tr from-blue-50 to-indigo-50 border border-blue-100/60 rounded-2xl shadow-inner flex flex-col items-center"
              >
-               <p className="text-sm text-blue-600 font-bold uppercase tracking-widest mb-1.5">Your Final CGPA</p>
-               <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700">{cgpaResult}</h2>
+               {completionPercentage === 100 ? (
+                 <>
+                   <p className="text-sm text-blue-600 font-bold uppercase tracking-widest mb-1.5">Your Final CGPA</p>
+                   <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700">{cgpaResult}</h2>
+                 </>
+               ) : (
+                 <>
+                   <div className="bg-white/60 px-4 py-2 rounded-full border border-blue-100/80 mb-6 shadow-sm">
+                     <p className="text-sm font-semibold text-slate-700">Course completed: <span className="text-blue-600 font-bold">{completionPercentage}%</span></p>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-lg text-center divide-y md:divide-y-0 md:divide-x divide-blue-200">
+                     <div className="flex flex-col items-center">
+                       <p className="text-xs text-blue-600 font-bold uppercase tracking-widest mb-1.5">Earned Points / 4.00</p>
+                       <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 mb-2">{earnedPoints}</h2>
+                       <p className="text-[11px] text-slate-500 font-medium">Exact sum without assumption</p>
+                     </div>
+                     
+                     <div className="flex flex-col items-center pt-8 md:pt-0">
+                       <p className="text-xs text-blue-600 font-bold uppercase tracking-widest mb-1.5">Current Average</p>
+                       <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 mb-2">{cgpaResult}</h2>
+                       <p className="text-[11px] text-slate-500 font-medium">Calculated out of {completionPercentage}%</p>
+                     </div>
+                   </div>
+                 </>
+               )}
              </motion.div>
           )}
 

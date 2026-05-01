@@ -11,6 +11,8 @@ export default function ExamRoutines() {
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const [expandedSem, setExpandedSem] = useState<string | null>(null);
 
+  const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
+
   useEffect(() => {
     fetchRoutines().catch(console.error);
   }, []);
@@ -19,7 +21,11 @@ export default function ExamRoutines() {
     try {
       const q = query(collection(db, 'examRoutines'), orderBy('date', 'asc'));
       const snapshot = await getDocs(q);
-      setRoutines(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRoutines(data);
+      
+      const regs = Array.from(new Set(data.map((r: any) => r.regulation || 'Unknown'))).sort().reverse();
+      if (regs.length > 0) setActiveRegulation(regs[0]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -27,7 +33,10 @@ export default function ExamRoutines() {
     }
   };
 
-  const grouped = routines.reduce((acc, curr) => {
+  const filteredRoutines = routines.filter(r => (r.regulation || 'Unknown') === activeRegulation);
+  const regulations = Array.from(new Set(routines.map(r => r.regulation || 'Unknown'))).sort().reverse();
+
+  const grouped = filteredRoutines.reduce((acc, curr) => {
     if (!acc[curr.department]) acc[curr.department] = { code: curr.departmentCode || '', semesters: {} };
     if (!acc[curr.department].semesters[curr.semester]) acc[curr.department].semesters[curr.semester] = [];
     acc[curr.department].semesters[curr.semester].push(curr);
@@ -94,6 +103,28 @@ export default function ExamRoutines() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Exam Routines</h1>
           <p className="text-gray-500">Browse and download exam schedules by department and semester.</p>
         </div>
+
+        {regulations.length > 0 && (
+          <div className="flex justify-center gap-2 mb-6 print:hidden">
+            {regulations.map(reg => (
+              <button
+                key={reg}
+                onClick={() => {
+                  setActiveRegulation(reg);
+                  setExpandedDept(null);
+                  setExpandedSem(null);
+                }}
+                className={`px-6 py-2 rounded-full font-medium text-sm transition-all ${
+                  activeRegulation === reg 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {reg === 'Unknown' ? 'Other' : `${reg} Probidhan`}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden print:hidden">
           {Object.keys(grouped).length === 0 ? (
