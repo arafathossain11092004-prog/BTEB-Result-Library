@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { BookCopy, Printer, ChevronRight, BookOpen, Layers, GraduationCap, Building2 } from 'lucide-react';
+import { BookCopy, Printer, ChevronRight, BookOpen, Layers, GraduationCap, Building2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import html2canvas from 'html2canvas';
 
 export default function Booklists() {
   const [booklists, setBooklists] = useState<any[]>([]);
@@ -83,6 +84,47 @@ export default function Booklists() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPNG = async () => {
+    const printContent = document.getElementById('print-booklist-container');
+    if (printContent) {
+      // Temporarily make it visible for html2canvas
+      printContent.classList.remove('hidden');
+      printContent.classList.remove('print:block');
+      printContent.classList.remove('fixed');
+      printContent.classList.remove('inset-0');
+      printContent.style.display = 'block';
+      printContent.style.position = 'absolute';
+      printContent.style.top = '-9999px';
+      printContent.style.width = '800px';
+      
+      try {
+        const canvas = await html2canvas(printContent, {
+          scale: 2, // Higher resolution
+          backgroundColor: '#ffffff',
+          logging: false
+        });
+        
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `${activeDepartment}-${activeSemester}-Booklist.png`;
+        link.click();
+      } catch (err) {
+        console.error("Error generating screenshot", err);
+      } finally {
+        // Restore classes and styles
+        printContent.classList.add('hidden');
+        printContent.classList.add('print:block');
+        printContent.classList.add('fixed');
+        printContent.classList.add('inset-0');
+        printContent.style.display = '';
+        printContent.style.position = '';
+        printContent.style.top = '';
+        printContent.style.width = '';
+      }
+    }
   };
 
   if (loading) {
@@ -276,12 +318,20 @@ export default function Booklists() {
                 <div className="p-8">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-gray-800">Subjects</h3>
-                    <button
-                      onClick={handlePrint}
-                      className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-                    >
-                      <Printer className="w-4 h-4" /> Print Booklist
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handlePrint}
+                        className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                      >
+                        <Printer className="w-4 h-4" /> Print
+                      </button>
+                      <button
+                        onClick={handleDownloadPNG}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
+                      >
+                        <Download className="w-4 h-4" /> Download PNG
+                      </button>
+                    </div>
                   </div>
 
                   {filteredSubjects.length === 0 ? (
@@ -327,7 +377,7 @@ export default function Booklists() {
       </div>
 
       {/* Print View Layout */}
-      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-10">
+      <div id="print-booklist-container" className="hidden print:block fixed inset-0 bg-white z-[9999] p-10">
         <div className="text-center mb-10 pb-6 border-b-2 border-gray-800">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Booklist</h1>
           <h2 className="text-xl font-bold text-gray-800 mb-2">{activeCurriculum}</h2>

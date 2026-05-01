@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, limit, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Folder, FolderOpen, FileText, Download, Printer } from 'lucide-react';
+import { FileText, Printer, ChevronRight, BookOpen, Layers, GraduationCap, Building2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import html2canvas from 'html2canvas';
 
 export default function ExamRoutines() {
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedDept, setExpandedDept] = useState<string | null>(null);
-  const [expandedSem, setExpandedSem] = useState<string | null>(null);
 
   const [activeCurriculum, setActiveCurriculum] = useState<string | null>(null);
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
+  const [activeSemester, setActiveSemester] = useState<string | null>(null);
+  const [activeDepartment, setActiveDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRoutines().catch(console.error);
@@ -24,12 +24,6 @@ export default function ExamRoutines() {
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRoutines(data);
-      
-      const currs = Array.from(new Set(data.map((r: any) => r.curriculum || 'Unknown'))).sort().reverse();
-      if (currs.length > 0) setActiveCurriculum(currs[0]);
-
-      const regs = Array.from(new Set(data.map((r: any) => r.regulation || 'Unknown'))).sort().reverse();
-      if (regs.length > 0) setActiveRegulation(regs[0]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -37,48 +31,73 @@ export default function ExamRoutines() {
     }
   };
 
-  useEffect(() => {
-    if (activeCurriculum && routines.length > 0) {
-      const regsForCurr = Array.from(new Set(routines.filter(r => (r.curriculum || 'Unknown') === activeCurriculum).map(r => r.regulation || 'Unknown'))).sort().reverse();
-      if (!regsForCurr.includes(activeRegulation || '')) {
-        setActiveRegulation(regsForCurr.length > 0 ? regsForCurr[0] : null);
-      }
-    }
-  }, [activeCurriculum, routines]);
-
-  const filteredRoutines = routines.filter(
-    r => (r.curriculum || 'Unknown') === activeCurriculum && (r.regulation || 'Unknown') === activeRegulation
-  );
+  const curriculums = useMemo(() => Array.from(new Set(routines.map(r => r.curriculum || 'Unknown'))).sort(), [routines]);
   
-  const curriculums = Array.from(new Set(routines.map(r => r.curriculum || 'Unknown'))).sort().reverse();
-  const regulations = Array.from(new Set(routines.filter(r => (r.curriculum || 'Unknown') === activeCurriculum).map(r => r.regulation || 'Unknown'))).sort().reverse();
+  const regulations = useMemo(() => {
+    if (!activeCurriculum) return [];
+    return Array.from(new Set(routines.filter(r => (r.curriculum || 'Unknown') === activeCurriculum).map(r => r.regulation || 'Unknown'))).sort().reverse();
+  }, [routines, activeCurriculum]);
 
-  const grouped = filteredRoutines.reduce((acc, curr) => {
-    if (!acc[curr.department]) acc[curr.department] = { code: curr.departmentCode || '', semesters: {} };
-    if (!acc[curr.department].semesters[curr.semester]) acc[curr.department].semesters[curr.semester] = [];
-    acc[curr.department].semesters[curr.semester].push(curr);
-    return acc;
-  }, {});
+  const semesters = useMemo(() => {
+    if (!activeCurriculum || !activeRegulation) return [];
+    return Array.from(new Set(routines.filter(r => (r.curriculum || 'Unknown') === activeCurriculum && (r.regulation || 'Unknown') === activeRegulation).map(r => r.semester || 'Unknown'))).sort();
+  }, [routines, activeCurriculum, activeRegulation]);
 
-  const handlePrint = (dept: string, sem: string) => {
-    const printContent = document.getElementById(`routine-${dept}-${sem}`);
-    if (printContent) {
-      const originalContents = document.body.innerHTML;
-      document.body.innerHTML = printContent.innerHTML;
-      window.print();
-      document.body.innerHTML = originalContents;
-      window.location.reload(); // To restore event listeners
-    }
+  const departments = useMemo(() => {
+    if (!activeCurriculum || !activeRegulation || !activeSemester) return [];
+    return Array.from(new Set(routines.filter(r => 
+      (r.curriculum || 'Unknown') === activeCurriculum && 
+      (r.regulation || 'Unknown') === activeRegulation && 
+      (r.semester || 'Unknown') === activeSemester
+    ).map(r => r.department || 'Unknown'))).sort();
+  }, [routines, activeCurriculum, activeRegulation, activeSemester]);
+
+  const filteredSubjects = useMemo(() => {
+    if (!activeCurriculum || !activeRegulation || !activeSemester || !activeDepartment) return [];
+    return routines.filter(r => 
+      (r.curriculum || 'Unknown') === activeCurriculum && 
+      (r.regulation || 'Unknown') === activeRegulation && 
+      (r.semester || 'Unknown') === activeSemester &&
+      (r.department || 'Unknown') === activeDepartment
+    );
+  }, [routines, activeCurriculum, activeRegulation, activeSemester, activeDepartment]);
+
+  // Auto-select if only one option available
+  useEffect(() => {
+    if (curriculums.length === 1 && !activeCurriculum) setActiveCurriculum(curriculums[0]);
+  }, [curriculums, activeCurriculum]);
+
+  useEffect(() => {
+    if (regulations.length === 1 && !activeRegulation) setActiveRegulation(regulations[0]);
+    else if (activeCurriculum && !regulations.includes(activeRegulation || '')) setActiveRegulation(null);
+  }, [regulations, activeRegulation, activeCurriculum]);
+
+  useEffect(() => {
+    if (semesters.length === 1 && !activeSemester) setActiveSemester(semesters[0]);
+    else if (activeRegulation && !semesters.includes(activeSemester || '')) setActiveSemester(null);
+  }, [semesters, activeSemester, activeRegulation]);
+
+  useEffect(() => {
+    if (departments.length === 1 && !activeDepartment) setActiveDepartment(departments[0]);
+    else if (activeSemester && !departments.includes(activeDepartment || '')) setActiveDepartment(null);
+  }, [departments, activeDepartment, activeSemester]);
+
+  const handlePrint = () => {
+    window.print();
   };
 
-  const handleDownloadPNG = async (dept: string, sem: string) => {
-    const printContent = document.getElementById(`routine-${dept}-${sem}`);
+  const handleDownloadPNG = async () => {
+    const printContent = document.getElementById('print-routine-container');
     if (printContent) {
       // Temporarily make it visible for html2canvas
-      printContent.parentElement!.classList.remove('hidden');
+      printContent.classList.remove('hidden');
+      printContent.classList.remove('print:block');
+      printContent.classList.remove('fixed');
+      printContent.classList.remove('inset-0');
       printContent.style.display = 'block';
       printContent.style.position = 'absolute';
       printContent.style.top = '-9999px';
+      printContent.style.width = '800px';
       
       try {
         const canvas = await html2canvas(printContent, {
@@ -90,16 +109,20 @@ export default function ExamRoutines() {
         const image = canvas.toDataURL("image/png");
         const link = document.createElement('a');
         link.href = image;
-        link.download = `${dept}-${sem}-Routine.png`;
+        link.download = `${activeDepartment}-${activeSemester}-Routine.png`;
         link.click();
       } catch (err) {
         console.error("Error generating screenshot", err);
       } finally {
-        // Restore hidden state
-        printContent.parentElement!.classList.add('hidden');
-        printContent.style.display = 'none';
+        // Restore classes and styles
+        printContent.classList.add('hidden');
+        printContent.classList.add('print:block');
+        printContent.classList.add('fixed');
+        printContent.classList.add('inset-0');
+        printContent.style.display = '';
         printContent.style.position = '';
         printContent.style.top = '';
+        printContent.style.width = '';
       }
     }
   };
@@ -108,233 +131,303 @@ export default function ExamRoutines() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-blue-700">
         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-        <p className="mt-4 font-medium text-gray-600">Loading routines...</p>
+        <p className="mt-4 font-medium text-gray-600">Loading exam routines...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center w-full px-4 sm:px-6 py-12 font-sans">
-      <div className="w-full max-w-4xl space-y-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center print:hidden">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Exam Routines</h1>
-          <p className="text-gray-500 mb-6">Browse and download exam schedules by department and semester.</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 font-sans">
+      <div className="mb-10 text-center print:hidden">
+        <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">Exam Routines</h1>
+        <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+          Find your exam schedules easily. Select your curriculum, regulation, semester, and department to get started.
+        </p>
+      </div>
 
-          <div className="flex flex-col gap-4">
-            {curriculums.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2">
-                {curriculums.map(curr => (
-                  <button
-                    key={curr}
-                    onClick={() => {
-                      setActiveCurriculum(curr);
-                      setActiveRegulation(null); // will effect in useEffect or next render
-                      setExpandedDept(null);
-                      setExpandedSem(null);
-                    }}
-                    className={`px-5 py-2 rounded-xl font-medium text-sm transition-all ${
-                      activeCurriculum === curr 
-                        ? 'bg-slate-900 text-white shadow-md' 
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {curr === 'Unknown' ? 'Other Curriculum' : curr}
-                  </button>
-                ))}
-              </div>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:hidden">
+        {/* Sidebar Filters */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Curriculum */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-4 text-gray-800 font-semibold">
+              <GraduationCap className="w-5 h-5 text-blue-600" />
+              <h2>Curriculum</h2>
+            </div>
+            <div className="space-y-2">
+              {curriculums.length > 0 ? curriculums.map(curr => (
+                <button
+                  key={curr}
+                  onClick={() => setActiveCurriculum(curr)}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                    activeCurriculum === curr 
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {curr}
+                  {activeCurriculum === curr && <ChevronRight className="w-4 h-4" />}
+                </button>
+              )) : (
+                <p className="text-sm text-gray-400 italic">No curriculums found.</p>
+              )}
+            </div>
+          </div>
 
-            {regulations.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2">
-                {regulations.map(reg => (
-                  <button
-                    key={reg}
-                    onClick={() => {
-                      setActiveRegulation(reg);
-                      setExpandedDept(null);
-                      setExpandedSem(null);
-                    }}
-                    className={`px-5 py-2 rounded-xl font-medium text-sm transition-all ${
-                      activeRegulation === reg 
-                        ? 'bg-blue-600 text-white shadow-md' 
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {reg === 'Unknown' ? 'Other Regulation' : `${reg} Probidhan`}
-                  </button>
-                ))}
-              </div>
+          {/* Regulation */}
+          <AnimatePresence>
+            {activeCurriculum && regulations.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+              >
+                <div className="flex items-center gap-2 mb-4 text-gray-800 font-semibold">
+                  <BookOpen className="w-5 h-5 text-indigo-500" />
+                  <h2>Regulation</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {regulations.map(reg => (
+                    <button
+                      key={reg}
+                      onClick={() => setActiveRegulation(reg)}
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-center ${
+                        activeRegulation === reg 
+                          ? 'bg-indigo-500 text-white shadow-sm' 
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100/50'
+                      }`}
+                    >
+                      {reg}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
             )}
+          </AnimatePresence>
+
+          {/* Semester */}
+          <AnimatePresence>
+            {activeRegulation && semesters.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+              >
+                <div className="flex items-center gap-2 mb-4 text-gray-800 font-semibold">
+                  <Layers className="w-5 h-5 text-emerald-500" />
+                  <h2>Semester</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {semesters.map(sem => (
+                    <button
+                      key={sem}
+                      onClick={() => setActiveSemester(sem)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        activeSemester === sem 
+                          ? 'bg-emerald-500 text-white shadow-sm' 
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100/50'
+                      }`}
+                    >
+                      {sem}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Department */}
+          <AnimatePresence>
+            {activeSemester && departments.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+              >
+                <div className="flex items-center gap-2 mb-4 text-gray-800 font-semibold">
+                  <Building2 className="w-5 h-5 text-orange-500" />
+                  <h2>Department</h2>
+                </div>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {departments.map(dept => (
+                    <button
+                      key={dept}
+                      onClick={() => setActiveDepartment(dept)}
+                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        activeDepartment === dept 
+                          ? 'bg-orange-500 text-white shadow-sm' 
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100/50'
+                      }`}
+                    >
+                      {dept}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="lg:col-span-8">
+          <AnimatePresence mode="wait">
+            {!activeDepartment ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-3xl h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8"
+              >
+                <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Configure Your Exam Routine</h3>
+                <p className="text-gray-500 max-w-sm">
+                  Select curriculum, regulation, semester, and department from the sidebar to view your schedule.
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="content"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden"
+              >
+                <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                    <FileText className="w-32 h-32" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-blue-500/20 text-blue-200 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
+                        {activeCurriculum}
+                      </span>
+                      <span className="bg-indigo-500/20 text-indigo-200 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
+                        {activeRegulation} Probidhan
+                      </span>
+                    </div>
+                    <h2 className="text-3xl font-bold mb-2">{activeDepartment}</h2>
+                    <p className="text-slate-300 text-lg flex items-center gap-2">
+                       {activeSemester} Semester
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-8">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-800">Exam Schedule</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handlePrint}
+                        className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                      >
+                        <Printer className="w-4 h-4" /> Print
+                      </button>
+                      <button
+                        onClick={handleDownloadPNG}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
+                      >
+                        <Download className="w-4 h-4" /> Download PNG
+                      </button>
+                    </div>
+                  </div>
+
+                  {filteredSubjects.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
+                      <p className="text-slate-500">No routines found for this selection.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 border-b border-gray-200 text-slate-600">
+                          <tr>
+                            <th className="px-6 py-4 font-semibold text-sm">Date & Day</th>
+                            <th className="px-6 py-4 font-semibold text-sm">Time</th>
+                            <th className="px-6 py-4 font-semibold text-sm">Subject Name</th>
+                            <th className="px-6 py-4 font-semibold text-sm">Code</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 bg-white">
+                          {filteredSubjects.map(subject => (
+                            <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="font-semibold text-gray-900">{subject.date}</div>
+                                {subject.day && <div className="text-xs text-gray-500 mt-1">{subject.day}</div>}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm font-medium">
+                                  {subject.time}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 font-medium text-gray-800">
+                                {subject.subjectName}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-sm font-bold tracking-wider bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">
+                                  {subject.subjectCode}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Print View Layout */}
+      <div id="print-routine-container" className="hidden print:block fixed inset-0 bg-white z-[9999] p-10">
+        <div className="text-center mb-10 pb-6 border-b-2 border-gray-800">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Exam Routine</h1>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">{activeCurriculum}</h2>
+          <div className="text-lg text-gray-600 font-semibold space-y-1">
+            <p>{activeRegulation} Regulation</p>
+            <p>{activeDepartment} - {activeSemester} Semester</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden print:hidden">
-          {Object.keys(grouped).length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No exam routines found.</div>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {Object.keys(grouped).map(dept => (
-                <li key={dept}>
-                  <button
-                    onClick={() => {
-                      setExpandedDept(expandedDept === dept ? null : dept);
-                      setExpandedSem(null);
-                    }}
-                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {expandedDept === dept ? (
-                        <FolderOpen className="w-6 h-6 text-blue-500" />
-                      ) : (
-                        <Folder className="w-6 h-6 text-blue-500" />
-                      )}
-                      <span className="font-semibold text-gray-800">{dept}</span>
-                    </div>
-                    {grouped[dept].code && (
-                      <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 uppercase tracking-wider">
-                        Code: {grouped[dept].code}
-                      </span>
-                    )}
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedDept === dept && (
-                      <motion.ul
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="bg-gray-50/50 border-t border-gray-100 overflow-hidden"
-                      >
-                        {Object.keys(grouped[dept].semesters).map(sem => (
-                          <li key={sem} className="pl-12">
-                            <button
-                              onClick={() => setExpandedSem(expandedSem === sem ? null : sem)}
-                              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="flex items-center gap-3">
-                                {expandedSem === sem ? (
-                                  <FolderOpen className="w-5 h-5 text-orange-400" />
-                                ) : (
-                                  <Folder className="w-5 h-5 text-orange-400" />
-                                )}
-                                <span className="font-medium text-gray-700">{sem} Semester</span>
-                              </div>
-                            </button>
-                            
-                            <AnimatePresence>
-                              {expandedSem === sem && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="pl-6 pr-4 pb-4 overflow-hidden"
-                                >
-                                  <div className="bg-white border text-left border-gray-200 rounded-xl overflow-hidden mt-2 p-4">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                                      <h3 className="font-bold text-gray-800">{dept} - {sem} Semester Routine</h3>
-                                      <div className="flex gap-2 w-full sm:w-auto">
-                                        <button
-                                          onClick={() => handlePrint(dept, sem)}
-                                          className="flex-1 sm:flex-none justify-center flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                          <Printer className="w-4 h-4" /> Print
-                                        </button>
-                                        <button
-                                          onClick={() => handleDownloadPNG(dept, sem)}
-                                          className="flex-1 sm:flex-none justify-center flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                          <Download className="w-4 h-4" /> Download PNG
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <div className="overflow-x-auto rounded-lg border border-gray-200">
-                                      <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 text-gray-700 uppercase text-[11px] tracking-wider">
-                                          <tr>
-                                            <th className="px-4 py-3 border-b font-semibold">Date & Day</th>
-                                            <th className="px-4 py-3 border-b font-semibold">Time</th>
-                                            <th className="px-4 py-3 border-b font-semibold">Subject Name</th>
-                                            <th className="px-4 py-3 border-b font-semibold">Code</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                          {grouped[dept].semesters[sem].map((subject: any) => (
-                                            <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
-                                              <td className="px-4 py-3 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{subject.date}</div>
-                                                {subject.day && <div className="text-xs text-gray-500 mt-0.5">{subject.day}</div>}
-                                              </td>
-                                              <td className="px-4 py-3 whitespace-nowrap text-gray-700">{subject.time}</td>
-                                              <td className="px-4 py-3 font-medium text-gray-800">{subject.subjectName}</td>
-                                              <td className="px-4 py-3">
-                                                <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">
-                                                  {subject.subjectCode}
-                                                </span>
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </li>
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <table className="w-full text-left border-collapse border border-gray-400">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm">Date & Day</th>
+              <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm">Time</th>
+              <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm w-1/2">Subject Name</th>
+              <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm">Subject Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredSubjects.map((subject, index) => (
+              <tr key={subject.id || index}>
+                <td className="px-6 py-4 border border-gray-400 text-gray-900">
+                  <span className="font-medium block">{subject.date}</span>
+                  {subject.day && <span className="text-gray-500 text-sm">{subject.day}</span>}
+                </td>
+                <td className="px-6 py-4 border border-gray-400 text-gray-900 font-medium">
+                  {subject.time}
+                </td>
+                <td className="px-6 py-4 border border-gray-400 text-gray-900 font-medium">
+                  {subject.subjectName}
+                </td>
+                <td className="px-6 py-4 border border-gray-400 text-gray-900 font-mono font-bold">
+                  {subject.subjectCode}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-        {/* Hidden print templates */}
-        <div className="hidden">
-          {Object.keys(grouped).map(dept => 
-            Object.keys(grouped[dept].semesters).map(sem => (
-              <div key={`print-${dept}-${sem}`} id={`routine-${dept}-${sem}`} className="bg-white p-8" style={{ width: '800px', display: 'none' }}>
-                <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-50 text-blue-700 font-bold text-2xl mb-3">
-                    B
-                  </div>
-                  <h1 className="text-2xl font-bold mb-2 text-gray-900">Exam Routine</h1>
-                  <h2 className="text-xl font-semibold text-gray-700">{dept} - {sem} Semester</h2>
-                  {grouped[dept].code && <p className="text-sm text-gray-500 mt-1">Department Code: {grouped[dept].code}</p>}
-                </div>
-                <table className="w-full text-sm text-left border-collapse border border-gray-300">
-                  <thead className="bg-gray-100 text-gray-800">
-                    <tr>
-                      <th className="px-4 py-3 border border-gray-300 font-semibold">Date & Day</th>
-                      <th className="px-4 py-3 border border-gray-300 font-semibold">Time</th>
-                      <th className="px-4 py-3 border border-gray-300 font-semibold">Subject Name</th>
-                      <th className="px-4 py-3 border border-gray-300 font-semibold">Subject Code</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {grouped[dept].semesters[sem].map((subject: any) => (
-                      <tr key={`print-row-${subject.id}`} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 border border-gray-300">
-                          <span className="font-medium">{subject.date}</span>
-                          {subject.day && <span className="text-gray-500 block text-xs">{subject.day}</span>}
-                        </td>
-                        <td className="px-4 py-3 border border-gray-300">{subject.time}</td>
-                        <td className="px-4 py-3 border border-gray-300 font-medium">{subject.subjectName}</td>
-                        <td className="px-4 py-3 border border-gray-300 font-mono text-gray-600">{subject.subjectCode}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="mt-8 text-center text-xs font-medium text-gray-400 uppercase tracking-widest border-t pt-4">
-                  Downloaded from BTEB Result Library
-                </div>
-              </div>
-            ))
-          )}
+        <div className="mt-12 pt-6 border-t border-gray-300 text-center text-gray-500 text-sm font-medium">
+          <p>Downloaded from BTEB Result Library</p>
         </div>
       </div>
     </div>
   );
 }
+
