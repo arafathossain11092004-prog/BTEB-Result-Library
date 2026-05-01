@@ -91,13 +91,33 @@ export default function ExamRoutines() {
     if (printContent) {
       const originalWidth = printContent.style.width;
       const originalMaxWidth = printContent.style.maxWidth;
+      const originalMinHeight = printContent.style.minHeight;
+      const originalDisplay = printContent.style.display;
+      const originalFlexDir = printContent.style.flexDirection;
+      const originalBorderRadius = printContent.style.borderRadius;
+
       const tableWrapper = printContent.querySelector('.table-wrapper') as HTMLElement;
       const origOverflow = tableWrapper ? tableWrapper.style.overflow : '';
       
-      // Force wider constraints to ensure desktop-like styling for PNG and prevent clamping
-      printContent.style.width = '800px';
-      printContent.style.maxWidth = '800px';
+      // Force A4 size constraints (794x1123 at 96 DPI)
+      printContent.style.width = '794px';
+      printContent.style.maxWidth = '794px';
+      printContent.style.minHeight = '1123px';
+      printContent.style.display = 'flex';
+      printContent.style.flexDirection = 'column';
+      printContent.style.borderRadius = '0px';
+
       if (tableWrapper) tableWrapper.style.overflow = 'visible';
+
+      const footer = document.createElement('div');
+      footer.className = 'mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm';
+      footer.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="text-blue-600 font-bold text-lg">BTEB Result Library</span>
+        </div>
+        <div class="text-base text-slate-400">btebresultlibrary.com</div>
+      `;
+      printContent.appendChild(footer);
 
       try {
         const dataUrl = await toPng(printContent, {
@@ -105,7 +125,7 @@ export default function ExamRoutines() {
           pixelRatio: 2,
           backgroundColor: '#ffffff',
           style: {
-            width: '800px', // Force the exact width for rendering
+            width: '794px', // Force the exact width for rendering
             fontFamily: 'sans-serif'
           }
         });
@@ -119,7 +139,14 @@ export default function ExamRoutines() {
       } finally {
         printContent.style.width = originalWidth;
         printContent.style.maxWidth = originalMaxWidth;
+        printContent.style.minHeight = originalMinHeight;
+        printContent.style.display = originalDisplay;
+        printContent.style.flexDirection = originalFlexDir;
+        printContent.style.borderRadius = originalBorderRadius;
         if (tableWrapper) tableWrapper.style.overflow = origOverflow;
+        if (printContent.contains(footer)) {
+          printContent.removeChild(footer);
+        }
       }
     }
   };
