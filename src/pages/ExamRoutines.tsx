@@ -87,7 +87,7 @@ export default function ExamRoutines() {
   };
 
   const handleDownloadPNG = async () => {
-    const printContent = document.getElementById('print-routine-container');
+    const printContent = document.getElementById('routine-card');
     if (printContent) {
       try {
         const dataUrl = await toPng(printContent, {
@@ -269,12 +269,13 @@ export default function ExamRoutines() {
             ) : (
               <motion.div
                 key="content"
+                id="routine-card"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden"
               >
-                <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                <div className="bg-slate-900 p-6 sm:p-8 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                     <FileText className="w-32 h-32" />
                   </div>
@@ -287,17 +288,17 @@ export default function ExamRoutines() {
                         {activeRegulation} Probidhan
                       </span>
                     </div>
-                    <h2 className="text-3xl font-bold mb-2">{activeDepartment}</h2>
-                    <p className="text-slate-300 text-lg flex items-center gap-2">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{activeDepartment}</h2>
+                    <p className="text-slate-300 text-base sm:text-lg flex items-center gap-2">
                        {activeSemester} Semester
                     </p>
                   </div>
                 </div>
 
-                <div className="p-8">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="p-4 sm:p-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                     <h3 className="text-xl font-bold text-gray-800">Exam Schedule</h3>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={handlePrint}
                         className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
@@ -318,33 +319,33 @@ export default function ExamRoutines() {
                       <p className="text-slate-500">No routines found for this selection.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-                      <table className="w-full text-left border-collapse">
+                    <div className="overflow-x-auto sm:overflow-visible rounded-2xl border border-gray-200 shadow-sm">
+                      <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-0">
                         <thead className="bg-slate-50 border-b border-gray-200 text-slate-600">
                           <tr>
-                            <th className="px-6 py-4 font-semibold text-sm">Date & Day</th>
-                            <th className="px-6 py-4 font-semibold text-sm">Time</th>
-                            <th className="px-6 py-4 font-semibold text-sm">Subject Name</th>
-                            <th className="px-6 py-4 font-semibold text-sm">Code</th>
+                            <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm whitespace-nowrap">Date & Day</th>
+                            <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm">Time</th>
+                            <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm">Subject Name</th>
+                            <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm w-24 sm:w-auto">Code</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 bg-white">
                           {filteredSubjects.map(subject => (
                             <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
-                              <td className="px-6 py-4">
-                                <div className="font-semibold text-gray-900">{subject.date}</div>
+                              <td className="px-4 py-3 sm:px-6 sm:py-4">
+                                <div className="font-semibold text-gray-900 text-sm sm:text-base">{subject.date}</div>
                                 {subject.day && <div className="text-xs text-gray-500 mt-1">{subject.day}</div>}
                               </td>
-                              <td className="px-6 py-4">
-                                <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm font-medium">
+                              <td className="px-4 py-3 sm:px-6 sm:py-4">
+                                <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs sm:text-sm font-medium whitespace-nowrap">
                                   {subject.time}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 font-medium text-gray-800">
+                              <td className="px-4 py-3 sm:px-6 sm:py-4 font-medium text-gray-800 text-sm sm:text-base leading-tight">
                                 {subject.subjectName}
                               </td>
-                              <td className="px-6 py-4">
-                                <span className="font-mono text-sm font-bold tracking-wider bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">
+                              <td className="px-4 py-3 sm:px-6 sm:py-4 align-top sm:align-middle">
+                                <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-wider bg-slate-100 text-slate-700 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200">
                                   {subject.subjectCode}
                                 </span>
                               </td>

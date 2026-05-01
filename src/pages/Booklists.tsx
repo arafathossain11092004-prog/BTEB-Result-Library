@@ -87,7 +87,7 @@ export default function Booklists() {
   };
 
   const handleDownloadPNG = async () => {
-    const printContent = document.getElementById('print-booklist-container');
+    const printContent = document.getElementById('booklist-card');
     if (printContent) {
       try {
         const dataUrl = await toPng(printContent, {
@@ -269,12 +269,13 @@ export default function Booklists() {
             ) : (
               <motion.div
                 key="content"
+                id="booklist-card"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden"
               >
-                <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                <div className="bg-slate-900 p-6 sm:p-8 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                     <BookOpen className="w-32 h-32" />
                   </div>
@@ -287,17 +288,17 @@ export default function Booklists() {
                         {activeRegulation} Probidhan
                       </span>
                     </div>
-                    <h2 className="text-3xl font-bold mb-2">{activeDepartment}</h2>
-                    <p className="text-slate-300 text-lg flex items-center gap-2">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{activeDepartment}</h2>
+                    <p className="text-slate-300 text-base sm:text-lg flex items-center gap-2">
                        {activeSemester} Semester
                     </p>
                   </div>
                 </div>
 
-                <div className="p-8">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="p-4 sm:p-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                     <h3 className="text-xl font-bold text-gray-800">Subjects</h3>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={handlePrint}
                         className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
@@ -318,27 +319,27 @@ export default function Booklists() {
                       <p className="text-slate-500">No subjects found for this selection.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-                      <table className="w-full text-left border-collapse">
+                    <div className="overflow-x-auto sm:overflow-visible rounded-2xl border border-gray-200 shadow-sm">
+                      <table className="w-full text-left border-collapse min-w-[300px]">
                         <thead className="bg-slate-50 border-b border-gray-200 text-slate-600">
                           <tr>
-                            <th className="px-6 py-4 font-semibold text-sm">Subject Name</th>
-                            <th className="px-6 py-4 font-semibold text-sm w-48">Subject Code</th>
+                            <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm">Subject Name</th>
+                            <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm w-32 sm:w-48">Subject Code</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 bg-white">
                           {filteredSubjects.map(subject => (
                             <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-                                    <BookCopy className="w-4 h-4" />
+                              <td className="px-4 py-3 sm:px-6 sm:py-4">
+                                <div className="flex items-start sm:items-center gap-2 sm:gap-3">
+                                  <div className="bg-blue-50 p-1.5 sm:p-2 rounded-lg text-blue-600 mt-0.5 sm:mt-0 flex-shrink-0">
+                                    <BookCopy className="w-4 h-4 sm:w-5 sm:h-5" />
                                   </div>
-                                  <span className="font-semibold text-gray-800">{subject.subjectName}</span>
+                                  <span className="font-semibold text-gray-800 text-sm sm:text-base leading-tight mt-0.5 sm:mt-0">{subject.subjectName}</span>
                                 </div>
                               </td>
-                              <td className="px-6 py-4">
-                                <span className="font-mono text-sm font-bold tracking-wider bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">
+                              <td className="px-4 py-3 sm:px-6 sm:py-4 align-top sm:align-middle">
+                                <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-wider bg-slate-100 text-slate-700 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
                                   {subject.subjectCode}
                                 </span>
                               </td>
