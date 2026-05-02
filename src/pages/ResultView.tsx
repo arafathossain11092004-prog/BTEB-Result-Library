@@ -949,7 +949,7 @@ export default function ResultView() {
                                    {parsed ? (
                                      parsed.type === 'passed' ? (
                                        <div className="inline-flex text-center items-center justify-center px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm border border-emerald-100/50 shadow-sm w-[80px]">
-                                         {parsed.gpa}
+                                         {parsed.gpa || parsed.cgpa || '-'}
                                        </div>
                                      ) : (
                                        <div className="group relative inline-flex flex-col items-center justify-center">

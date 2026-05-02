@@ -38,7 +38,7 @@ export default function Calculator() {
   const [completionPercentage, setCompletionPercentage] = useState<number | null>(null);
 
   // Autofill states
-  const [curriculum, setCurriculum] = useState('');
+  const [curriculum, setCurriculum] = useState('Diploma in Engineering');
   const [autoRegulation, setAutoRegulation] = useState('2022');
   const [rollNumber, setRollNumber] = useState('');
   const [fetching, setFetching] = useState(false);
@@ -95,7 +95,8 @@ export default function Calculator() {
     const failedInThisSem = (data.currentFailedSubjects || []).filter((f: any) => f.originSemester === semNumber);
     if (failedInThisSem.length > 0) return ''; // Has referred
 
-    const gpa = semData.results[0].cgpa || semData.results[0].gpa;
+    // Use specific gpa field to prevent fetching cgpa which might overwrite true semester gpa in 8th semester
+    const gpa = semData.results[0].gpa || semData.results[0].cgpa;
     if (gpa === 'Passed') return '';
     return parseGPA(gpa);
   };

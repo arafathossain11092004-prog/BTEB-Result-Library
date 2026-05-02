@@ -178,21 +178,24 @@ export default function ExamRoutines() {
               <GraduationCap className="w-5 h-5 text-blue-600" />
               <h2>Curriculum</h2>
             </div>
-            <div className="space-y-2">
-              {curriculums.length > 0 ? curriculums.map(curr => (
-                <button
-                  key={curr}
-                  onClick={() => setActiveCurriculum(curr)}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
-                    activeCurriculum === curr 
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  {curr}
-                  {activeCurriculum === curr && <ChevronRight className="w-4 h-4" />}
-                </button>
-              )) : (
+            <div className="space-y-2 relative">
+              {curriculums.length > 0 ? (
+                <div className="relative">
+                  <select
+                    value={activeCurriculum || ''}
+                    onChange={(e) => setActiveCurriculum(e.target.value)}
+                    className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-blue-500 font-medium text-sm transition-colors cursor-pointer"
+                  >
+                    <option value="" disabled>Select Curriculum</option>
+                    {curriculums.map(curr => (
+                      <option key={curr} value={curr}>{curr}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                    <ChevronRight className="w-4 h-4 rotate-90" />
+                  </div>
+                </div>
+              ) : (
                 <p className="text-sm text-gray-400 italic">No curriculums found.</p>
               )}
             </div>
@@ -272,20 +275,22 @@ export default function ExamRoutines() {
                   <Building2 className="w-5 h-5 text-orange-500" />
                   <h2>Department</h2>
                 </div>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                  {departments.map(dept => (
-                    <button
-                      key={dept}
-                      onClick={() => setActiveDepartment(dept)}
-                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        activeDepartment === dept 
-                          ? 'bg-orange-500 text-white shadow-sm' 
-                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100/50'
-                      }`}
+                <div className="space-y-2 relative">
+                  <div className="relative">
+                    <select
+                      value={activeDepartment || ''}
+                      onChange={(e) => setActiveDepartment(e.target.value)}
+                      className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-orange-500 font-medium text-sm transition-colors cursor-pointer"
                     >
-                      {dept}
-                    </button>
-                  ))}
+                      <option value="" disabled>Select Department</option>
+                      {departments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                      <ChevronRight className="w-4 h-4 rotate-90" />
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
