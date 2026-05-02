@@ -111,11 +111,12 @@ export default function ExamRoutines() {
 
       const footer = document.createElement('div');
       footer.className = 'mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm';
+      const currentDomain = window.location.hostname;
       footer.innerHTML = `
         <div class="flex items-center gap-2">
           <span class="text-blue-600 font-bold text-lg">BTEB Result Library</span>
         </div>
-        <div class="text-base text-slate-400">btebresultlibrary.com</div>
+        <div class="text-base text-slate-400">${currentDomain}</div>
       `;
       printContent.appendChild(footer);
 

@@ -5,8 +5,8 @@ import { Users, BookOpen, Calendar, Hash, ArrowRight, Search } from 'lucide-reac
 
 export default function GroupResults() {
   const navigate = useNavigate();
-  const [curriculum, setCurriculum] = useState('');
-  const [regulation, setRegulation] = useState('');
+  const [curriculum, setCurriculum] = useState('diploma_in_engineering');
+  const [regulation, setRegulation] = useState('2022');
   const [startRoll, setStartRoll] = useState('');
   const [endRoll, setEndRoll] = useState('');
 

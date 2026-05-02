@@ -892,12 +892,12 @@ export default function ResultView() {
                  </div>
               </div>
 
-              <div className="space-y-8 max-w-[100vw] overflow-x-auto mx-auto pb-4">
-                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-w-[800px]">
-                   <table className="w-full text-left text-sm bg-white whitespace-nowrap">
-                     <thead className="bg-[#f8fafc] border-b border-gray-200 text-gray-500 tracking-wider text-[11px] font-bold">
+              <div className="w-full pb-4">
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full overflow-hidden">
+                   <table className="w-full text-left text-sm bg-white">
+                     <thead className="bg-[#f8fafc] border-b border-gray-200 text-gray-500 tracking-wider text-[10px] sm:text-[11px] font-bold">
                        <tr>
-                         <th className="py-4 px-5 border-r border-gray-100 uppercase">Roll No & Institute</th>
+                         <th className="py-2 px-2 sm:py-4 sm:px-4 border-r border-gray-100 uppercase">Roll No & Institute</th>
                          {(() => {
                            // Find all possible semester keys across all results
                            const allSems = new Set<number>();
@@ -909,8 +909,8 @@ export default function ResultView() {
                            const sortedSems = Array.from(allSems).sort((a, b) => a - b);
                            
                            return sortedSems.map(semNum => (
-                             <th key={semNum} className="py-4 px-3 border-r border-gray-100 text-center uppercase">
-                               {semNum === 1 ? '1st' : semNum === 2 ? '2nd' : semNum === 3 ? '3rd' : `${semNum}th`} Sem
+                             <th key={semNum} className="py-2 px-1 sm:py-4 sm:px-2 border-r border-gray-100 text-center uppercase whitespace-nowrap">
+                               {semNum === 1 ? '1st' : semNum === 2 ? '2nd' : semNum === 3 ? '3rd' : `${semNum}th`}
                              </th>
                            ));
                          })()}
@@ -929,12 +929,12 @@ export default function ResultView() {
 
                          return (
                            <tr key={r.id || r.rollNumber} className="hover:bg-blue-50/20 transition-colors">
-                             <td className="py-4 px-5 border-r border-gray-50 align-top max-w-[250px]">
-                               <div className="flex items-center gap-3">
-                                  <div className="min-w-0">
-                                    <div className="font-bold text-gray-900 text-base leading-tight mb-1">{r.rollNumber || r.roll || '--'}</div>
-                                    <div className="text-[11px] text-gray-500 font-medium truncate flex items-center gap-1.5" title={r.instituteName}>
-                                       <Building className="w-3 h-3 shrink-0" />
+                             <td className="py-3 px-2 sm:py-4 sm:px-4 border-r border-gray-50 align-top max-w-[120px] sm:max-w-[200px]">
+                               <div className="flex items-center gap-2 sm:gap-3">
+                                  <div className="min-w-0 w-full">
+                                    <div className="font-bold text-gray-900 text-sm sm:text-base leading-tight mb-0.5 sm:mb-1">{r.rollNumber || r.roll || '--'}</div>
+                                    <div className="text-[9px] sm:text-[11px] text-gray-500 font-medium truncate flex items-center gap-1 sm:gap-1.5" title={r.instituteName}>
+                                       <Building className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
                                        <span className="truncate">{r.instituteName || (r.institute && r.institute.name) || 'Unknown Institute'}</span>
                                     </div>
                                   </div>
@@ -945,23 +945,23 @@ export default function ResultView() {
                                const parsed = semData ? parseSemester(semData) : null;
                                
                                return (
-                                 <td key={semNum} className="py-2 px-3 border-r border-gray-50 align-middle text-center w-[120px]">
+                                 <td key={semNum} className="py-2 px-0.5 sm:px-1.5 border-r border-gray-50 align-middle text-center">
                                    {parsed ? (
                                      parsed.type === 'passed' ? (
-                                       <div className="inline-flex text-center items-center justify-center px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm border border-emerald-100/50 shadow-sm w-[80px]">
+                                       <div className="inline-flex text-center items-center justify-center px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded sm:rounded-lg bg-emerald-50 text-emerald-700 font-bold text-xs sm:text-sm border border-emerald-100/50 shadow-sm min-w-[2.5rem] whitespace-nowrap">
                                          {parsed.gpa || parsed.cgpa || '-'}
                                        </div>
                                      ) : (
                                        <div className="group relative inline-flex flex-col items-center justify-center">
-                                         <div className="px-2 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] uppercase border border-red-100/50 shadow-sm tracking-wider cursor-help">
+                                         <div className="px-1.5 py-1 sm:px-2 sm:py-1.5 rounded sm:rounded-lg bg-red-50 text-red-600 font-bold text-[9px] sm:text-[11px] uppercase border border-red-100/50 shadow-sm tracking-widest cursor-help whitespace-nowrap">
                                            Fail ({parsed.total})
                                          </div>
-                                         <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded p-2 z-50 pointer-events-none">
+                                         <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-40 sm:w-48 bg-gray-900 text-white text-[10px] sm:text-xs rounded p-2 z-50 pointer-events-none">
                                             <div className="font-semibold mb-1 border-b border-gray-700 pb-1">Failed Subjects:</div>
                                             <ul className="text-left list-disc pl-3">
                                               {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
                                                 <li key={idx} className="truncate">
-                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-300 ml-1 text-[10px]">({sub.code || sub.subCode})</span>
+                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-300 ml-1 text-[9px] sm:text-[10px]">({sub.code || sub.subCode})</span>
                                                 </li>
                                               ))}
                                             </ul>
