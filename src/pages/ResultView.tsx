@@ -893,7 +893,8 @@ export default function ResultView() {
               </div>
 
               <div className="w-full pb-4">
-                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full overflow-hidden">
+                 {/* Desktop Table View */}
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full overflow-hidden hidden lg:block">
                    <table className="w-full text-left text-sm bg-white">
                      <thead className="bg-[#f8fafc] border-b border-gray-200 text-gray-500 tracking-wider text-[10px] sm:text-[11px] font-bold">
                        <tr>
@@ -979,6 +980,65 @@ export default function ResultView() {
                        })}
                      </tbody>
                    </table>
+                 </div>
+
+                 {/* Mobile Grid View */}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
+                   {results.map((r) => {
+                     // Find all possible semester keys across all results again for card mapping
+                     const allSems = new Set<number>();
+                     results.forEach(res => {
+                       Object.keys(res)
+                         .filter(k => k.startsWith('semester') && !isNaN(parseInt(k.replace('semester', ''))))
+                         .forEach(k => allSems.add(parseInt(k.replace('semester', ''))));
+                     });
+                     const sortedSems = Array.from(allSems).sort((a, b) => a - b);
+
+                     return (
+                       <div key={r.id || r.rollNumber} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition-shadow">
+                         <div className="mb-4 pb-3 border-b border-gray-100">
+                            <div className="font-bold text-gray-900 text-lg mb-1">{r.rollNumber || r.roll || '--'}</div>
+                            <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5" title={r.instituteName}>
+                               <Building className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                               <span className="truncate">{r.instituteName || (r.institute && r.institute.name) || 'Unknown Institute'}</span>
+                            </div>
+                         </div>
+                         <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
+                            {sortedSems.map(semNum => {
+                               const semData = r[`semester${semNum}`];
+                               const parsed = semData ? parseSemester(semData) : null;
+                               
+                               return (
+                                 <div key={semNum} className="flex flex-col items-center justify-center p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                   <span className="text-[10px] text-slate-500 font-semibold uppercase mb-1">{semNum === 1 ? '1st' : semNum === 2 ? '2nd' : semNum === 3 ? '3rd' : `${semNum}th`}</span>
+                                   {parsed ? (
+                                     parsed.type === 'passed' ? (
+                                       <span className="text-xs font-bold text-emerald-700">{parsed.gpa || parsed.cgpa || '-'}</span>
+                                     ) : (
+                                       <div className="group relative">
+                                          <span className="text-[10px] font-bold text-red-600 uppercase cursor-help bg-red-100 px-1 py-0.5 rounded">Fail({parsed.total})</span>
+                                          <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded p-2 z-50 pointer-events-none">
+                                            <div className="font-semibold mb-1 border-b border-gray-700 pb-1">Failed Subjects:</div>
+                                            <ul className="text-left list-disc pl-3">
+                                              {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
+                                                <li key={idx} className="truncate">
+                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-300 ml-1 text-[10px]">({sub.code || sub.subCode})</span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                         </div>
+                                       </div>
+                                     )
+                                   ) : (
+                                     <span className="text-gray-300 font-medium">-</span>
+                                   )}
+                                 </div>
+                               );
+                            })}
+                         </div>
+                       </div>
+                     );
+                   })}
                  </div>
               </div>
            </div>

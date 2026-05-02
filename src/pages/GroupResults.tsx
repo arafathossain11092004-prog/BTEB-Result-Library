@@ -22,8 +22,8 @@ export default function GroupResults() {
       return;
     }
     
-    if (end - start > 150) {
-      alert("Please select a range of maximum 150 rolls at a time.");
+    if (end - start > 100) {
+      alert("Please select a range of maximum 100 rolls at a time.");
       return;
     }
 

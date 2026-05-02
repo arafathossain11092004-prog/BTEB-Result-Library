@@ -364,47 +364,74 @@ async function startServer() {
           let ranges = normalizedRollStr;
           let filterRolls = new Set<string>();
           let isFilterMode = false;
+          let rolls: number[] = [];
           
-          if (!ranges.includes('-') && ranges.includes(',')) {
-              const rolls = ranges.split(',').map(Number).filter(r => !isNaN(r)).sort((a, b) => a - b);
-              if (rolls.length > 0) {
-                  const compressedRanges = [];
-                  let start = rolls[0];
-                  let prev = rolls[0];
-                  for (let i = 1; i <= rolls.length; i++) {
-                      if (rolls[i] === prev + 1) {
-                          prev = rolls[i];
-                      } else {
-                          if (start === prev) compressedRanges.push(start.toString());
-                          else compressedRanges.push(start + '-' + prev);
-                          if (i < rolls.length) {
-                              start = rolls[i];
-                              prev = rolls[i];
+          if (ranges.includes('-') || ranges.includes(',')) {
+              const parts = ranges.split(',');
+              parts.forEach(part => {
+                  if (part.includes('-')) {
+                      const [startStr, endStr] = part.split('-');
+                      const s = parseInt(startStr, 10);
+                      const e = parseInt(endStr, 10);
+                      if (!isNaN(s) && !isNaN(e) && s <= e) {
+                          for (let i = s; i <= e; i++) {
+                              rolls.push(i);
                           }
                       }
-                  }
-                  if (compressedRanges.length > 5) {
-                      ranges = `${rolls[0]}-${rolls[rolls.length - 1]}`;
-                      isFilterMode = true;
-                      rolls.forEach(r => filterRolls.add(r.toString()));
                   } else {
-                      ranges = compressedRanges.join(',');
+                      const r = parseInt(part, 10);
+                      if (!isNaN(r)) rolls.push(r);
                   }
-              }
+              });
+              rolls = Array.from(new Set(rolls)).sort((a, b) => a - b);
           }
-
-          let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${ranges}`;
-          groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
-
+          
+          let rawStudents: any[] = [];
           try {
-             console.log(`Fetching from: ${groupApiUrl}`);
-             const response = await fetchFromBteb(groupApiUrl);
-             console.log(`BTEB Response success: ${response?.success}, data? ${!!response?.data}`);
-             if (response && response.success && response.data && response.data.studentResults) {
-                 let rawStudents = response.data.studentResults;
-                 if (isFilterMode) {
-                     rawStudents = rawStudents.filter((s: any) => filterRolls.has(s.roll.toString()));
+             const CHUNK_SIZE = 30; // Max rolls per request to BTEB to bypass 29 limit
+             const chunks = [];
+             for (let i = 0; i < rolls.length; i += CHUNK_SIZE) {
+                 chunks.push(rolls.slice(i, i + CHUNK_SIZE));
+             }
+             
+             if (chunks.length === 0) {
+                 // Fallback if parsing failed
+                 let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${ranges}`;
+                 groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
+                 const response = await fetchFromBteb(groupApiUrl);
+                 if (response && response.success && response.data && response.data.studentResults) {
+                     rawStudents = response.data.studentResults;
                  }
+             } else {
+                 // Fetch all chunks sequentially (or with a small delay)
+                 for (let i = 0; i < chunks.length; i++) {
+                     const chunk = chunks[i];
+                     const chunkRange = `${chunk[0]}-${chunk[chunk.length - 1]}`;
+                     let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${chunkRange}`;
+                     groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
+                     console.log(`Fetching chunk ${i+1}/${chunks.length}: ${groupApiUrl}`);
+                     
+                     const response = await fetchFromBteb(groupApiUrl);
+                     if (response && response.success && response.data && response.data.studentResults) {
+                         // Filter out strictly requested rolls to avoid extra results spanning the range gaps
+                         const validResults = response.data.studentResults.filter((s: any) => chunk.includes(Number(s.roll)));
+                         rawStudents.push(...validResults);
+                     }
+                     if (i < chunks.length - 1) {
+                         await new Promise(r => setTimeout(r, 1000));
+                     }
+                 }
+             }
+             
+             if (rawStudents.length > 0) {
+                 // deduplicate students by roll just in case
+                 const seen = new Set();
+                 rawStudents = rawStudents.filter(s => {
+                     if (seen.has(s.roll)) return false;
+                     seen.add(s.roll);
+                     return true;
+                 });
+                 
                  // 1. Identify minimal rolls to fetch to get ALL subject names
                  const unmetSubjects = new Set<string | number>();
                  const studentFailedSubs = new Map<string | number, (string | number)[]>();
