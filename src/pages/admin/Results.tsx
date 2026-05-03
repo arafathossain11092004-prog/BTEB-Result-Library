@@ -488,6 +488,33 @@ export default function AdminResults() {
       let added = 0;
       let currentInstCode = 'Unknown';
       let currentInstName = 'Unknown Institute';
+
+      // Fetch booklists context
+      let booklistsContext = "";
+      try {
+         const blSnap = await getDocs(query(collection(db, 'booklists')));
+         const uniqueSubjects = new Map();
+         
+         const normalizeCurriculum = (c: string) => c.toLowerCase().trim();
+         const targetCurriculumLower = pdfCurriculum ? normalizeCurriculum(pdfCurriculum) : '';
+
+         blSnap.docs.forEach(d => {
+            const data = d.data();
+            if (data.subjectCode && data.subjectName) {
+                // Determine if we should prioritize this subject mapping
+                if (!pdfCurriculum || normalizeCurriculum(data.curriculum) === targetCurriculumLower) {
+                    uniqueSubjects.set(data.subjectCode, data.subjectName);
+                } else if (!uniqueSubjects.has(data.subjectCode)) {
+                    // Fallback map if not already present
+                    uniqueSubjects.set(data.subjectCode, data.subjectName);
+                }
+            }
+         });
+         const items = Array.from(uniqueSubjects.entries()).map(([code, name]) => `Code: ${code} -> Name: ${name}`);
+         booklistsContext = items.join("\n");
+      } catch(err) {
+         console.warn("Could not fetch booklists for context", err);
+      }
       
       // We will group pages into chunks to prevent output token limits (max 8k/call)
       // typically 1 page of result has ~40 students. Let's do 3 pages per chunk.
@@ -515,7 +542,7 @@ export default function AdminResults() {
              headers: {
                "Content-Type": "application/json"
              },
-             body: JSON.stringify({ chunkText })
+             body: JSON.stringify({ chunkText, booklistsContext })
            });
 
            const data = await res.json();
@@ -529,6 +556,7 @@ export default function AdminResults() {
            }
 
            let jsonStr = data.text || "{}";
+           jsonStr = jsonStr.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
            const parsed = JSON.parse(jsonStr);
            
            if (parsed.institutes && Array.isArray(parsed.institutes)) {

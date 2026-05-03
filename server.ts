@@ -28,7 +28,7 @@ async function startServer() {
 
   app.post("/api/admin/extract-pdf", async (req, res) => {
     try {
-      const { chunkText } = req.body;
+      const { chunkText, booklistsContext } = req.body;
       if (!chunkText) return res.status(400).json({ success: false, error: "Missing chunkText" });
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -43,9 +43,15 @@ Transform unstructured result PDF text into structured JSON with:
 - Institute Info (code, name)
 - Exam Info
 - Student-wise result
-- Subject mapping
+- Subject mapping (Use the provided Booklist Data to accurately map subject codes to their correct names)
 
 NO explanation. ONLY JSON output.
+
+========================================
+📚 BOOKLIST DATA FOR SUBJECT MAPPING
+========================================
+Use this data to find subject names based on their codes:
+${booklistsContext || "No booklist data provided."}
 
 ========================================
 📌 STEP 1: DETECT INSTITUTE
@@ -79,7 +85,8 @@ Extract:
 ========================================
 For each subject:
 Extract: Subject Code, Subject Type (T/P).
-Mark subject status: "referred" or "failed"
+Map the Subject Code to its actual name using the Booklist Data provided above. If not found in the booklist, write "Unknown".
+Mark subject status: "referred" or "failed".
 
 ========================================
 📌 STEP 5: OUTPUT FORMAT (STRICT JSON)
