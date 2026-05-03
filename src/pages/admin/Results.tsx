@@ -586,7 +586,7 @@ export default function AdminResults() {
               }
            }
         } catch (e: any) {
-           console.error("Gemini Extraction Error for Chunk:", JSON.stringify(e, null, 2));
+           console.error("Gemini Extraction Error for Chunk:", String(e));
            // If we hit a rate limit, alert the user and maybe break
            if (e?.status === 429 || e?.status === 'RESOURCE_EXHAUSTED' || e?.message?.includes('429')) {
               alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");

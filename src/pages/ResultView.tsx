@@ -190,7 +190,7 @@ export default function ResultView() {
         if (type === 'institute') {
           const tree: any = {};
           json.data.forEach((student: any) => {
-              // Extract data regardless of if it's from Firebase (flat) or BTEB proxy (nested)
+              // Extract data regardless of if it's from Firebase (flat) or nested structure
               const instName = student.instituteName || (student.institute?.name 
                 ? `${student.institute.name}${student.institute.district ? `, ${student.institute.district}` : ''}`
                 : instituteCode || 'Unknown Institute');
@@ -201,7 +201,7 @@ export default function ResultView() {
               const currName = getCurriculumName(currId);
               const reg = student.regulation ? student.regulation.toString() : 'Unknown Regulation';
 
-              // If nested BTEB server results
+              // If nested results data
               if (student.semesterResults && student.semesterResults.length > 0) {
                  student.semesterResults.forEach((sem: any) => {
                      const originalResult = sem.results?.find((r: any) => r.republished === false) || sem.results?.[0] || {};

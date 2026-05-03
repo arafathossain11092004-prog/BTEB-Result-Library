@@ -127,7 +127,7 @@ ${chunkText}
       return res.json({ success: true, text: response.text });
     } catch (error: any) {
       console.error("Extraction error:", error);
-      res.status(error?.status || 500).json({ success: false, error: JSON.stringify(error) });
+      res.status(error?.status || 500).json({ success: false, error: String(error) });
     }
   });
 
