@@ -247,9 +247,6 @@ export default function AdminResults() {
 
   // PDF Form State
   const [showPdfForm, setShowPdfForm] = useState(false);
-  const [pdfCurriculum, setPdfCurriculum] = useState('');
-  const [pdfRegulation, setPdfRegulation] = useState('');
-  const [pdfTargetSemester, setPdfTargetSemester] = useState('1');
 
   const groupedResults = React.useMemo(() => {
     const institutes: Record<string, Record<string, any[]>> = {};
@@ -471,41 +468,23 @@ export default function AdminResults() {
   };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!pdfCurriculum || !pdfTargetSemester) {
-       alert("Please fill in Curriculum and Target Semester before selecting a PDF.");
-       e.target.value = '';
-       return;
-    }
+    const files = Array.from(e.target.files || []) as File[];
+    if (files.length === 0) return;
 
     setSaving(true);
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
       let added = 0;
-      let currentInstCode = 'Unknown';
-      let currentInstName = 'Unknown Institute';
 
       // Fetch booklists context
       let booklistsContext = "";
       try {
          const blSnap = await getDocs(query(collection(db, 'booklists')));
          const uniqueSubjects = new Map();
-         
-         const normalizeCurriculum = (c: string) => c.toLowerCase().trim();
-         const targetCurriculumLower = pdfCurriculum ? normalizeCurriculum(pdfCurriculum) : '';
 
          blSnap.docs.forEach(d => {
             const data = d.data();
             if (data.subjectCode && data.subjectName) {
-                // Determine if we should prioritize this subject mapping
-                if (!pdfCurriculum || normalizeCurriculum(data.curriculum) === targetCurriculumLower) {
-                    uniqueSubjects.set(data.subjectCode, data.subjectName);
-                } else if (!uniqueSubjects.has(data.subjectCode)) {
-                    // Fallback map if not already present
+                if (!uniqueSubjects.has(data.subjectCode)) {
                     uniqueSubjects.set(data.subjectCode, data.subjectName);
                 }
             }
@@ -516,119 +495,135 @@ export default function AdminResults() {
          console.warn("Could not fetch booklists for context", err);
       }
       
-      // We will group pages into chunks to prevent output token limits (max 8k/call)
-      // typically 1 page of result has ~40 students. Let's do 3 pages per chunk.
-      const CHUNK_SIZE = 3;
-      let pageChunks: string[] = [];
-      let currentChunkText = '';
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(' ');
-        currentChunkText += `Page ${i}: ` + pageText + '\n';
-        if (i % CHUNK_SIZE === 0 || i === pdf.numPages) {
-           pageChunks.push(currentChunkText);
-           currentChunkText = '';
-        }
-      }
+      for (const file of files) {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          
+          let currentInstCode = 'Unknown';
+          let currentInstName = 'Unknown Institute';
+          
+          const CHUNK_SIZE = 3;
+          let pageChunks: string[] = [];
+          let currentChunkText = '';
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+            currentChunkText += `Page ${i}: ` + pageText + '\n';
+            if (i % CHUNK_SIZE === 0 || i === pdf.numPages) {
+               pageChunks.push(currentChunkText);
+               currentChunkText = '';
+            }
+          }
 
-      for (let chunkIndex = 0; chunkIndex < pageChunks.length; chunkIndex++) {
-        const chunkText = pageChunks[chunkIndex];
-        
-        try {
-           const res = await fetch("/api/admin/extract-pdf", {
-             method: "POST",
-             headers: {
-               "Content-Type": "application/json"
-             },
-             body: JSON.stringify({ chunkText, booklistsContext })
-           });
+          for (let chunkIndex = 0; chunkIndex < pageChunks.length; chunkIndex++) {
+            const chunkText = pageChunks[chunkIndex];
+            
+            try {
+               const res = await fetch("/api/admin/extract-pdf", {
+                 method: "POST",
+                 headers: {
+                   "Content-Type": "application/json"
+                 },
+                 body: JSON.stringify({ chunkText, booklistsContext })
+               });
 
-           const data = await res.json();
-           if (!data.success) {
-              console.error("Extraction error:", data.error);
-              if (res.status === 429 || String(data.error).includes('429')) {
-                 alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");
-                 break;
-              }
-              continue;
-           }
-
-           let jsonStr = data.text || "{}";
-           jsonStr = jsonStr.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
-           const parsed = JSON.parse(jsonStr);
-           
-           if (parsed.institutes && Array.isArray(parsed.institutes)) {
-              for (const inst of parsed.institutes) {
-                  if (inst.code && inst.code !== "") currentInstCode = String(inst.code);
-                  if (inst.name && inst.name !== "") currentInstName = String(inst.name);
-                  
-                  if (!inst.students) continue;
-                  
-                  for (const student of inst.students) {
-                     const rollStr = student.roll;
-                     if (!rollStr) continue;
-
-                     let resultObj: any = { gpa: '', subjects: [] };
-                     if (student.status && student.status.toLowerCase() === 'pass') {
-                        resultObj = student.gpa.gpa3 || student.gpa.gpa2 || student.gpa.gpa1 || "Pass";
-                     } else {
-                        const subsStr = (student.subjects || []).map((s:any) => ({ code: s.code, name: s.name || 'Unknown', type: s.type==='P'?'Practical':'Theory' }));
-                        resultObj = JSON.stringify({ type: 'referred', subjects: subsStr, gpa: student.gpa.gpa3 || '' });
-                     }
-
-                     const dataObj: any = {
-                         curriculum: pdfCurriculum || inst.exam?.curriculum || "Unknown",
-                         regulation: pdfRegulation || inst.exam?.regulation || "2022",
-                         rollNumber: String(rollStr),
-                         instituteName: currentInstName,
-                         instituteCode: currentInstCode,
-                         semester1: '', semester2: '', semester3: '', semester4: '',
-                         semester5: '', semester6: '', semester7: '', semester8: '',
-                         createdAt: Date.now(),
-                         updatedAt: Date.now()
-                     };
-                     
-                     dataObj[`semester${pdfTargetSemester}`] = typeof resultObj === 'string' ? resultObj : JSON.stringify(resultObj);
-                     
-                     const q = query(collection(db, 'results'), where('rollNumber', '==', String(rollStr)), limit(1));
-                     const snap = await getDocs(q);
-                     if (!snap.empty) {
-                         const existingDoc = snap.docs[0];
-                         await updateDoc(doc(db, 'results', existingDoc.id), {
-                            [`semester${pdfTargetSemester}`]: dataObj[`semester${pdfTargetSemester}`],
-                            updatedAt: Date.now(),
-                            instituteName: currentInstName,
-                            instituteCode: currentInstCode,
-                         });
-                     } else {
-                         try {
-                            await addDoc(collection(db, 'results'), dataObj);
-                         } catch (e) {
-                            handleFirestoreError(e, OperationType.CREATE, 'results');
-                         }
-                     }
-                     added++;
+               const data = await res.json();
+               if (!data.success) {
+                  console.error("Extraction error:", data.error);
+                  if (res.status === 429 || String(data.error).includes('429')) {
+                     alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");
+                     break;
                   }
-              }
-           }
-        } catch (e: any) {
-           console.error("Gemini Extraction Error for Chunk:", String(e));
-           // If we hit a rate limit, alert the user and maybe break
-           if (e?.status === 429 || e?.status === 'RESOURCE_EXHAUSTED' || e?.message?.includes('429')) {
-              alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");
-              break;
-           }
-        }
-        
-        // Add a small delay between chunks to avoid rate limiting
-        if (chunkIndex < pageChunks.length - 1) {
-           await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+                  continue;
+               }
+
+               let jsonStr = data.text || "{}";
+               jsonStr = jsonStr.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+               const parsed = JSON.parse(jsonStr);
+               
+               if (parsed.institutes && Array.isArray(parsed.institutes)) {
+                  for (const inst of parsed.institutes) {
+                      if (inst.code && inst.code !== "") currentInstCode = String(inst.code);
+                      if (inst.name && inst.name !== "") currentInstName = String(inst.name);
+                      
+                      if (!inst.students) continue;
+
+                      let semesterStr = "1";
+                      if (inst.exam && inst.exam.semester) {
+                         const match = String(inst.exam.semester).match(/\d+/);
+                         if (match) semesterStr = match[0];
+                      }
+                      const semNum = Number(semesterStr);
+                      if (semNum < 1 || semNum > 8) {
+                         semesterStr = "1";
+                      }
+                      
+                      for (const student of inst.students) {
+                         const rollStr = student.roll;
+                         if (!rollStr) continue;
+
+                         let resultObj: any = { gpa: '', subjects: [] };
+                         if (student.status && student.status.toLowerCase() === 'pass') {
+                            resultObj = student.gpa?.gpa3 || student.gpa?.gpa2 || student.gpa?.gpa1 || "Pass";
+                         } else {
+                            const subsStr = (student.subjects || []).map((s:any) => ({ code: s.code, name: s.name || 'Unknown', type: s.type==='P'?'Practical':'Theory' }));
+                            resultObj = JSON.stringify({ type: 'referred', subjects: subsStr, gpa: student.gpa?.gpa3 || student.gpa?.gpa2 || student.gpa?.gpa1 || '' });
+                         }
+
+                         const dataObj: any = {
+                             curriculum: inst.exam?.curriculum || "Diploma in Engineering",
+                             regulation: inst.exam?.regulation || "2022",
+                             rollNumber: String(rollStr),
+                             instituteName: currentInstName,
+                             instituteCode: currentInstCode,
+                             semester1: '', semester2: '', semester3: '', semester4: '',
+                             semester5: '', semester6: '', semester7: '', semester8: '',
+                             createdAt: Date.now(),
+                             updatedAt: Date.now()
+                         };
+                         
+                         dataObj[`semester${semesterStr}`] = typeof resultObj === 'string' ? resultObj : JSON.stringify(resultObj);
+                         
+                         const q = query(collection(db, 'results'), where('rollNumber', '==', String(rollStr)), limit(1));
+                         const snap = await getDocs(q);
+                         if (!snap.empty) {
+                             const existingDoc = snap.docs[0];
+                             await updateDoc(doc(db, 'results', existingDoc.id), {
+                                [`semester${semesterStr}`]: dataObj[`semester${semesterStr}`],
+                                updatedAt: Date.now(),
+                                instituteName: currentInstName,
+                                instituteCode: currentInstCode,
+                                curriculum: dataObj.curriculum,
+                                regulation: dataObj.regulation
+                             });
+                         } else {
+                             try {
+                                await addDoc(collection(db, 'results'), dataObj);
+                             } catch (e) {
+                                handleFirestoreError(e, OperationType.CREATE, 'results');
+                             }
+                         }
+                         added++;
+                      }
+                  }
+               }
+            } catch (e: any) {
+               console.error("Gemini Extraction Error for Chunk:", String(e));
+               if (e?.status === 429 || e?.status === 'RESOURCE_EXHAUSTED' || e?.message?.includes('429')) {
+                  alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");
+                  break;
+               }
+            }
+            
+            if (chunkIndex < pageChunks.length - 1) {
+               await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+          }
       }
       
-      alert(`Imported/Updated ${added} results via AI from PDF.`);
+      alert(`Imported/Updated ${added} results via AI from PDFs.`);
       setShowPdfForm(false);
     } catch (error: any) {
       console.error("PDF upload error:", error);
@@ -702,57 +697,22 @@ export default function AdminResults() {
       {showPdfForm && (
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 pb-8">
            <h2 className="text-lg font-bold text-gray-900 mb-2">Import from BTEB PDF</h2>
-           <p className="text-sm text-gray-500 mb-6">Select the details below before uploading the BTEB PDF. We will automatically extract Roll Numbers and GPAs/Referred subjects.</p>
-           
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum <span className="text-red-500">*</span></label>
-               <select value={pdfCurriculum} onChange={e => setPdfCurriculum(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                 <option value="" disabled>Select Curriculum</option>
-                 <option value="Diploma in Engineering">Diploma in Engineering</option>
-                 <option value="Diploma in Textile">Diploma in Textile</option>
-                 <option value="Diploma in Agriculture">Diploma in Agriculture</option>
-                 <option value="Diploma in Fisheries">Diploma in Fisheries</option>
-                 <option value="Diploma in Medical Technology">Diploma in Medical Technology</option>
-               </select>
-             </div>
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target Semester *</label>
-                <select value={pdfTargetSemester} onChange={e => setPdfTargetSemester(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                  <option value="1">1st Semester</option>
-                  <option value="2">2nd Semester</option>
-                  <option value="3">3rd Semester</option>
-                  <option value="4">4th Semester</option>
-                  <option value="5">5th Semester</option>
-                  <option value="6">6th Semester</option>
-                  <option value="7">7th Semester</option>
-                  <option value="8">8th Semester</option>
-                </select>
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Regulation</label>
-               <select value={pdfRegulation} onChange={e => setPdfRegulation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                 <option value="" disabled>Select Regulation</option>
-                 <option value="2022">2022</option>
-                 <option value="2016">2016</option>
-                 <option value="2010">2010</option>
-               </select>
-             </div>
-           </div>
+           <p className="text-sm text-gray-500 mb-6">Select the BTEB PDFs below. Our AI will automatically extract Roll Numbers, GPAs, Curriculum, Regulation, and mapping for referred subjects.</p>
 
            <div className="flex gap-4 items-center">
-              <label className={cn("cursor-pointer inline-flex items-center px-6 py-3 border-2 border-dashed rounded-lg text-sm font-medium transition-colors", (!pdfCurriculum || !pdfTargetSemester) ? "opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50" : "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100")}>
+              <label className={cn("cursor-pointer inline-flex items-center px-6 py-3 border-2 border-dashed rounded-lg text-sm font-medium transition-colors", saving ? "opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50" : "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100")}>
                 {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Upload className="w-5 h-5 mr-2" />}
-                Choose BTEB PDF File
+                Choose BTEB PDF Files
                 <input 
                   type="file" 
                   accept=".pdf" 
+                  multiple
                   className="hidden" 
                   onChange={handlePdfUpload}
-                  disabled={!pdfCurriculum || !pdfTargetSemester || saving} 
+                  disabled={saving} 
                 />
               </label>
-              {(pdfCurriculum && pdfTargetSemester && !saving) && (
+              {!saving && (
                  <span className="text-sm text-gray-500 font-medium">Ready to extract!</span>
               )}
            </div>
