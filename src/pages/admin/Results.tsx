@@ -247,6 +247,10 @@ export default function AdminResults() {
 
   // PDF Form State
   const [showPdfForm, setShowPdfForm] = useState(false);
+  const [pdfCurriculum, setPdfCurriculum] = useState('');
+  const [pdfRegulation, setPdfRegulation] = useState('');
+  const [pdfTargetSemester, setPdfTargetSemester] = useState('');
+  const [pdfPublishedDate, setPdfPublishedDate] = useState('');
 
   const groupedResults = React.useMemo(() => {
     const institutes: Record<string, Record<string, any[]>> = {};
@@ -550,14 +554,16 @@ export default function AdminResults() {
                       
                       if (!inst.students) continue;
 
-                      let semesterStr = "1";
-                      if (inst.exam && inst.exam.semester) {
-                         const match = String(inst.exam.semester).match(/\d+/);
-                         if (match) semesterStr = match[0];
-                      }
-                      const semNum = Number(semesterStr);
-                      if (semNum < 1 || semNum > 8) {
-                         semesterStr = "1";
+                      let semesterStr = pdfTargetSemester || "1";
+                      if (!pdfTargetSemester) {
+                         if (inst.exam && inst.exam.semester) {
+                            const match = String(inst.exam.semester).match(/\d+/);
+                            if (match) semesterStr = match[0];
+                         }
+                         const semNum = Number(semesterStr);
+                         if (semNum < 1 || semNum > 8) {
+                            semesterStr = "1";
+                         }
                       }
                       
                       for (const student of inst.students) {
@@ -573,8 +579,8 @@ export default function AdminResults() {
                          }
 
                          const dataObj: any = {
-                             curriculum: inst.exam?.curriculum || "Diploma in Engineering",
-                             regulation: inst.exam?.regulation || "2022",
+                             curriculum: pdfCurriculum || inst.exam?.curriculum || "Diploma in Engineering",
+                             regulation: pdfRegulation || inst.exam?.regulation || "2022",
                              rollNumber: String(rollStr),
                              instituteName: currentInstName,
                              instituteCode: currentInstCode,
@@ -583,6 +589,9 @@ export default function AdminResults() {
                              createdAt: Date.now(),
                              updatedAt: Date.now()
                          };
+                         if (pdfPublishedDate) {
+                             dataObj.publishedDate = pdfPublishedDate;
+                         }
                          
                          dataObj[`semester${semesterStr}`] = typeof resultObj === 'string' ? resultObj : JSON.stringify(resultObj);
                          
@@ -590,14 +599,18 @@ export default function AdminResults() {
                          const snap = await getDocs(q);
                          if (!snap.empty) {
                              const existingDoc = snap.docs[0];
-                             await updateDoc(doc(db, 'results', existingDoc.id), {
+                             const updateData: any = {
                                 [`semester${semesterStr}`]: dataObj[`semester${semesterStr}`],
                                 updatedAt: Date.now(),
                                 instituteName: currentInstName,
                                 instituteCode: currentInstCode,
                                 curriculum: dataObj.curriculum,
                                 regulation: dataObj.regulation
-                             });
+                             };
+                             if (pdfPublishedDate) {
+                                updateData.publishedDate = pdfPublishedDate;
+                             }
+                             await updateDoc(doc(db, 'results', existingDoc.id), updateData);
                          } else {
                              try {
                                 await addDoc(collection(db, 'results'), dataObj);
@@ -697,7 +710,49 @@ export default function AdminResults() {
       {showPdfForm && (
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 pb-8">
            <h2 className="text-lg font-bold text-gray-900 mb-2">Import from BTEB PDF</h2>
-           <p className="text-sm text-gray-500 mb-6">Select the BTEB PDFs below. Our AI will automatically extract Roll Numbers, GPAs, Curriculum, Regulation, and mapping for referred subjects.</p>
+           <p className="text-sm text-gray-500 mb-6">Our AI will extract data, but you can optionally override Curriculum, Regulation, Semester or set Published Date before uploading PDFs.</p>
+           
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum Override</label>
+               <select value={pdfCurriculum} onChange={e => setPdfCurriculum(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                 <option value="">Auto-detect</option>
+                 <option value="Diploma in Engineering">Diploma in Engineering</option>
+                 <option value="Diploma in Textile">Diploma in Textile</option>
+                 <option value="Diploma in Agriculture">Diploma in Agriculture</option>
+                 <option value="Diploma in Fisheries">Diploma in Fisheries</option>
+                 <option value="Diploma in Forestry">Diploma in Forestry</option>
+                 <option value="Diploma in Medical Technology">Diploma in Medical Technology</option>
+               </select>
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Regulation Override</label>
+               <select value={pdfRegulation} onChange={e => setPdfRegulation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                 <option value="">Auto-detect</option>
+                 <option value="2022">2022</option>
+                 <option value="2016">2016</option>
+                 <option value="2010">2010</option>
+               </select>
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Semester Override</label>
+                <select value={pdfTargetSemester} onChange={e => setPdfTargetSemester(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                  <option value="">Auto-detect</option>
+                  <option value="1">1st Semester</option>
+                  <option value="2">2nd Semester</option>
+                  <option value="3">3rd Semester</option>
+                  <option value="4">4th Semester</option>
+                  <option value="5">5th Semester</option>
+                  <option value="6">6th Semester</option>
+                  <option value="7">7th Semester</option>
+                  <option value="8">8th Semester</option>
+                </select>
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Published Date (Optional)</label>
+               <input type="text" placeholder="e.g. 15 Jan 2024" value={pdfPublishedDate} onChange={e => setPdfPublishedDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white" />
+             </div>
+           </div>
 
            <div className="flex gap-4 items-center">
               <label className={cn("cursor-pointer inline-flex items-center px-6 py-3 border-2 border-dashed rounded-lg text-sm font-medium transition-colors", saving ? "opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50" : "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100")}>
