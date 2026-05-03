@@ -86,6 +86,21 @@ export default function Calculator() {
     }
   };
 
+  const extractGPAFromAPI = (data: any, semNumber: number) => {
+    if (!data || !data.semesterResults) return '';
+    const semData = data.semesterResults.find((s: any) => s.semester === semNumber);
+    if (!semData || !semData.results || semData.results.length === 0) return '';
+    
+    // Check for failed subjects in this semester
+    const failedInThisSem = (data.currentFailedSubjects || []).filter((f: any) => f.originSemester === semNumber);
+    if (failedInThisSem.length > 0) return ''; // Has referred
+
+    // Use specific gpa field to prevent fetching cgpa which might overwrite true semester gpa in 8th semester
+    const gpa = semData.results[0].gpa || semData.results[0].cgpa;
+    if (gpa === 'Passed') return '';
+    return parseGPA(gpa);
+  };
+
   const handleAutofill = async () => {
     if (!curriculum || !autoRegulation || !rollNumber) {
       setError('Please fill all autofill fields.');
@@ -119,27 +134,68 @@ export default function Calculator() {
 
       if (firebaseResults.length > 0) {
         dataToUse = firebaseResults[0];
+      } else {
+        // Fallback to API Proxy
+        let mappedCurriculum = curriculum;
+        if (curriculum === 'Diploma in Engineering') mappedCurriculum = 'diploma_in_engineering';
+        if (curriculum === 'Diploma in Textile Engineering') mappedCurriculum = 'diploma_in_textile';
+        if (curriculum === 'Diploma in Agriculture') mappedCurriculum = 'diploma_in_agriculture';
+        if (curriculum === 'Diploma in Fisheries') mappedCurriculum = 'diploma_in_fisheries';
+        if (curriculum === 'Diploma in Forestry') mappedCurriculum = 'diploma_in_forestry';
+        if (curriculum === 'Diploma in Medical Technology') mappedCurriculum = 'diploma_in_medical_technology';
+
+        const apiUrl = `/api/results?roll=${rollNumber}&curriculumId=${mappedCurriculum}&regulation=${autoRegulation}`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('API fetch failed');
+        const resultData = await response.json();
+        
+        if (resultData.success && resultData.data && resultData.data.length > 0) {
+          dataToUse = resultData.data[0];
+          isFromApi = true;
+        } else if (Array.isArray(resultData) && resultData.length > 0) {
+          dataToUse = resultData[0];
+          isFromApi = true;
+        } else if (resultData && resultData.roll) {
+           // Direct single result
+           dataToUse = resultData;
+           isFromApi = true;
+        }
       }
 
       if (dataToUse) {
-        let newGpas = [
-          parseGPA(dataToUse.semester1),
-          parseGPA(dataToUse.semester2),
-          parseGPA(dataToUse.semester3),
-          parseGPA(dataToUse.semester4),
-          parseGPA(dataToUse.semester5),
-          parseGPA(dataToUse.semester6),
-          parseGPA(dataToUse.semester7),
-          parseGPA(dataToUse.semester8),
-        ];
-
+        let newGpas = Array(8).fill('');
+        
+        if (isFromApi) {
+          newGpas = [
+            extractGPAFromAPI(dataToUse, 1),
+            extractGPAFromAPI(dataToUse, 2),
+            extractGPAFromAPI(dataToUse, 3),
+            extractGPAFromAPI(dataToUse, 4),
+            extractGPAFromAPI(dataToUse, 5),
+            extractGPAFromAPI(dataToUse, 6),
+            extractGPAFromAPI(dataToUse, 7),
+            extractGPAFromAPI(dataToUse, 8),
+          ];
+        } else {
+          newGpas = [
+            parseGPA(dataToUse.semester1),
+            parseGPA(dataToUse.semester2),
+            parseGPA(dataToUse.semester3),
+            parseGPA(dataToUse.semester4),
+            parseGPA(dataToUse.semester5),
+            parseGPA(dataToUse.semester6),
+            parseGPA(dataToUse.semester7),
+            parseGPA(dataToUse.semester8),
+          ];
+        }
+        
         setGpas(newGpas);
         setRegulation(autoRegulation);
         setCgpaResult(null);
         setEarnedPoints(null);
         setCompletionPercentage(null);
       } else {
-        setError('No results found for this Roll Number in our database.');
+        setError('No results found for this Roll Number.');
       }
     } catch (err) {
       console.error(err);

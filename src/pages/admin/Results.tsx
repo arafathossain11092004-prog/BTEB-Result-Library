@@ -4,11 +4,6 @@ import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Plus, Trash2, Edit2, Upload, Loader2, Download, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import * as xlsx from 'xlsx';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-// Configure pdfjs worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const SemesterInput = ({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) => {
   const [mode, setMode] = useState<'gpa' | 'referred'>('gpa');
@@ -245,14 +240,6 @@ export default function AdminResults() {
   const [saving, setSaving] = useState(false);
   const [searchingRoll, setSearchingRoll] = useState(false);
 
-  // PDF Form State
-  const [showPdfForm, setShowPdfForm] = useState(false);
-  const [pdfCurriculum, setPdfCurriculum] = useState('');
-  const [pdfRegulation, setPdfRegulation] = useState('');
-  const [pdfTargetSemester, setPdfTargetSemester] = useState('');
-  const [pdfPublishedDate, setPdfPublishedDate] = useState('');
-  const [pdfProgress, setPdfProgress] = useState<{current: number, total: number, message: string, added: number} | null>(null);
-
   const groupedResults = React.useMemo(() => {
     const institutes: Record<string, Record<string, any[]>> = {};
 
@@ -472,180 +459,6 @@ export default function AdminResults() {
     }
   };
 
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []) as File[];
-    if (files.length === 0) return;
-
-    setSaving(true);
-    try {
-      let added = 0;
-
-      setPdfProgress({ current: 0, total: 100, message: 'Fetching Booklist data...', added: 0 });
-      let booklistsContext = "";
-      const uniqueSubjects = new Map();
-      try {
-         const blSnap = await getDocs(query(collection(db, 'booklists')));
-
-         blSnap.docs.forEach(d => {
-            const data = d.data();
-            if (data.subjectCode && data.subjectName) {
-                if (!uniqueSubjects.has(data.subjectCode)) {
-                    uniqueSubjects.set(data.subjectCode, data.subjectName);
-                }
-            }
-         });
-      } catch(err) {
-         console.warn("Could not fetch booklists for context", err);
-      }
-      
-      for (const file of files) {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          const totalPages = pdf.numPages;
-          
-          let currentInstCode = 'Unknown';
-          let currentInstName = 'Unknown Institute';
-          let autoSemester = '1';
-          let autoCurriculum = 'Diploma in Engineering';
-          let autoRegulation = '2022';
-          
-          for (let i = 1; i <= totalPages; i++) {
-            setPdfProgress({ current: i, total: totalPages, message: `Processing PDF Page ${i} of ${totalPages}`, added });
-            
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map((item: any) => item.str).join(' ');
-
-            // Parse Institute
-            const instRegex = /(\d{4,5})\s*-\s*([A-Za-z\s,()]+?)(?=\s+\d|\n|$)/;
-            const instMatch = pageText.match(instRegex);
-            if (instMatch) {
-               currentInstCode = instMatch[1].trim();
-               currentInstName = instMatch[2].trim();
-            }
-
-            // Parse Exam Info (simple heuristics for Curriculum and Regulation)
-            if (pageText.includes('Diploma in Engineering')) autoCurriculum = 'Diploma in Engineering';
-            else if (pageText.includes('Diploma in Textile')) autoCurriculum = 'Diploma in Textile';
-            else if (pageText.includes('Diploma in Agriculture')) autoCurriculum = 'Diploma in Agriculture';
-            else if (pageText.includes('Diploma in Fisheries')) autoCurriculum = 'Diploma in Fisheries';
-            else if (pageText.includes('Diploma in Forestry')) autoCurriculum = 'Diploma in Forestry';
-            else if (pageText.includes('Diploma in Medical Technology')) autoCurriculum = 'Diploma in Medical Technology';
-            
-            if (pageText.includes('2022 Regulation')) autoRegulation = '2022';
-            else if (pageText.includes('2016 Regulation')) autoRegulation = '2016';
-            else if (pageText.includes('2010 Regulation')) autoRegulation = '2010';
-            
-            const semRegex = /(\d)(?:st|nd|rd|th)\s+Semester/i;
-            const semMatch = pageText.match(semRegex);
-            if (semMatch) autoSemester = semMatch[1];
-            
-            // Build Students
-            const resultsRegex = /\b(\d{6})\b\s*(?:\(\s*([\d\.]+|Pass)\s*\)|\{\s*([^}]+)\})/g;
-            let match;
-            const batchRolls: any[] = [];
-            while ((match = resultsRegex.exec(pageText)) !== null) {
-              const rollStr = match[1];
-              const gpa = match[2];
-              const ref = match[3];
-
-              let resultObj: any = { gpa: '', subjects: [] };
-              if (gpa) {
-                 resultObj = gpa; // "3.50" or "Pass"
-              } else if (ref) {
-                 const subjectsArr = ref.split(',').map((s: string) => {
-                    const subCodeMatch = s.match(/(\d+)/);
-                    const code = subCodeMatch ? subCodeMatch[1] : s.trim();
-                    const isPractical = s.includes('(P)');
-                    return {
-                       code: code,
-                       name: uniqueSubjects.get(code) || 'Unknown',
-                       type: isPractical ? 'Practical' : 'Theory'
-                    };
-                 });
-                 resultObj = JSON.stringify({ type: 'referred', subjects: subjectsArr, gpa: '' });
-              }
-              
-              const semesterStr = pdfTargetSemester || autoSemester;
-              batchRolls.push({ roll: rollStr, resultObj, semesterStr });
-            }
-            
-            if (batchRolls.length > 0) {
-               // Save to DB in manageable chunks (30 max due to 'in' query limit)
-               const chunkSize = 25;
-               for (let j = 0; j < batchRolls.length; j += chunkSize) {
-                  const chunk = batchRolls.slice(j, j + chunkSize);
-                  const rollNumbers = chunk.map(c => String(c.roll));
-                  
-                  const q = query(collection(db, 'results'), where('rollNumber', 'in', rollNumbers));
-                  const snap = await getDocs(q);
-                  
-                  const existingMap = new Map();
-                  snap.docs.forEach(doc => {
-                     existingMap.set(doc.data().rollNumber, doc);
-                  });
-                  
-                  const promises = chunk.map(async (student) => {
-                      const semesterStr = student.semesterStr;
-                      
-                      const dataObj: any = {
-                          curriculum: pdfCurriculum || autoCurriculum,
-                          regulation: pdfRegulation || autoRegulation,
-                          rollNumber: String(student.roll),
-                          instituteName: currentInstName,
-                          instituteCode: currentInstCode,
-                          semester1: '', semester2: '', semester3: '', semester4: '',
-                          semester5: '', semester6: '', semester7: '', semester8: '',
-                          createdAt: Date.now(),
-                          updatedAt: Date.now()
-                      };
-                      if (pdfPublishedDate) {
-                          dataObj.publishedDate = pdfPublishedDate;
-                      }
-                      
-                      dataObj[`semester${semesterStr}`] = typeof student.resultObj === 'string' ? student.resultObj : JSON.stringify(student.resultObj);
-                      
-                      const existingDoc = existingMap.get(String(student.roll));
-                      if (existingDoc) {
-                          const updateData: any = {
-                             [`semester${semesterStr}`]: dataObj[`semester${semesterStr}`],
-                             updatedAt: Date.now(),
-                             instituteName: currentInstName,
-                             instituteCode: currentInstCode,
-                             curriculum: dataObj.curriculum,
-                             regulation: dataObj.regulation
-                          };
-                          if (pdfPublishedDate) updateData.publishedDate = pdfPublishedDate;
-                          return updateDoc(doc(db, 'results', existingDoc.id), updateData);
-                      } else {
-                          return addDoc(collection(db, 'results'), dataObj);
-                      }
-                  });
-                  
-                  await Promise.allSettled(promises);
-                  added += promises.length;
-                  setPdfProgress(prev => prev ? { ...prev, added } : null);
-               }
-            }
-            
-            // Yield to main thread
-            await new Promise(r => setTimeout(r, 1));
-          }
-      }
-      
-      alert(`Imported/Updated ${added} results successfully.`);
-      setShowPdfForm(false);
-    } catch (error: any) {
-      console.error("PDF upload error:", error);
-      alert("Error processing PDF: " + (error?.message || "Unknown error"));
-    } finally {
-      setSaving(false);
-      setPdfProgress(null);
-      fetchResults().catch(console.error);
-      if (e.target) e.target.value = '';
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto space-y-6 lg:px-0 px-4">
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-6 mb-6">
@@ -689,100 +502,14 @@ export default function AdminResults() {
               <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleFileUpload} />
            </label>
            <button
-             onClick={() => { setShowPdfForm(!showPdfForm); setShowForm(false); }}
-             className={cn("inline-flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors", showPdfForm ? "bg-purple-100 border-purple-300 text-purple-800" : "border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100")}
-           >
-             <Upload className="w-4 h-4 mr-2" />
-             Import PDF
-           </button>
-           <button
-             onClick={() => { resetForm(); setShowForm(true); setShowPdfForm(false); }}
-             className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-           >
-             <Plus className="w-4 h-4 mr-2" />
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
             Add Result
           </button>
         </div>
       </div>
-
-      {showPdfForm && (
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 pb-8">
-           <h2 className="text-lg font-bold text-gray-900 mb-2">Import from BTEB PDF</h2>
-           <p className="text-sm text-gray-500 mb-6">Our lightning-fast native engine extracts data automatically. You can optionally override Curriculum, Regulation, Semester or set Published Date before choosing the PDFs.</p>
-           
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Curriculum Override</label>
-               <select value={pdfCurriculum} onChange={e => setPdfCurriculum(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                 <option value="">Auto-detect</option>
-                 <option value="Diploma in Engineering">Diploma in Engineering</option>
-                 <option value="Diploma in Textile">Diploma in Textile</option>
-                 <option value="Diploma in Agriculture">Diploma in Agriculture</option>
-                 <option value="Diploma in Fisheries">Diploma in Fisheries</option>
-                 <option value="Diploma in Forestry">Diploma in Forestry</option>
-                 <option value="Diploma in Medical Technology">Diploma in Medical Technology</option>
-               </select>
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Regulation Override</label>
-               <select value={pdfRegulation} onChange={e => setPdfRegulation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                 <option value="">Auto-detect</option>
-                 <option value="2022">2022</option>
-                 <option value="2016">2016</option>
-                 <option value="2010">2010</option>
-               </select>
-             </div>
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Semester Override</label>
-                <select value={pdfTargetSemester} onChange={e => setPdfTargetSemester(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                  <option value="">Auto-detect</option>
-                  <option value="1">1st Semester</option>
-                  <option value="2">2nd Semester</option>
-                  <option value="3">3rd Semester</option>
-                  <option value="4">4th Semester</option>
-                  <option value="5">5th Semester</option>
-                  <option value="6">6th Semester</option>
-                  <option value="7">7th Semester</option>
-                  <option value="8">8th Semester</option>
-                </select>
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Published Date (Optional)</label>
-               <input type="text" placeholder="e.g. 15 Jan 2024" value={pdfPublishedDate} onChange={e => setPdfPublishedDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white" />
-             </div>
-           </div>
-
-           <div className="flex gap-4 items-center">
-              <label className={cn("cursor-pointer inline-flex items-center px-6 py-3 border-2 border-dashed rounded-lg text-sm font-medium transition-colors", saving ? "opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50" : "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100")}>
-                {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Upload className="w-5 h-5 mr-2" />}
-                Choose BTEB PDF Files
-                <input 
-                  type="file" 
-                  accept=".pdf" 
-                  multiple
-                  className="hidden" 
-                  onChange={handlePdfUpload}
-                  disabled={saving} 
-                />
-              </label>
-              {!saving && (
-                 <span className="text-sm text-gray-500 font-medium">Ready to extract!</span>
-              )}
-           </div>
-           
-           {pdfProgress && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-bold text-gray-800">{pdfProgress.message}</span>
-                  <span className="text-sm font-medium text-gray-500">{pdfProgress.added} added/updated</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
-                  <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${(pdfProgress.current / pdfProgress.total) * 100}%` }}></div>
-                </div>
-              </div>
-           )}
-        </div>
-      )}
 
       {showForm && (
         <form onSubmit={handleSave} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
