@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link, useParams } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -18,11 +18,8 @@ export default function ResultView() {
   
   const [results, setResults] = useState<any[]>([]);
   const [selectedResultIndex, setSelectedResultIndex] = useState(0);
-  const [instituteDates, setInstituteDates] = useState<any[]>([]);
   const [instituteName, setInstituteName] = useState<string | null>(null);
-  const [institutePDFs, setInstitutePDFs] = useState<string[]>([]);
   const [activeDateStr, setActiveDateStr] = useState<string | null>(null);
-  const [loadingPdfs, setLoadingPdfs] = useState(false);
   const [instituteTree, setInstituteTree] = useState<any>(null);
   const [expandedNodes, setExpandedNodes] = useState<string[]>([]);
   const [selectedPublishDate, setSelectedPublishDate] = useState<string | null>(null);
@@ -73,30 +70,64 @@ export default function ResultView() {
       setLoading(true);
       setError('');
       
-      if (type === 'institute') {
-        try {
-          const res = await fetch(`/api/bteb/institute-results/${instituteCode}`);
-          const json = await res.json();
-          if (!isMounted) return;
-          if (json.success && json.data) {
-             setInstituteDates(json.data);
-             if (json.instituteName) setInstituteName(json.instituteName);
-          } else {
-             setError(json.error || 'Failed to load institute results');
-          }
-        } catch(e) {
-          if (!isMounted) return;
-          setError('Failed to fetch institute results');
-        }
-        setLoading(false);
-        return;
-      }
       try {
-        let firebaseResults: any[] = [];
+        let data: any[] = [];
         
         try {
-          if (roll && type !== 'institute') {
-             const rollsList = roll.split(/[,\s]+/).map(r => r.trim()).filter(Boolean);
+          if (type === 'institute') {
+             // Let's try matching String instituteCode
+             let q = query(collection(db, 'results'), where('instituteCode', '==', String(instituteCode)), limit(1000));
+             let snap = await getDocs(q);
+             snap.forEach(d => {
+                 data.push({ id: d.id, ...d.data() });
+             });
+             
+             // If not found, try matching Nested institute.code (number)
+             if (data.length === 0) {
+                 q = query(collection(db, 'results'), where('institute.code', '==', parseInt(String(instituteCode), 10)), limit(1000));
+                 snap = await getDocs(q);
+                 snap.forEach(d => {
+                     data.push({ id: d.id, ...d.data() });
+                 });
+             }
+             
+             // If not found, try matching Nested institute.code (string)
+             if (data.length === 0) {
+                 q = query(collection(db, 'results'), where('institute.code', '==', String(instituteCode)), limit(1000));
+                 snap = await getDocs(q);
+                 snap.forEach(d => {
+                     data.push({ id: d.id, ...d.data() });
+                 });
+             }
+
+          } else if (roll) {
+             let rollsList: string[] = [];
+             
+             const processRange = (part: string) => {
+                 if (part.includes('-')) {
+                    const [sStr, eStr] = part.split('-');
+                    const s = parseInt(sStr, 10);
+                    const e = parseInt(eStr, 10);
+                    if (!isNaN(s) && !isNaN(e) && s <= e) {
+                        for (let i = s; i <= e; i++) {
+                            rollsList.push(String(i));
+                        }
+                    }
+                 } else {
+                     rollsList.push(part.trim());
+                 }
+             };
+
+             if (roll.includes(',') || roll.includes('-')) {
+                 const parts = roll.split(',');
+                 parts.forEach(part => processRange(part));
+             } else {
+                 rollsList.push(roll.trim());
+             }
+             
+             // deduplicate
+             rollsList = Array.from(new Set(rollsList)).filter(Boolean);
+
              const chunks = [];
              for (let i = 0; i < rollsList.length; i += 10) {
                  chunks.push(rollsList.slice(i, i + 10));
@@ -105,58 +136,22 @@ export default function ResultView() {
                  let q = query(collection(db, 'results'), where('rollNumber', 'in', chunk));
                  const snap = await getDocs(q);
                  snap.forEach(d => {
-                   const data = d.data();
-                   if (!curriculum || data.curriculum === curriculum || data.curriculumId === curriculum) {
-                     firebaseResults.push({ id: d.id, ...data });
+                   const rData = d.data();
+                   if (!curriculum || rData.curriculum === curriculum || rData.curriculumId === curriculum) {
+                     data.push({ id: d.id, ...rData });
                    }
                  });
              }
           }
         } catch (dbErr) {
            console.warn("Firebase query failed:", dbErr);
+           if (!isMounted) return;
+           setError('Database fetch error.');
+           setLoading(false);
+           return;
         }
 
-        if (firebaseResults.length > 0 && roll && type !== 'institute') {
-             const requestedRolls = roll.split(/[,\s]+/).map(r => r.trim()).filter(Boolean);
-             if (firebaseResults.length === requestedRolls.length) {
-                 if (!isMounted) return;
-                 setSelectedResultIndex(0);
-                 setResults([...firebaseResults]);
-                 setLoading(false);
-                 return;
-             }
-        }
-
-        let apiUrl = '/api/results?';
-        const queryParams = new URLSearchParams();
-        
-        if (type === 'institute' && instituteCode) {
-          queryParams.append('type', 'institute');
-          queryParams.append('instituteCode', instituteCode);
-        } else if (roll) {
-          queryParams.append('type', type);
-          queryParams.append('roll', roll);
-        }
-
-        if (curriculum) queryParams.append('curriculumId', curriculum);
-        if (regulation) queryParams.append('regulation', regulation);
-
-        apiUrl += queryParams.toString();
-
-        const response = await fetch(apiUrl);
-        if (!isMounted) return;
-        if (!response.ok) {
-          let errorMsg = 'Failed to fetch from server';
-          try {
-             const errJson = await response.json();
-             if (errJson && errJson.error) {
-                errorMsg = errJson.error;
-             }
-          } catch(e) {}
-          throw new Error(errorMsg);
-        }
-
-        const json = await response.json();
+        const json = { success: true, data: data };
         if (!isMounted) return;
         
         if (!json.success || !json.data || json.data.length === 0) {
@@ -444,25 +439,6 @@ export default function ResultView() {
     }
   };
 
-  const loadInstitutePdfs = async (dateStr: string) => {
-    if (activeDateStr === dateStr) {
-      setActiveDateStr(null);
-      return; // toggle off
-    }
-    setActiveDateStr(dateStr);
-    setLoadingPdfs(true);
-    setInstitutePDFs([]);
-    try {
-      const res = await fetch(`/api/bteb/institute-results/${instituteCode}/${dateStr}`);
-      const json = await res.json();
-      if (json.success && json.pdfs) {
-        setInstitutePDFs(json.pdfs);
-      }
-    } catch(e) {
-      console.error(e);
-    }
-    setLoadingPdfs(false);
-  };
 
   const handlePrint = () => {
     window.print();
@@ -784,95 +760,89 @@ export default function ResultView() {
                  </p>
               </div>
 
-              {instituteDates.length === 0 ? (
+              {!instituteTree || Object.keys(instituteTree).length === 0 ? (
                 <div className="text-center py-12">
                    <p className="text-gray-500">No dates available or still loading...</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-5">
-                  {instituteDates.map((item, idx) => (
-                    <div key={idx} className="bg-white border text-left border-gray-200/60 shadow-sm rounded-2xl overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all">
-                      <button 
-                        onClick={() => loadInstitutePdfs(item.dateStr)}
-                        className="w-full text-left p-5 flex flex-col justify-between focus:outline-none focus:bg-gray-50/50"
-                      >
-                         <div className="w-full">
-                            <div className="flex justify-between items-start mb-3">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-indigo-500" />
-                                <div className="text-sm font-semibold text-gray-900">{item.dateStr}</div>
-                              </div>
-                              <div className="shrink-0 flex items-center justify-center w-8 h-8 bg-gray-50 rounded-full text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                                {activeDateStr === item.dateStr ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
-                              </div>
-                            </div>
-                            
-                            {item.stats.passed && (
-                              <div className="mt-4 space-y-2">
-                                <div className="flex items-center justify-between text-xs text-gray-600">
-                                   <span className="font-medium">Pass Rate</span>
-                                   <span className="font-bold text-gray-900">{item.stats.passed.split(' ')[0]}</span>
-                                </div>
-                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
-                                   <div className="h-full bg-emerald-500 transition-all duration-1000 ease-out" style={{ width: item.stats.passed.split(' ')[0] }}></div>
-                                   {item.stats.failed && (
-                                     <div className="h-full bg-red-400 transition-all duration-1000 ease-out" style={{ width: item.stats.failed.split(' ')[0] }}></div>
-                                   )}
-                                </div>
-                              </div>
-                            )}
+                  {Object.entries(instituteTree).map(([inst, datesObj]: any, idx) => (
+                      <div key={idx} className="w-full space-y-4">
+                         {Object.entries(datesObj).map(([dateStr, filesObj]: any, didx) => {
+                             let totalPassed = 0;
+                             let totalFailed = 0;
+                             Object.values(filesObj).forEach((f: any) => {
+                                 totalPassed += f.passed?.length || 0;
+                                 totalFailed += f.referred?.length || 0;
+                             });
+                             const total = totalPassed + totalFailed;
+                             const passRate = total > 0 ? ((totalPassed / total) * 100).toFixed(1) + '%' : '0%';
+                             
+                             return (
+                            <div key={didx} className="bg-white border text-left border-gray-200/60 shadow-sm rounded-2xl overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all">
+                              <button 
+                                onClick={() => setActiveDateStr(activeDateStr === dateStr ? null : dateStr)}
+                                className="w-full text-left p-5 flex flex-col justify-between focus:outline-none focus:bg-gray-50/50"
+                              >
+                                 <div className="w-full">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 text-indigo-500" />
+                                        <div className="text-sm font-semibold text-gray-900">{dateStr}</div>
+                                      </div>
+                                      <div className="shrink-0 flex items-center justify-center w-8 h-8 bg-gray-50 rounded-full text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                        {activeDateStr === dateStr ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mt-4 space-y-2">
+                                        <div className="flex items-center justify-between text-xs text-gray-600">
+                                           <span className="font-medium">Pass Rate</span>
+                                           <span className="font-bold text-gray-900">{passRate}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
+                                           <div className="h-full bg-emerald-500 transition-all duration-1000 ease-out" style={{ width: passRate }}></div>
+                                           <div className="h-full bg-red-400 transition-all duration-1000 ease-out" style={{ width: (100 - parseFloat(passRate)) + '%' }}></div>
+                                        </div>
+                                    </div>
 
-                            <div className="flex items-center gap-6 mt-5 pt-4 border-t border-gray-100">
-                               {item.stats.passed && (
-                                 <div className="text-sm">
-                                   <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Passed</span>
-                                   <span className="font-bold text-gray-900">{item.stats.passed.match(/\((\d+)\)/)?.[1] || '-'}</span>
+                                    <div className="flex items-center gap-6 mt-5 pt-4 border-t border-gray-100">
+                                         <div className="text-sm">
+                                           <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Passed</span>
+                                           <span className="font-bold text-gray-900">{totalPassed}</span>
+                                         </div>
+                                         <div className="text-sm">
+                                           <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Failed</span>
+                                           <span className="font-bold text-gray-900">{totalFailed}</span>
+                                         </div>
+                                         <div className="text-sm">
+                                           <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Total</span>
+                                           <span className="font-bold text-gray-900">{total}</span>
+                                         </div>
+                                    </div>
                                  </div>
-                               )}
-                               {item.stats.failed && (
-                                 <div className="text-sm">
-                                   <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Failed</span>
-                                   <span className="font-bold text-gray-900">{item.stats.failed.match(/\((\d+)\)/)?.[1] || '-'}</span>
-                                 </div>
-                               )}
-                               {item.stats.total && (
-                                 <div className="text-sm">
-                                   <span className="text-gray-500 block text-[10px] uppercase tracking-wider mb-0.5">Total</span>
-                                   <span className="font-bold text-gray-900">{item.stats.total}</span>
-                                 </div>
-                               )}
+                              </button>
+                              
+                              {activeDateStr === dateStr && (
+                                <div className="border-t border-gray-100 p-5 bg-slate-50/50">
+                                  <div className="space-y-4">
+                                     {Object.entries(filesObj).map(([fKey, fData]: any, fidx) => (
+                                        <div key={fidx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                           <div className="font-semibold text-gray-800 text-sm mb-1">{fData.curriculumName} - {fData.semester} Semester</div>
+                                           <div className="flex gap-4 text-xs text-gray-500 mb-2">
+                                              <span>Regulation: {fData.regulation}</span>
+                                              <span>Passed: <span className="text-emerald-600 font-bold">{fData.passed.length}</span></span>
+                                              <span>Failed: <span className="text-red-500 font-bold">{fData.referred.length}</span></span>
+                                           </div>
+                                        </div>
+                                     ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                         </div>
-                      </button>
-
-                      {activeDateStr === item.dateStr && (
-                        <div className="border-t border-gray-100 p-5 bg-slate-50/50">
-                           {loadingPdfs ? (
-                             <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-indigo-500 animate-spin" /></div>
-                           ) : institutePDFs.length === 0 ? (
-                             <div className="text-center text-gray-500 text-sm py-4">No PDF files found for this date.</div>
-                           ) : (
-                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Result Files ({institutePDFs.length})</h4>
-                                {institutePDFs.map((pdf, pidx) => (
-                                  <a key={pidx} href={pdf} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white border border-gray-200 p-3 rounded-xl hover:border-indigo-400 hover:shadow text-left transition-all group">
-                                     <div className="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-red-500 group-hover:text-white transition-colors">
-                                       <Folder className="w-5 h-5" />
-                                     </div>
-                                     <div className="flex-1 overflow-hidden">
-                                       <div className="font-medium text-sm text-gray-800 truncate">{pdf.split('/').pop()}</div>
-                                       <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">Official BTEB Document</div>
-                                     </div>
-                                     <div className="text-gray-300 group-hover:text-indigo-600 transition-colors">
-                                       <Download className="w-4 h-4" />
-                                     </div>
-                                  </a>
-                                ))}
-                             </div>
-                           )}
-                        </div>
-                      )}
-                    </div>
+                            );
+                         })}
+                      </div>
                   ))}
                 </div>
               )}

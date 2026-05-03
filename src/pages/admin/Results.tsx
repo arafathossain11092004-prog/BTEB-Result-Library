@@ -6,7 +6,6 @@ import { cn } from '../../lib/utils';
 import * as xlsx from 'xlsx';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { GoogleGenAI } from "@google/genai";
 
 // Configure pdfjs worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -490,8 +489,6 @@ export default function AdminResults() {
       let currentInstCode = 'Unknown';
       let currentInstName = 'Unknown Institute';
       
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
       // We will group pages into chunks to prevent output token limits (max 8k/call)
       // typically 1 page of result has ~40 students. Let's do 3 pages per chunk.
       const CHUNK_SIZE = 3;
@@ -509,107 +506,35 @@ export default function AdminResults() {
         }
       }
 
-      await Promise.all(pageChunks.map(async (chunkText, chunkIndex) => {
-        const promptString = `You are a highly advanced AI system specialized in extracting and structuring technical education board result data from large, messy PDF documents.
-
-Your task is to process the ENTIRE provided text and convert it into a clean, structured, database-ready JSON.
-
-========================================
-🎯 PRIMARY GOAL
-========================================
-Transform unstructured result PDF text into structured JSON with:
-- Institute Info (code, name)
-- Exam Info
-- Student-wise result
-- Subject mapping
-
-NO explanation. ONLY JSON output.
-
-========================================
-📌 STEP 1: DETECT INSTITUTE
-========================================
-Extract for each institute block:
-- Institute Name
-- Institute Code
-
-========================================
-📌 STEP 2: EXTRACT EXAM INFO
-========================================
-From header text extract:
-- Regulation (e.g., 2022 Regulation)
-- Curriculum (e.g., Diploma in Engineering)
-- Semester (e.g., 3rd Semester)
-- Exam Year
-
-========================================
-📌 STEP 3: STUDENT DATA EXTRACTION
-========================================
-For EACH roll number:
-Extract:
-- Roll Number
-- GPA (gpa1, gpa2, gpa3)
-- Result Status ("Pass", "Referred", "Fail")
-- Referred Subjects (ref_sub)
-- Failed Subjects
-
-========================================
-📌 STEP 4: SUBJECT PROCESSING
-========================================
-For each subject:
-Extract: Subject Code, Subject Type (T/P).
-Mark subject status: "referred" or "failed"
-
-========================================
-📌 STEP 5: OUTPUT FORMAT (STRICT JSON)
-========================================
-Return ONLY this format. Output NO markdown formatting around JSON:
-
-{
-  "institutes": [
-    {
-      "name": "",
-      "code": "",
-      "exam": {
-        "regulation": "",
-        "curriculum": "",
-        "semester": "",
-        "year": ""
-      },
-      "students": [
-        {
-          "roll": "",
-          "gpa": { "gpa1": "", "gpa2": "", "gpa3": "" },
-          "status": "",
-          "subjects": [
-            { "code": "", "name": "", "type": "", "status": "" }
-          ]
-        }
-      ]
-    }
-  ]
-}
-
-========================================
-Data to process:
-${chunkText}
-`;
-
+      for (let chunkIndex = 0; chunkIndex < pageChunks.length; chunkIndex++) {
+        const chunkText = pageChunks[chunkIndex];
+        
         try {
-           const response = await ai.models.generateContent({
-             model: "gemini-3.1-pro-preview",
-             contents: promptString,
-             config: {
-               responseMimeType: "application/json",
-             }
+           const res = await fetch("/api/admin/extract-pdf", {
+             method: "POST",
+             headers: {
+               "Content-Type": "application/json"
+             },
+             body: JSON.stringify({ chunkText })
            });
-           
-           let jsonStr = response.text || "{}";
+
+           const data = await res.json();
+           if (!data.success) {
+              console.error("Extraction error:", data.error);
+              if (res.status === 429 || String(data.error).includes('429')) {
+                 alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");
+                 break;
+              }
+              continue;
+           }
+
+           let jsonStr = data.text || "{}";
            const parsed = JSON.parse(jsonStr);
            
            if (parsed.institutes && Array.isArray(parsed.institutes)) {
               for (const inst of parsed.institutes) {
-                  if (inst.code) currentInstCode = String(inst.code);
-                  if (inst.name) currentInstName = String(inst.name);
+                  if (inst.code && inst.code !== "") currentInstCode = String(inst.code);
+                  if (inst.name && inst.name !== "") currentInstName = String(inst.name);
                   
                   if (!inst.students) continue;
                   
@@ -660,10 +585,20 @@ ${chunkText}
                   }
               }
            }
-        } catch (e) {
-           console.error("Gemini Extraction Error for Chunk:", e);
+        } catch (e: any) {
+           console.error("Gemini Extraction Error for Chunk:", JSON.stringify(e, null, 2));
+           // If we hit a rate limit, alert the user and maybe break
+           if (e?.status === 429 || e?.status === 'RESOURCE_EXHAUSTED' || e?.message?.includes('429')) {
+              alert("Rate limit exceeded. Stopping extraction. Partially imported data has been saved.");
+              break;
+           }
         }
-      }));
+        
+        // Add a small delay between chunks to avoid rate limiting
+        if (chunkIndex < pageChunks.length - 1) {
+           await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
       
       alert(`Imported/Updated ${added} results via AI from PDF.`);
       setShowPdfForm(false);
