@@ -406,10 +406,10 @@ async function startServer() {
                  // Fetch all chunks sequentially (or with a small delay)
                  for (let i = 0; i < chunks.length; i++) {
                      const chunk = chunks[i];
-                     const chunkRange = \`\${chunk[0]}-\${chunk[chunk.length - 1]}\`;
-                     let groupApiUrl = \`https://btebresultszone.com/api/group-results?rollRanges=\${chunkRange}\`;
-                     groupApiUrl += \`&curriculumId=\${curriculum}&regulation=\${finalRegulation}\`;
-                     console.log(\`Fetching chunk \${i+1}/\${chunks.length}: \${groupApiUrl}\`);
+                    const chunkRange = `${chunk[0]}-${chunk[chunk.length - 1]}`;
+                    let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${chunkRange}`;
+                    groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
+                    console.log(`Fetching chunk ${i+1}/${chunks.length}: ${groupApiUrl}`);
                      
                      const response = await fetchFromBteb(groupApiUrl);
                      if (response && response.success && response.data && response.data.studentResults) {
@@ -662,10 +662,7 @@ async function startServer() {
                  // return exact format that ResultView component expects as json.data array
                  return res.json({ success: true, data: mappedData });
              } else {
-                 if (response && response.error === 'No results found') {
-                     return res.json({ success: true, data: [] });
-                 }
-                 throw new Error(response?.error || 'Failed to fetch group results');
+                 return res.json({ success: true, data: [] });
              }
           } catch (err: any) {
              console.error(`Group fetch error:`, err.message);
