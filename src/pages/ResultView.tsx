@@ -6,6 +6,7 @@ import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Ca
 import { motion } from 'motion/react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
+import { Helmet } from 'react-helmet-async';
 
 export default function ResultView() {
   const [searchParams] = useSearchParams();
@@ -515,6 +516,11 @@ export default function ResultView() {
 
   return (
     <div className="w-full font-sans px-4 sm:px-6 py-6 sm:py-8 lg:py-10 print:py-0 print:px-0 print:m-0">
+      <Helmet>
+        <title>{type === 'institute' ? `Results for Institute ${instituteCode} | BTEB Result Library` : `Result for Roll ${roll} | BTEB Result Library`}</title>
+        <meta name="description" content={type === 'institute' ? `Check the BTEB examination results, pass rates, and PDFs for institute ${instituteCode}.` : `View the complete diploma academic result for roll number ${roll} from Bangladesh Technical Education Board (BTEB).`} />
+        <link rel="canonical" href={`https://btebresultlibrary.vercel.app/result?roll=${roll}&type=${type}&curriculum=${curriculum}&regulation=${regulation}`} />
+      </Helmet>
       <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0">
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">

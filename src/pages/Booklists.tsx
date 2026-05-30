@@ -1,18 +1,41 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { BookCopy, Printer, ChevronRight, BookOpen, Layers, GraduationCap, Building2, Download } from 'lucide-react';
+import { BookCopy, Printer, ChevronRight, BookOpen, Layers, GraduationCap, Building2, Download, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Booklists() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [booklists, setBooklists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeCurriculum, setActiveCurriculum] = useState<string | null>(null);
-  const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
-  const [activeSemester, setActiveSemester] = useState<string | null>(null);
-  const [activeDepartment, setActiveDepartment] = useState<string | null>(null);
+  const activeCurriculum = searchParams.get('curriculum') || null;
+  const activeRegulation = searchParams.get('regulation') || null;
+  const activeSemester = searchParams.get('semester') || null;
+  const activeDepartment = searchParams.get('department') || null;
+
+  const setActiveFilter = (key: string, value: string | null) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value) {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    // If a higher-level filter changes, clear the lower ones
+    if (key === 'curriculum') {
+      newParams.delete('regulation');
+      newParams.delete('semester');
+      newParams.delete('department');
+    } else if (key === 'regulation') {
+      newParams.delete('semester');
+      newParams.delete('department');
+    } else if (key === 'semester') {
+      newParams.delete('department');
+    }
+    setSearchParams(newParams);
+  };
 
   useEffect(() => {
     fetchBooklists().catch(console.error);
@@ -64,26 +87,50 @@ export default function Booklists() {
 
   // Auto-select if only one option available
   useEffect(() => {
-    if (curriculums.length === 1 && !activeCurriculum) setActiveCurriculum(curriculums[0]);
+    if (curriculums.length === 1 && !activeCurriculum) setActiveFilter('curriculum', curriculums[0]);
   }, [curriculums, activeCurriculum]);
 
   useEffect(() => {
-    if (regulations.length === 1 && !activeRegulation) setActiveRegulation(regulations[0]);
-    else if (activeCurriculum && !regulations.includes(activeRegulation || '')) setActiveRegulation(null);
-  }, [regulations, activeRegulation, activeCurriculum]);
+    if (regulations.length === 1 && !activeRegulation) setActiveFilter('regulation', regulations[0]);
+    else if (activeCurriculum && regulations.length > 0 && !regulations.includes(activeRegulation || '')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('regulation');
+      setSearchParams(newParams);
+    }
+  }, [regulations, activeRegulation, activeCurriculum, searchParams]);
 
   useEffect(() => {
-    if (semesters.length === 1 && !activeSemester) setActiveSemester(semesters[0]);
-    else if (activeRegulation && !semesters.includes(activeSemester || '')) setActiveSemester(null);
-  }, [semesters, activeSemester, activeRegulation]);
+    if (semesters.length === 1 && !activeSemester) setActiveFilter('semester', semesters[0]);
+    else if (activeRegulation && semesters.length > 0 && !semesters.includes(activeSemester || '')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('semester');
+      setSearchParams(newParams);
+    }
+  }, [semesters, activeSemester, activeRegulation, searchParams]);
 
   useEffect(() => {
-    if (departments.length === 1 && !activeDepartment) setActiveDepartment(departments[0]);
-    else if (activeSemester && !departments.includes(activeDepartment || '')) setActiveDepartment(null);
-  }, [departments, activeDepartment, activeSemester]);
+    if (departments.length === 1 && !activeDepartment) setActiveFilter('department', departments[0]);
+    else if (activeSemester && departments.length > 0 && !departments.includes(activeDepartment || '')) {
+       const newParams = new URLSearchParams(searchParams);
+       newParams.delete('department');
+       setSearchParams(newParams);
+    }
+  }, [departments, activeDepartment, activeSemester, searchParams]);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Booklist for ${activeDepartment} - ${activeSemester} Semester`,
+        url: window.location.href
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    }
   };
 
   const handleDownloadPNG = async () => {
@@ -184,7 +231,7 @@ export default function Booklists() {
                 <div className="relative">
                   <select
                     value={activeCurriculum || ''}
-                    onChange={(e) => setActiveCurriculum(e.target.value)}
+                    onChange={(e) => setActiveFilter('curriculum', e.target.value)}
                     className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-blue-500 font-medium text-sm transition-colors cursor-pointer"
                   >
                     <option value="" disabled>Select Curriculum</option>
@@ -218,7 +265,7 @@ export default function Booklists() {
                   {regulations.map(reg => (
                     <button
                       key={reg}
-                      onClick={() => setActiveRegulation(reg)}
+                      onClick={() => setActiveFilter('regulation', reg)}
                       className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-center ${
                         activeRegulation === reg 
                           ? 'bg-indigo-500 text-white shadow-sm' 
@@ -249,7 +296,7 @@ export default function Booklists() {
                   {semesters.map(sem => (
                     <button
                       key={sem}
-                      onClick={() => setActiveSemester(sem)}
+                      onClick={() => setActiveFilter('semester', sem)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         activeSemester === sem 
                           ? 'bg-emerald-500 text-white shadow-sm' 
@@ -280,7 +327,7 @@ export default function Booklists() {
                   <div className="relative">
                     <select
                       value={activeDepartment || ''}
-                      onChange={(e) => setActiveDepartment(e.target.value)}
+                      onChange={(e) => setActiveFilter('department', e.target.value)}
                       className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-orange-500 font-medium text-sm transition-colors cursor-pointer"
                     >
                       <option value="" disabled>Select Department</option>
@@ -332,6 +379,12 @@ export default function Booklists() {
                        Booklist Explorer
                     </h3>
                     <div className="flex flex-wrap w-full sm:w-auto gap-2">
+                      <button
+                        onClick={handleShare}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                      >
+                        <Share2 className="w-4 h-4" /> Share
+                      </button>
                       <button
                         onClick={handlePrint}
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"

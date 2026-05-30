@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Users, Calculator, ArrowRight, GraduationCap, CalendarRange, BookCopy } from 'lucide-react';
 import { collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { Helmet } from 'react-helmet-async';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -82,6 +83,11 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center w-full px-4 sm:px-6 py-12 font-sans">
+      <Helmet>
+        <title>BTEB Result Library | Get Polytechnic Results Fast</title>
+        <meta name="description" content="Check Bangladesh Technical Education Board (BTEB) Diploma in Engineering results easily. Use our fast web portal for individual results, group results, cgpa calculator, exam routines, and booklists." />
+        <link rel="canonical" href="https://btebresultlibrary.vercel.app/" />
+      </Helmet>
       <div className="w-full max-w-5xl my-auto mb-8">
         <div className="text-center mb-16">
           <motion.div 
