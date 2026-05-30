@@ -5,6 +5,8 @@ import { LogOut, LayoutDashboard, Search, FileText, Users, Building2, CalendarRa
 import { signOut } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
+import Footer from './Footer';
 
 export default function Layout() {
   const { user, isAdmin } = useAuth();
@@ -25,8 +27,45 @@ export default function Layout() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "BTEB Result Library",
+        "url": "https://btebresultlibrary.vercel.app/",
+        "description": "Fast BTEB result checking system for Bangladesh students.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://btebresultlibrary.vercel.app/individual-results?roll={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "EducationalOrganization",
+        "name": "BTEB Result Library",
+        "url": "https://btebresultlibrary.vercel.app/",
+        "logo": "https://btebresultlibrary.vercel.app/favicon.svg",
+        "sameAs": [],
+        "description": "Independent educational platform providing easy access to Bangladesh Technical Education Board (BTEB) Diploma in Engineering results."
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      <Helmet>
+        <title>BTEB Result Library - Fast Diploma Results</title>
+        <meta name="description" content="Check Bangladesh Technical Education Board (BTEB) Diploma in Engineering results easily. Calculate your CGPA or find your exam routine instantly." />
+        <meta name="keywords" content="BTEB result, diploma result Bangladesh, CGPA calculator, BTEB diploma result, Polytechnic result, BTEB results 2024" />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
+      
       <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 print:hidden",
         isScrolled ? "bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm" : "bg-white border-b border-transparent"
@@ -173,40 +212,7 @@ export default function Layout() {
         </motion.div>
       </main>
 
-      <footer className="bg-white border-t border-gray-100 mt-auto print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-lg">
-                B
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 tracking-tight">BTEB Result Library</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Diploma Results in Bangladesh</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-600 font-medium">
-              <Link to="/individual-results" className="hover:text-blue-600 transition-colors">Individual</Link>
-              <Link to="/group-results" className="hover:text-blue-600 transition-colors">Group</Link>
-              <Link to="/calculator" className="hover:text-blue-600 transition-colors">CGPA</Link>
-              <Link to="/exam-routines" className="hover:text-blue-600 transition-colors">Routines</Link>
-              <Link to="/booklists" className="hover:text-blue-600 transition-colors">Booklists</Link>
-            </div>
-          </div>
-          
-          <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} BTEB Result Library. All rights reserved.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-gray-400 text-slate-500">
-              <span>Developed with</span>
-              <span className="text-red-500">❤</span>
-              <span>by Arafat Hossain</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -7,6 +7,7 @@ export default function AdminExamRoutines() {
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   
   const [semester, setSemester] = useState('');
   const [department, setDepartment] = useState('');
@@ -33,6 +34,51 @@ export default function AdminExamRoutines() {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await fetch('/api/parse-routine', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const resData = await response.json();
+      if (resData.success && resData.data && resData.data.length > 0) {
+        const first = resData.data[0];
+        setCurriculum(first.Curriculum || '');
+        setRegulation(first.Regulation || '');
+        setSemester(first.Semester || '');
+        setDepartment(first.Department || '');
+        setDepartmentCode(first.Department_Code || '');
+
+        const newSubjects = resData.data.map((item: any) => ({
+          subjectName: item.Subject_Name || '',
+          subjectCode: item.Subject_Code || '',
+          date: item.Date || '',
+          day: item.Day || '',
+          time: item.Time || '',
+        }));
+        
+        setSubjects(newSubjects);
+        alert(`Successfully parsed ${newSubjects.length} subjects! Please review the dates and times.`);
+      } else {
+        alert(resData.error || 'Failed to parse routine properly.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error parsing file.');
+    } finally {
+      setIsParsing(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -127,6 +173,23 @@ export default function AdminExamRoutines() {
         <form onSubmit={handleSave} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">Add Subjects</h2>
+            
+            <div className="relative">
+              <input
+                type="file"
+                accept="application/pdf,image/*"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                title="Upload PDF or Image"
+              />
+              <button
+                type="button"
+                className={`inline-flex items-center px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors ${isParsing ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isParsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarRange className="w-4 h-4 mr-2" />}
+                {isParsing ? 'Parsing with AI...' : 'Magic Parse with AI'}
+              </button>
+            </div>
           </div>
           
           <div className="flex flex-col md:flex-row gap-4">

@@ -13,6 +13,8 @@ import ResultView from './pages/ResultView';
 import Calculator from './pages/Calculator';
 import ExamRoutines from './pages/ExamRoutines';
 import Booklists from './pages/Booklists';
+import About from './pages/About';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminResults from './pages/admin/Results';
@@ -47,6 +49,8 @@ export default function App() {
             <Route path="calculator" element={<Calculator />} />
             <Route path="exam-routines" element={<ExamRoutines />} />
             <Route path="booklists" element={<Booklists />} />
+            <Route path="about" element={<About />} />
+            <Route path="privacy-policy" element={<PrivacyPolicy />} />
             <Route path="admin/login" element={<AdminLogin />} />
             <Route 
               path="admin" 

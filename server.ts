@@ -6,6 +6,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { createProxyMiddleware, responseInterceptor } from 'http-proxy-middleware';
 import * as cheerio from 'cheerio';
+import multer from 'multer';
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config({ override: true });
 
@@ -25,7 +27,118 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-   app.get("/api/bteb/institutes", (req, res) => {
+  const upload = multer({ storage: multer.memoryStorage() });
+
+  app.post("/api/parse-routine", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'No file uploaded' });
+      }
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ success: false, error: 'GEMINI_API_KEY is not configured on the server.' });
+      }
+      
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const prompt = `You are an advanced backend automation assistant integrated into an Admin "Add Panel" for an Exam Routine Management System. Your job is to parse the uploaded BTEB Exam Routine PDF/Image and output a clean JSON array that the system can immediately insert into the database or use to auto-fill the form fields.
+
+CRITICAL MAPPING RULES FOR ADMIN PANEL FORM COMPATIBILITY:
+
+1. "Curriculum" Mapping:
+   Analyze the header of the routine. You must map it strictly to one of these Admin Panel dropdown options:
+   - "Diploma in Engineering"
+   - "Diploma in Textile Engineering"
+   - "Diploma in Agriculture"
+   - "Diploma in Fisheries"
+   - "Diploma in Forestry"
+   - "Diploma in Livestock"
+   - "Basic Trade (360 hrs)"
+   - "Other"
+
+2. "Regulation" Mapping:
+   Identify the Probidhan (e.g., ২০১৬ প্রবিধান, ২০২২ প্রবিধান) and map strictly to:
+   - "2022 Probidhan"
+   - "2016 Probidhan"
+   - "2010 Probidhan"
+
+3. "Semester" Mapping:
+   Convert the Bengali text (১ম, ২য়, ৩য়, ৪র্থ, ৫ম, ৬ষ্ঠ, ৭ম, ৮ম পর্ব) exactly to these database values:
+   - "1st Semester", "2nd Semester", "3rd Semester", "4th Semester", "5th Semester", "6th Semester", "7th Semester", "8th Semester"
+
+4. "Department" Auto-Classification:
+   Read the 'Technology' (টেকনোলজি) column and classify it into the Admin Panel's exact Department list. Do not output Bengali text.
+   - If Technology is আর্কিটেকচার / Architecture -> "Architecture"
+   - If Technology is সিভিল / Civil -> "Civil"
+   - If Technology is কম্পিউটার / Computer -> "Computer"
+   - If Technology is ইলেকট্রিক্যাল / Electrical -> "Electrical"
+   - If Technology is মেকানিক্যাল / Mechanical -> "Mechanical"
+   - If Technology is পাওয়ার / Power -> "Power"
+   - If Technology is ইলেকট্রনিক্স / Electronics -> "Electronics"
+   - If Technology is অটোমোবাইল / Automobile -> "Automobile"
+   - If Technology is ফুড / Food -> "Food"
+   - If Technology is এনভায়রনমেন্ট / Environment -> "Environment"
+   - If Technology is টেলিকমিউনিকেশন / Telecommunication -> "Telecommunication"
+   - For ANY other technology (e.g., ট্যুরিজম, কেমিক্যাল, টেক্সটাইল) -> Strictly set to "Other"
+
+5. "Department_Code": Extract the technology numerical code if given, else output empty string "".
+
+6. "Day" Mapping:
+   Convert Bengali days to exact English names: "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday".
+
+7. Date & Time Format:
+   - "Date": Convert to YYYY-MM-DD standard format.
+   - "Time": Format as standard "HH:MM AM/PM" (e.g., "10:00 AM" or "02:00 PM").
+
+Output Requirement:
+Return ONLY a valid JSON array of objects. No explanations, no markdown block (like \`\`\`json), just the raw JSON text ready to be parsed by the Add Panel's backend logic.
+
+Example JSON Output Structure:
+[
+  {
+    "Curriculum": "Diploma in Engineering",
+    "Regulation": "2016 Probidhan",
+    "Semester": "5th Semester",
+    "Department": "Architecture",
+    "Department_Code": "",
+    "Subject_Name": "Architectural Design-4",
+    "Subject_Code": "66151",
+    "Date": "2021-10-17",
+    "Day": "Sunday",
+    "Time": "02:00 PM"
+  }
+]`;
+
+      const mimeType = req.file.mimetype;
+      const base64Data = req.file.buffer.toString('base64');
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          prompt,
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType
+            }
+          }
+        ]
+      });
+      
+      let text = response.text || '';
+      // Clean up markdown block if the model ignores the instruction
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      
+      const jsonData = JSON.parse(text);
+      return res.json({ success: true, data: jsonData });
+    } catch (error: any) {
+      console.error('Error in parse-routine:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/bteb/institutes", (req, res) => {
     try {
       const institutesPath = path.join(process.cwd(), "src", "data", "all_institutes.json");
       if (fs.existsSync(institutesPath)) {
