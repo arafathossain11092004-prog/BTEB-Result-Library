@@ -1067,8 +1067,8 @@ export default function ResultView() {
             </div>
             {typeof window !== 'undefined' && (
               <div className="flex flex-col items-center">
-                <QRCodeSVG value={window.location.href} size={70} />
-                <span className="text-[10px] mt-1 text-gray-400 font-medium">Scan for actual result</span>
+                <QRCodeSVG value={window.location.href} size={96} />
+                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
               </div>
             )}
         </div>

@@ -240,7 +240,7 @@ export default function Booklists() {
       
       let qrCodeImg = "";
       try {
-        qrCodeImg = await QRCode.toDataURL(window.location.href, { margin: 0, width: 64 });
+        qrCodeImg = await QRCode.toDataURL(window.location.href, { margin: 0, width: 96 });
       } catch (e) {
         console.error(e);
       }
@@ -252,7 +252,7 @@ export default function Booklists() {
              <div class="text-base text-slate-400">${currentDomain}</div>
            </div>
         </div>
-        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="64" height="64" /></div>` : ''}
+        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="96" height="96" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
       `;
       printContent.appendChild(footer);
 
@@ -663,8 +663,8 @@ export default function Booklists() {
             </div>
             {typeof window !== 'undefined' && (
               <div className="flex flex-col items-center">
-                <QRCodeSVG value={window.location.href} size={64} />
-                <span className="text-[10px] mt-1">Scan for actual result</span>
+                <QRCodeSVG value={window.location.href} size={96} />
+                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
               </div>
             )}
           </div>
