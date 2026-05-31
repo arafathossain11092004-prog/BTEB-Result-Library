@@ -8,7 +8,7 @@ const bengaliToEnglishNumbers: { [key: string]: string } = {
   "৫": "5", "৬": "6", "৭": "7", "৮": "8", "৯": "9",
 };
 
-function translateBengaliNum(str: string): string {
+export function translateBengaliNum(str: string): string {
   return str.replace(/[০-৯]/g, (match) => bengaliToEnglishNumbers[match]);
 }
 

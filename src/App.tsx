@@ -21,6 +21,7 @@ import AdminResults from './pages/admin/Results';
 import AdminExamRoutines from './pages/admin/ExamRoutines';
 import AdminBooklists from './pages/admin/Booklists';
 import AdminSettings from './pages/admin/Settings';
+import RoutineMarkdownGenerator from './pages/admin/RoutineMarkdownGenerator';
 
 import { ReactNode } from 'react';
 
@@ -67,6 +68,10 @@ export default function App() {
             <Route 
               path="admin/booklists" 
               element={<AdminRoute><AdminBooklists /></AdminRoute>} 
+            />
+            <Route 
+              path="admin/markdown-generator" 
+              element={<AdminRoute><RoutineMarkdownGenerator /></AdminRoute>} 
             />
             <Route 
               path="admin/settings" 
