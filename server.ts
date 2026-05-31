@@ -23,14 +23,15 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
 });
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+export const viteNodeApp = app;
 
-  app.use(cors());
-  app.use(express.json());
+const PORT = 3000;
 
-  const upload = multer({ storage: multer.memoryStorage() });
+app.use(cors());
+app.use(express.json());
+
+const upload = multer({ storage: multer.memoryStorage() });
 
   const translateBengaliNum = (str: string) => {
     const benToEng = {
@@ -1148,26 +1149,29 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+  async function setupViteAndListen() {
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer().catch((err) => {
-  console.error("Failed to start server:", err);
-  process.exit(1);
-});
+  if (process.env.VERCEL !== "1") {
+    setupViteAndListen().catch((err) => {
+      console.error("Failed to start server:", err);
+      process.exit(1);
+    });
+  }
