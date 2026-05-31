@@ -63,7 +63,7 @@ async function startServer() {
         try {
           const fileBuffer = req.file.buffer;
           const pdfParseModule = await import("pdf-parse");
-          const pdfParse = pdfParseModule.default || pdfParseModule;
+          const pdfParse = (pdfParseModule as any).default || pdfParseModule;
           const data = await pdfParse(fileBuffer);
           const fullText = data.text.replace(/\n/g, ' ');
           
@@ -312,8 +312,10 @@ async function startServer() {
     "/institute-results",
     "/_next/data",
     "/_next/static",
+    "/_next/image",
     "/latest-results",
     "/group-results",
+    "/proxy-exam-routines", // changed from /exam-routines
   ];
   app.use(async (req, res, next) => {
     // Only intercept paths that match our proxyRoutes
@@ -321,6 +323,7 @@ async function startServer() {
       proxyRoutes.some((route) => req.path.startsWith(route)) ||
       (req.path.startsWith("/api/") &&
         !req.path.startsWith("/api/bteb/institutes") &&
+        !req.path.startsWith("/api/bteb-exam-routines") &&
         !req.path.startsWith("/api/results"));
 
     if (!shouldProxy) {
@@ -328,7 +331,12 @@ async function startServer() {
     }
 
     try {
-      const targetUrl = `https://btebresultszone.com${req.originalUrl}`;
+      let targetPath = req.originalUrl;
+      // Rewrite /proxy-exam-routines to /exam-routines on the target
+      if (targetPath.startsWith('/proxy-exam-routines')) {
+        targetPath = targetPath.replace('/proxy-exam-routines', '/exam-routines');
+      }
+      const targetUrl = `https://btebresultszone.com${targetPath}`;
       const fetchHeaders: Record<string, string> = {
         Accept: req.headers.accept || "*/*",
         "User-Agent":
@@ -365,9 +373,17 @@ async function startServer() {
           "</head>",
           `
           <style>
-            header, footer, nav[aria-label="breadcrumb"], .print\\:hidden, #nprogress { display: none !important; }
+            /* Hide generic navigation and footers */
+            header, footer, nav, .footer, .header, #header, #footer { display: none !important; }
+            /* Specific overrides for this site */
+            .sticky.top-0, nav.sticky { display: none !important; }
+            div[class*="footer"] { display: none !important; }
+            .print\\:hidden, #nprogress { display: none !important; }
             main { padding-top: 0 !important; margin-top: 0 !important; }
             .min-h-screen-minus-topnav { min-height: 0 !important; }
+            
+            /* Remove bottom padding if there is a main tag */
+            body, main { padding-bottom: 0 !important; margin-bottom: 0 !important; }
           </style>
         </head>`,
         );
@@ -379,6 +395,158 @@ async function startServer() {
     } catch (error: any) {
       console.error("Proxy manual error:", error);
       res.status(500).send("Proxy error");
+    }
+  });
+
+  app.get("/api/bteb-exam-routines", async (req, res) => {
+    try {
+      const response = await fetch("https://btebresultszone.com/exam-routines", {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch exam routines");
+      }
+      const html = await response.text();
+      const $ = cheerio.load(html);
+      
+      const routines: any[] = [];
+      $('a[href^="/exam-routines/"]').each((i, el) => {
+         const href = $(el).attr('href');
+         const title = $(el).find('div[class*="text-lg font-semibold"]').text();
+         const dates = $(el).find('.lucide-calendar').next('span').text();
+         
+         const bottomText = $(el).find('.flex.gap-4.text-xs.text-gray-600').text();
+         let regulations = '';
+         let semesters = '';
+         
+         if (bottomText) {
+             const lower = bottomText.toLowerCase();
+             const regMatch = lower.match(/regulations:\s*([0-9,\s&]+)/i);
+             const semMatch = lower.match(/semesters:\s*([0-9,\s&]+)/i);
+             // Alternatively, since our cheerio logic extracted them concatenated without spaces nicely:
+             // Because in the div structure it was Regulations: 2022
+         }
+
+         if (title && href) {
+             routines.push({ 
+                 href: "/exam-routines" + href.replace('/exam-routines', ''), 
+                 title, 
+                 dates, 
+                 bottomText 
+             });
+         }
+      });
+      
+      return res.json({ success: true, data: routines });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.get("/api/bteb-exam-routines-scrape", async (req, res) => {
+    try {
+      const targetPath = req.query.path as string;
+      if (!targetPath) return res.status(400).json({ success: false, error: "Path missing" });
+
+      const response = await fetch(`https://btebresultszone.com/exam-routines${targetPath}`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+      if (!response.ok) throw new Error("Failed to fetch");
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      // Determine level
+      const pathParts = targetPath.split('/').filter(Boolean);
+
+      if (pathParts.length === 1) {
+        // Level 2 (Program -> list of technologies)
+        const items: any[] = [];
+        $('a[href^="/exam-routines/"]').each((i, el) => {
+           const href = $(el).attr('href');
+           if (!href) return;
+           const titleNode = $(el).find('h3');
+           // try to separate text from badge
+           const badgeText = titleNode.find('[data-slot="badge"]').text();
+           const fullText = titleNode.text();
+           let title = fullText;
+           if (badgeText) {
+             title = fullText.replace(badgeText, '').trim();
+             // Some titles have badge immediately following
+           }
+           
+           if (!titleNode.length) {
+              const divTitle = $(el).find('div[class*="text-lg font-semibold"]').text();
+              if (divTitle) title = divTitle;
+           }
+
+           if (title && href) {
+               const cleanHref = href.replace('/exam-routines', '');
+               if (cleanHref.endsWith('/customize') || cleanHref.endsWith('/all-technologies')) {
+                  return;
+               }
+               items.push({ 
+                   href: "/exam-routines" + cleanHref, 
+                   title,
+                   badge: badgeText || ''
+               });
+           }
+        });
+        return res.json({ success: true, type: 'program', data: items });
+      } else {
+        // Level 3 (Technology -> list of subjects and dates)
+        const semestersData: any[] = [];
+        $('div[data-slot="card"]').each((i, el) => {
+            const table = $(el).find('table');
+            if (table.length === 0) return;
+            
+            const title = $(el).find('div[data-slot="card-title"]').text().trim();
+            const headerText = $(el).find('div[data-slot="card-header"]').text().trim();
+            const semesterName = headerText.replace(title, '').trim() || `Table ${semestersData.length + 1}`;
+            
+            const routineTable: any[] = [];
+            table.find('tr').each((j, tr) => {
+                const tds = $(tr).find('td');
+                if (tds.length >= 4) {
+                     routineTable.push({
+                         date: $(tds[0]).text().trim(),
+                         code: $(tds[1]).text().trim(),
+                         subject: $(tds[2]).text().trim(),
+                         time: $(tds[3]).text().trim(),
+                         day: tds.length >= 5 ? $(tds[4]).text().trim() : '',
+                     });
+                }
+            });
+            
+            semestersData.push({ semester: semesterName, routine: routineTable });
+        });
+
+        // If no cards found, fallback to generic table scan
+        if (semestersData.length === 0) {
+           const routineTable: any[] = [];
+           $('tr').each((i, el) => {
+               const tds = $(el).find('td');
+               if (tds.length >= 4) {
+                    routineTable.push({
+                        date: $(tds[0]).text().trim(),
+                        code: $(tds[1]).text().trim(),
+                        subject: $(tds[2]).text().trim(),
+                        time: $(tds[3]).text().trim(),
+                        day: tds.length >= 5 ? $(tds[4]).text().trim() : '',
+                    });
+               }
+           });
+           semestersData.push({ semester: 'All', routine: routineTable });
+        }
+
+        const pageTitle = $('h1').text().trim() || "Exam Routine";
+
+        return res.json({ success: true, type: 'technology', title: pageTitle, data: semestersData });
+      }
+
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
     }
   });
 

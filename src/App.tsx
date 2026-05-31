@@ -12,6 +12,7 @@ import GroupResults from './pages/GroupResults';
 import ResultView from './pages/ResultView';
 import Calculator from './pages/Calculator';
 import ExamRoutines from './pages/ExamRoutines';
+import ExamRoutineView from './pages/ExamRoutineView';
 import Booklists from './pages/Booklists';
 import About from './pages/About';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="result" element={<ResultView />} />
             <Route path="calculator" element={<Calculator />} />
             <Route path="exam-routines" element={<ExamRoutines />} />
+            <Route path="exam-routines/*" element={<ExamRoutineView />} />
             <Route path="booklists" element={<Booklists />} />
             <Route path="about" element={<About />} />
             <Route path="privacy-policy" element={<PrivacyPolicy />} />

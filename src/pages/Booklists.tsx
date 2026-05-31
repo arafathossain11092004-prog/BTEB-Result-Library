@@ -51,10 +51,17 @@ export default function Booklists() {
   };
 
   useEffect(() => {
-    fetchBooklists().catch(console.error);
+    fetchBooklists().catch((e) => {
+      // Ignored
+      setLoading(false);
+    });
   }, []);
 
   const fetchBooklists = async () => {
+    if (!import.meta.env.VITE_FIREBASE_PROJECT_ID || !db) {
+      setLoading(false);
+      return;
+    }
     try {
       const q = query(collection(db, "booklists"), limit(2000));
       const snapshot = await getDocs(q);
