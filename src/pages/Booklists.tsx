@@ -235,7 +235,7 @@ export default function Booklists() {
 
       const footer = document.createElement("div");
       footer.className =
-        "mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm";
+        "mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm relative z-50";
       const currentDomain = window.location.hostname;
       
       let qrCodeImg = "";
@@ -246,13 +246,12 @@ export default function Booklists() {
       }
 
       footer.innerHTML = `
-        <div class="flex items-center gap-2">
-           <div>
-             <div class="text-blue-600 font-bold text-lg mb-1">BTEB Result Library</div>
-             <div class="text-base text-slate-400">${currentDomain}</div>
-           </div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-slate-800 pointer-events-none mt-2">
+          <div class="text-blue-600 font-bold text-lg mb-0.5">BTEB Result Library</div>
+          <div class="text-xs text-slate-500">${currentDomain}</div>
         </div>
-        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="96" height="96" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
+        <div class="flex-1 opacity-0 pointer-events-none">spacer</div>
+        ${qrCodeImg ? `<div class="flex flex-col items-center ml-auto relative z-10"><img src="${qrCodeImg}" alt="QR Code" width="96" height="96" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
       `;
       printContent.appendChild(footer);
 
@@ -656,13 +655,14 @@ export default function Booklists() {
             </tbody>
           </table>
 
-          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600">
-            <div>
+          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600 relative h-[100px]">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-3">
               <p className="font-bold text-gray-900 text-lg">BTEB Result Library</p>
-              <p className="text-sm mt-1">{window.location.origin}</p>
+              <p className="text-sm mt-1">{window.location.host}</p>
             </div>
+            <div className="flex-1"></div>
             {typeof window !== 'undefined' && (
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center ml-auto">
                 <QRCodeSVG value={window.location.href} size={96} />
                 <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
               </div>

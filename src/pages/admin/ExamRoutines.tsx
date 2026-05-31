@@ -13,6 +13,7 @@ export default function AdminExamRoutines() {
   const [department, setDepartment] = useState('');
   const [customDepartment, setCustomDepartment] = useState('');
   const [departmentCode, setDepartmentCode] = useState('');
+  const [publishDate, setPublishDate] = useState('');
   const [curriculum, setCurriculum] = useState('');
   const [customCurriculum, setCustomCurriculum] = useState('');
   const [regulation, setRegulation] = useState('');
@@ -127,6 +128,7 @@ export default function AdminExamRoutines() {
            semester,
            department: finalDept,
            departmentCode,
+           publishDate,
            ...subject,
            createdAt: Date.now(),
            updatedAt: Date.now()
@@ -142,6 +144,7 @@ export default function AdminExamRoutines() {
       setDepartment('');
       setCustomDepartment('');
       setDepartmentCode('');
+      setPublishDate('');
       setSubjects([{ subjectName: '', subjectCode: '', date: '', day: '', time: '' }]);
       fetchRoutines().catch(console.error);
     } catch (error) {
@@ -266,6 +269,11 @@ export default function AdminExamRoutines() {
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Department Code (Optional)</label>
               <input type="text" value={departmentCode} onChange={e => setDepartmentCode(e.target.value)} placeholder="e.g. 666" className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Publish Date (Optional)</label>
+              <input type="date" value={publishDate} onChange={e => setPublishDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
           </div>
 

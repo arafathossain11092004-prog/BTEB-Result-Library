@@ -63,6 +63,7 @@ async function startServer() {
         try {
           const fileBuffer = req.file.buffer;
           const pdfParseModule = await import("pdf-parse");
+          // @ts-ignore
           const pdfParse = pdfParseModule.default || pdfParseModule;
           const data = await pdfParse(fileBuffer);
           const fullText = data.text.replace(/\n/g, ' ');
