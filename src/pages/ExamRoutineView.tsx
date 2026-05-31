@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, BookOpen, Calendar as CalendarIcon, Clock, Hash, Printer, Share2, Download } from "lucide-react";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 
 export default function ExamRoutineView() {
@@ -66,13 +66,17 @@ export default function ExamRoutineView() {
     buttons.forEach(b => b.style.display = 'none');
     
     try {
-      const canvas = await html2canvas(element, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
+      const dataUrl = await toPng(element, { pixelRatio: 2, backgroundColor: '#ffffff' });
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+      
+      const pdfHeight = (img.height * pdfWidth) / img.width;
+      
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${data?.title || 'routine'}-${semesterName}.pdf`);
     } catch (err) {
       console.error("Failed to generate PDF", err);
@@ -103,13 +107,17 @@ export default function ExamRoutineView() {
     const element = document.getElementById('routine-content');
     if (!element) return;
     try {
-      const canvas = await html2canvas(element, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
+      const dataUrl = await toPng(element, { pixelRatio: 2, backgroundColor: '#ffffff' });
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+      
+      const pdfHeight = (img.height * pdfWidth) / img.width;
+      
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${data?.title || 'routine'}.pdf`);
     } catch (err) {
       console.error("Failed to generate PDF", err);
