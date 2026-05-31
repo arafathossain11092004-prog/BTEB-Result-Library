@@ -83,71 +83,31 @@ export async function parsePdfToRoutines(file: File) {
         let subjectName = rest.join(' ').trim();
         
         let tech = "All";
-        if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "আর্কিটেকচার"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
-        else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "অটোমোবাইল"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
-        else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "কেমিক্যাল"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
-        else if (subjectName.includes("রিরভল") || subjectName.includes("সিভিল") || subjectName.includes("Civil")) { tech = "সিভিল"; subjectName = subjectName.replace(/রিরভল|সিভিল|Civil/g, '').trim(); }
-        else if (subjectName.includes("করিউটাি") || subjectName.includes("কম্পিউটার") || subjectName.includes("Computer")) { tech = "কম্পিউটার"; subjectName = subjectName.replace(/করিউটাি|কম্পিউটার|Computer/g, '').trim(); }
-        else if (subjectName.includes("ইদলকরট্রকুাল") || subjectName.includes("ইলেকট্রিক্যাল") || subjectName.includes("Electrical")) { tech = "ইলেকট্রিক্যাল"; subjectName = subjectName.replace(/ইদলকরট্রকুাল|ইলেকট্রিক্যাল|Electrical/g, '').trim(); }
-        else if (subjectName.includes("ইদলকট্ররিক্স") || subjectName.includes("ইলেকট্রনিক্স") || subjectName.includes("Electronics")) { tech = "ইলেকট্রনিক্স"; subjectName = subjectName.replace(/ইদলকট্ররিক্স|ইলেকট্রনিক্স|Electronics/g, '').trim(); }
-        else if (subjectName.includes("বমকারিকুাল") || subjectName.includes("মেকানিক্যাল") || subjectName.includes("Mechanical")) { tech = "মেকানিক্যাল"; subjectName = subjectName.replace(/বমকারিকুাল|মেকানিক্যাল|Mechanical/g, '').trim(); }
-        else if (subjectName.includes("পাওয়াি") || subjectName.includes("পাওয়ার") || subjectName.includes("Power")) { tech = "পাওয়ার"; subjectName = subjectName.replace(/পাওয়াি|পাওয়ার|Power/g, '').trim(); }
+        if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "Architecture"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
+        else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "Automobile"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
+        else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "Chemical"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
+        else if (subjectName.includes("রিরভল") || subjectName.includes("সিভিল") || subjectName.includes("Civil")) { tech = "Civil"; subjectName = subjectName.replace(/রিরভল|সিভিল|Civil/g, '').trim(); }
+        else if (subjectName.includes("করিউটাি") || subjectName.includes("কম্পিউটার") || subjectName.includes("Computer")) { tech = "Computer"; subjectName = subjectName.replace(/করিউটাি|কম্পিউটার|Computer/g, '').trim(); }
+        else if (subjectName.includes("ইদলকরট্রকুাল") || subjectName.includes("ইলেকট্রিক্যাল") || subjectName.includes("Electrical")) { tech = "Electrical"; subjectName = subjectName.replace(/ইদলকরট্রকুাল|ইলেকট্রিক্যাল|Electrical/g, '').trim(); }
+        else if (subjectName.includes("ইদলকট্ররিক্স") || subjectName.includes("ইলেকট্রনিক্স") || subjectName.includes("Electronics")) { tech = "Electronics"; subjectName = subjectName.replace(/ইদলকট্ররিক্স|ইলেকট্রনিক্স|Electronics/g, '').trim(); }
+        else if (subjectName.includes("বমকারিকুাল") || subjectName.includes("মেকানিক্যাল") || subjectName.includes("Mechanical")) { tech = "Mechanical"; subjectName = subjectName.replace(/বমকারিকুাল|মেকানিক্যাল|Mechanical/g, '').trim(); }
+        else if (subjectName.includes("পাওয়াি") || subjectName.includes("পাওয়ার") || subjectName.includes("Power")) { tech = "Power"; subjectName = subjectName.replace(/পাওয়াি|পাওয়ার|Power/g, '').trim(); }
         
         if (subjectName.endsWith(',')) subjectName = subjectName.slice(0, -1);
         if (subjectName.trim() === '') subjectName = `Subject ${code}`;
         
-        let banglaSemester = currentSemester
-            .replace("1st", "১ম")
-            .replace("2nd", "২য়")
-            .replace("3rd", "৩য়")
-            .replace("4th", "৪র্থ")
-            .replace("5th", "৫ম")
-            .replace("6th", "৬ষ্ঠ")
-            .replace("7th", "৭ম")
-            .replace("8th", "৮ম")
-            .replace("Semester", "পর্ব");
-            
-        let banglaDay = currentDay;
-        if(currentDay === "Monday") banglaDay = "সোমবার";
-        if(currentDay === "Tuesday") banglaDay = "মঙ্গলবার";
-        if(currentDay === "Wednesday") banglaDay = "বুধবার";
-        if(currentDay === "Thursday") banglaDay = "বৃহস্পতিবার";
-        if(currentDay === "Friday") banglaDay = "শুক্রবার";
-        if(currentDay === "Saturday") banglaDay = "শনিবার";
-        if(currentDay === "Sunday") banglaDay = "রবিবার";
-        
-        let banglaTime = currentTime;
-        if(currentTime === "10:00 AM") banglaTime = "সকাল ১০:০০";
-        if(currentTime === "02:00 PM") banglaTime = "বিকাল ০২:০০";
-
-        let banglaDate = currentDate.replace(/[0-9]/g, (match) => "০১২৩৪৫৬৭৮৯"[parseInt(match)]);
-        
-        let banglaRegulation = currentRegulation
-            .replace("2016 Probidhan", "২০১৬ প্রবিধান")
-            .replace("2010 Probidhan", "২০১০ প্রবিধান")
-            .replace("2022 Probidhan", "২০২২ প্রবিধান");
-
         if (currentDate) {
           routines.push({
-            exam_type: "ডিপ্লোমা-ইন-ইঞ্জিনিয়ারিং",
-            date_day_time: `${banglaDate} ${banglaDay} ${banglaTime}`,
-            regulation: banglaRegulation,
-            semester: banglaSemester,
-            subject_code: translateBengaliNum(code),
-            subject_name: subjectName.trim(),
-            technology: tech,
-            
-            // To maintain compatibility with older usages
             Curriculum: "Diploma in Engineering",
-            Regulation: banglaRegulation,
-            Semester: banglaSemester,
+            Regulation: currentRegulation,
+            Semester: currentSemester,
             Department: tech,
             Department_Code: "",
             Subject_Name: subjectName.trim(),
             Subject_Code: translateBengaliNum(code),
-            Date: banglaDate,
-            Day: banglaDay,
-            Time: banglaTime
+            Date: translateBengaliNum(currentDate),
+            Day: currentDay,
+            Time: currentTime
           });
         }
       }
