@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toPng } from "html-to-image";
+import { QRCodeSVG } from 'qrcode.react';
+import QRCode from 'qrcode';
 import { useSearchParams } from "react-router-dom";
 import SeoBlocks from "../components/SeoBlocks";
 
@@ -235,11 +237,22 @@ export default function Booklists() {
       footer.className =
         "mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm";
       const currentDomain = window.location.hostname;
+      
+      let qrCodeImg = "";
+      try {
+        qrCodeImg = await QRCode.toDataURL(window.location.href, { margin: 0, width: 64 });
+      } catch (e) {
+        console.error(e);
+      }
+
       footer.innerHTML = `
         <div class="flex items-center gap-2">
-          <span class="text-blue-600 font-bold text-lg">BTEB Result Library</span>
+           <div>
+             <div class="text-blue-600 font-bold text-lg mb-1">BTEB Result Library</div>
+             <div class="text-base text-slate-400">${currentDomain}</div>
+           </div>
         </div>
-        <div class="text-base text-slate-400">${currentDomain}</div>
+        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="64" height="64" /></div>` : ''}
       `;
       printContent.appendChild(footer);
 
@@ -642,6 +655,19 @@ export default function Booklists() {
               ))}
             </tbody>
           </table>
+
+          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600">
+            <div>
+              <p className="font-bold text-gray-900 text-lg">BTEB Result Library</p>
+              <p className="text-sm mt-1">{window.location.origin}</p>
+            </div>
+            {typeof window !== 'undefined' && (
+              <div className="flex flex-col items-center">
+                <QRCodeSVG value={window.location.href} size={64} />
+                <span className="text-[10px] mt-1">Scan for actual result</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
         <SeoBlocks 

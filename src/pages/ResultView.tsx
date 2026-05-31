@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toPng } from 'html-to-image';
+import { QRCodeSVG } from 'qrcode.react';
 import download from 'downloadjs';
 import { Helmet } from 'react-helmet-async';
 
@@ -426,6 +427,12 @@ export default function ResultView() {
     // Add downloading class
     const element = resultRef.current;
     
+    const footerElement = element.querySelector('#print-footer') as HTMLElement;
+    if (footerElement) {
+      footerElement.style.display = 'flex';
+      footerElement.style.setProperty('display', 'flex', 'important');
+    }
+    
     try {
       const dataUrl = await toPng(element, {
         cacheBust: true,
@@ -438,8 +445,10 @@ export default function ResultView() {
           return true;
         }
       });
+      if (footerElement) footerElement.style.display = '';
       download(dataUrl, `Result_${roll || instituteCode || 'group'}.png`);
     } catch(err) {
+      if (footerElement) footerElement.style.display = '';
       console.error("Failed to generate image:", err);
       alert("Failed to download image. Try printing instead.");
     }
@@ -1048,13 +1057,20 @@ export default function ResultView() {
            </div>
         )}
 
-        <div className="mt-16 text-center border-t border-gray-200 pt-6">
-           <p className="text-xs text-gray-500 font-medium">
-             The information is provided by BTEB Result Library. This is an electronic copy of the exact board result.
-           </p>
-           <p className="text-xs text-gray-400 mt-1">
-             Generated on: {new Date().toLocaleString()}
-           </p>
+        <div id="print-footer" className="mt-16 border-t border-gray-200 pt-6 justify-between items-center hidden print:flex h-[90px]" data-html2canvas-ignore="false">
+            <div>
+              <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
+              <p className="text-sm mt-1 text-gray-600 font-medium">{window.location.origin}</p>
+              <p className="text-xs text-gray-400 mt-2">
+                Generated on: {new Date().toLocaleString()}
+              </p>
+            </div>
+            {typeof window !== 'undefined' && (
+              <div className="flex flex-col items-center">
+                <QRCodeSVG value={window.location.href} size={70} />
+                <span className="text-[10px] mt-1 text-gray-400 font-medium">Scan for actual result</span>
+              </div>
+            )}
         </div>
       </div>
 
