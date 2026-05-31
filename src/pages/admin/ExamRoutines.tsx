@@ -61,16 +61,16 @@ export default function AdminExamRoutines() {
             for (const item of chunk) {
               const newDocRef = doc(collection(db, 'examRoutines'));
               batch.set(newDocRef, {
-                curriculum: item.Curriculum || 'Diploma in Engineering',
-                regulation: item.Regulation || '2016 Probidhan',
-                semester: item.Semester || '1st Semester',
-                department: item.Department || 'Other',
-                departmentCode: item.Department_Code || '',
-                subjectName: item.Subject_Name || '',
-                subjectCode: item.Subject_Code || '',
-                date: item.Date || '',
-                day: item.Day || '',
-                time: item.Time || '',
+                curriculum: (item.Curriculum || 'Diploma in Engineering').slice(0, 50),
+                regulation: (item.Regulation || '2016 Probidhan').slice(0, 50),
+                semester: (item.Semester || '1st Semester').slice(0, 100),
+                department: (item.Department || 'Other').slice(0, 100),
+                departmentCode: (item.Department_Code || '').slice(0, 50),
+                subjectName: (item.Subject_Name || '').slice(0, 200),
+                subjectCode: (item.Subject_Code || '').slice(0, 100),
+                date: (item.Date || '').slice(0, 100),
+                day: (item.Day || '').slice(0, 50),
+                time: (item.Time || '').slice(0, 100),
                 createdAt: Date.now(),
                 updatedAt: Date.now()
               });
@@ -82,9 +82,9 @@ export default function AdminExamRoutines() {
           alert(`Successfully parsed and saved ${count} exam routines from the PDF!`);
           setShowForm(false);
           fetchRoutines().catch(console.error);
-        } catch (e) {
+        } catch (e: any) {
           console.error("Batch save error", e);
-          alert("Error saving parsed routines to Firebase.");
+          alert("Error saving parsed routines to Firebase: " + (e.message || "Unknown error"));
         }
       } else {
         alert('No valid routines found in this PDF.');

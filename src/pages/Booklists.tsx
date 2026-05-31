@@ -656,15 +656,15 @@ export default function Booklists() {
             </tbody>
           </table>
 
-          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600">
+          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex flex-col justify-center items-center text-center text-gray-600 gap-4">
             <div>
-              <p className="font-bold text-gray-900 text-lg">BTEB Result Library</p>
-              <p className="text-sm mt-1">{window.location.origin}</p>
+              <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
+              <p className="text-sm mt-1 font-medium">{window.location.origin}</p>
             </div>
             {typeof window !== 'undefined' && (
               <div className="flex flex-col items-center">
-                <QRCodeSVG value={window.location.href} size={96} />
-                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
+                <QRCodeSVG value={window.location.href} size={80} />
+                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual booklist</span>
               </div>
             )}
           </div>
