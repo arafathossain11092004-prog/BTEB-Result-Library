@@ -201,106 +201,72 @@ async function startServer() {
     }
   });
 
-  app.get("/api/bteb/institute-results/:code", async (req, res) => {
+  app.get("/api/bteb-institute-results", async (req, res) => {
     try {
-      const { code } = req.params;
-      const response = await fetch(
-        `https://btebresultszone.com/institute-results/${code}`,
-        {
-          headers: {
-            Accept: "text/html",
-            "User-Agent": "Mozilla/5.0",
-          },
-        },
-      );
-      if (!response.ok)
-        return res
-          .status(response.status)
-          .json({ success: false, error: "BTEB Server Error" });
-
-      const html = await response.text();
-      const $ = cheerio.load(html);
-
-      let instituteName = $("h1, h2, h3")
-        .first()
-        .text()
-        .replace("Institute ", "")
-        .trim();
-      const titleText = $("title").text();
-      if (titleText && titleText.includes("|")) {
-        instituteName = titleText.split("|")[0].replace(`[${code}]`, "").trim();
-      }
-
-      const results: any[] = [];
-      $(`a[href^='/institute-results/${code}/']`).each((i, el) => {
-        const href = $(el).attr("href");
-        const parts = href?.split("/") || [];
-        const dateStr = parts[parts.length - 1];
-
-        const card = $(el).closest(
-          '.rounded-xl, .shadow-sm, [data-slot="card"], .border-gray-100',
-        );
-        let rawText = card.text() || "";
-
-        let fileCount = "Unknown";
-        let matchFile = rawText.match(/(\d+) File[s]?/);
-        if (matchFile) fileCount = matchFile[0];
-
-        let passed = "",
-          failed = "",
-          total = "",
-          curr = "";
-        let matchPass = rawText.match(/Passed([\d.]+%)\s*(\d+)/);
-        if (matchPass) passed = `${matchPass[1]} (${matchPass[2]})`;
-
-        let matchFail = rawText.match(/Failed([\d.]+%)\s*(\d+)/);
-        if (matchFail) failed = `${matchFail[1]} (${matchFail[2]})`;
-
-        let matchTotal = rawText.match(/Total.*?(\d+)/);
-        if (matchTotal) total = matchTotal[1];
-
-        results.push({
-          href,
-          dateStr,
-          rawText,
-          stats: { fileCount, passed, failed, total },
+      const code = req.query.code as string;
+      const date = req.query.date as string;
+      
+      if (!code) return res.status(400).json({ success: false, error: "Code missing" });
+      
+      if (date) {
+        const response = await fetch(`https://btebresultszone.com/institute-results/${code}/${date}`, {
+          headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" },
         });
-      });
+        if (!response.ok) return res.status(response.status).json({ success: false, error: "BTEB Server Error" });
 
-      return res.json({ success: true, instituteName, data: results });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ success: false, error: "Server error" });
-    }
-  });
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-  app.get("/api/bteb/institute-results/:code/:date", async (req, res) => {
-    try {
-      const { code, date } = req.params;
-      const response = await fetch(
-        `https://btebresultszone.com/institute-results/${code}/${date}`,
-        {
-          headers: {
-            Accept: "text/html",
-            "User-Agent": "Mozilla/5.0",
-          },
-        },
-      );
-      if (!response.ok)
-        return res
-          .status(response.status)
-          .json({ success: false, error: "BTEB Server Error" });
+        const pdfs: string[] = [];
+        $('a[href$=".pdf"]').each((i, el) => {
+          const href = $(el).attr("href");
+          if (href) pdfs.push(href);
+        });
 
-      const html = await response.text();
-      const $ = cheerio.load(html);
+        return res.json({ success: true, pdfs });
+      } else {
+        const response = await fetch(`https://btebresultszone.com/institute-results/${code}`, {
+          headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" },
+        });
+        if (!response.ok) return res.status(response.status).json({ success: false, error: "BTEB Server Error" });
 
-      const pdfs: string[] = [];
-      $('a[href$=".pdf"]').each((i, el) => {
-        const href = $(el).attr("href");
-        if (href) pdfs.push(href);
-      });
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-      return res.json({ success: true, pdfs });
+        let instituteName = $("h1, h2, h3").first().text().replace("Institute ", "").trim();
+        const titleText = $("title").text();
+        if (titleText && titleText.includes("|")) {
+          instituteName = titleText.split("|")[0].replace(`[${code}]`, "").trim();
+        }
+
+        const results: any[] = [];
+        $(`a[href^='/institute-results/${code}/']`).each((i, el) => {
+          const href = $(el).attr("href");
+          const parts = href?.split("/") || [];
+          const dateStr = parts[parts.length - 1];
+
+          const card = $(el).closest('.rounded-xl, .shadow-sm, [data-slot="card"], .border-gray-100');
+          let rawText = card.text() || "";
+
+          let fileCount = "Unknown";
+          let matchFile = rawText.match(/(\d+) File[s]?/);
+          if (matchFile) fileCount = matchFile[0];
+
+          let passed = "", failed = "", total = "";
+          let matchPass = rawText.match(/Passed([\d.]+%)\s*(\d+)/);
+          if (matchPass) passed = `${matchPass[1]} (${matchPass[2]})`;
+
+          let matchFail = rawText.match(/Failed([\d.]+%)\s*(\d+)/);
+          if (matchFail) failed = `${matchFail[1]} (${matchFail[2]})`;
+
+          let matchTotal = rawText.match(/Total.*?(\d+)/);
+          if (matchTotal) total = matchTotal[1];
+
+          results.push({ href, dateStr, rawText, stats: { fileCount, passed, failed, total } });
+        });
+
+        return res.json({ success: true, instituteName, data: results });
+      }
     } catch (error) {
       console.error(error);
       return res.status(500).json({ success: false, error: "Server error" });

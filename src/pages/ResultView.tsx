@@ -77,7 +77,7 @@ export default function ResultView() {
       
       if (type === 'institute') {
         try {
-          const res = await fetch(`/api/bteb/institute-results/${instituteCode}`);
+          const res = await fetch(`/api/bteb-institute-results?code=${instituteCode}`);
           const json = await res.json();
           if (!isMounted) return;
           if (json.success && json.data) {
@@ -463,7 +463,7 @@ export default function ResultView() {
     setLoadingPdfs(true);
     setInstitutePDFs([]);
     try {
-      const res = await fetch(`/api/bteb/institute-results/${instituteCode}/${dateStr}`);
+      const res = await fetch(`/api/bteb-institute-results?code=${instituteCode}&date=${dateStr}`);
       const json = await res.json();
       if (json.success && json.pdfs) {
         setInstitutePDFs(json.pdfs);

@@ -1,9 +1,5 @@
 import * as cheerio from "cheerio";
 
-export const config = {
-  runtime: 'edge',
-};
-
 export default async function handler(req: Request) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
