@@ -766,9 +766,7 @@ export default function ResultView() {
                           </table>
                         </div>
 
-                        <div className="hidden print:block text-center text-xs text-gray-500 mt-6 pt-4 border-t border-gray-200">
-                          Printed from <strong className="text-gray-700">BTEB Result Library</strong> &bull; {window.location.origin}
-                        </div>
+
                       </>
                     );
                   })()}

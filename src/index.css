@@ -34,10 +34,11 @@
 
 @media print {
   @page {
-    margin: 5mm;
+    margin: 0;
     size: auto;
   }
   body {
+    padding: 10mm;
     background-color: white !important;
   }
 }

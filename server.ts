@@ -4,20 +4,23 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createProxyMiddleware, responseInterceptor } from 'http-proxy-middleware';
-import * as cheerio from 'cheerio';
-import multer from 'multer';
+import {
+  createProxyMiddleware,
+  responseInterceptor,
+} from "http-proxy-middleware";
+import * as cheerio from "cheerio";
+import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
 
 dotenv.config({ override: true });
 
 // Global Error Handlers for Node.js (preventing server crashes from unhandled rejections)
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
 
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
 });
 
 async function startServer() {
@@ -29,118 +32,164 @@ async function startServer() {
 
   const upload = multer({ storage: multer.memoryStorage() });
 
-  app.post("/api/parse-routine", upload.single('file'), async (req, res) => {
+  const translateBengaliNum = (str: string) => {
+    const benToEng = {
+      "০": "0",
+      "১": "1",
+      "২": "2",
+      "৩": "3",
+      "৪": "4",
+      "৫": "5",
+      "৬": "6",
+      "৭": "7",
+      "৮": "8",
+      "৯": "9",
+    };
+    return str.replace(
+      /[০-৯]/g,
+      (match) => benToEng[match as keyof typeof benToEng],
+    );
+  };
+
+  app.post("/api/parse-routine", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ success: false, error: 'No file uploaded' });
+        return res
+          .status(400)
+          .json({ success: false, error: "No file uploaded" });
       }
-      
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ success: false, error: 'GEMINI_API_KEY is not configured on the server.' });
-      }
-      
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const prompt = `You are an advanced backend automation assistant integrated into an Admin "Add Panel" for an Exam Routine Management System. Your job is to parse the uploaded BTEB Exam Routine PDF/Image and output a clean JSON array that the system can immediately insert into the database or use to auto-fill the form fields.
 
-CRITICAL MAPPING RULES FOR ADMIN PANEL FORM COMPATIBILITY:
-
-1. "Curriculum" Mapping:
-   Analyze the header of the routine. You must map it strictly to one of these Admin Panel dropdown options:
-   - "Diploma in Engineering"
-   - "Diploma in Textile Engineering"
-   - "Diploma in Agriculture"
-   - "Diploma in Fisheries"
-   - "Diploma in Forestry"
-   - "Diploma in Livestock"
-   - "Basic Trade (360 hrs)"
-   - "Other"
-
-2. "Regulation" Mapping:
-   Identify the Probidhan (e.g., ২০১৬ প্রবিধান, ২০২২ প্রবিধান) and map strictly to:
-   - "2022 Probidhan"
-   - "2016 Probidhan"
-   - "2010 Probidhan"
-
-3. "Semester" Mapping:
-   Convert the Bengali text (১ম, ২য়, ৩য়, ৪র্থ, ৫ম, ৬ষ্ঠ, ৭ম, ৮ম পর্ব) exactly to these database values:
-   - "1st Semester", "2nd Semester", "3rd Semester", "4th Semester", "5th Semester", "6th Semester", "7th Semester", "8th Semester"
-
-4. "Department" Auto-Classification:
-   Read the 'Technology' (টেকনোলজি) column and classify it into the Admin Panel's exact Department list. Do not output Bengali text.
-   - If Technology is আর্কিটেকচার / Architecture -> "Architecture"
-   - If Technology is সিভিল / Civil -> "Civil"
-   - If Technology is কম্পিউটার / Computer -> "Computer"
-   - If Technology is ইলেকট্রিক্যাল / Electrical -> "Electrical"
-   - If Technology is মেকানিক্যাল / Mechanical -> "Mechanical"
-   - If Technology is পাওয়ার / Power -> "Power"
-   - If Technology is ইলেকট্রনিক্স / Electronics -> "Electronics"
-   - If Technology is অটোমোবাইল / Automobile -> "Automobile"
-   - If Technology is ফুড / Food -> "Food"
-   - If Technology is এনভায়রনমেন্ট / Environment -> "Environment"
-   - If Technology is টেলিকমিউনিকেশন / Telecommunication -> "Telecommunication"
-   - For ANY other technology (e.g., ট্যুরিজম, কেমিক্যাল, টেক্সটাইল) -> Strictly set to "Other"
-
-5. "Department_Code": Extract the technology numerical code if given, else output empty string "".
-
-6. "Day" Mapping:
-   Convert Bengali days to exact English names: "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday".
-
-7. Date & Time Format:
-   - "Date": Convert to YYYY-MM-DD standard format.
-   - "Time": Format as standard "HH:MM AM/PM" (e.g., "10:00 AM" or "02:00 PM").
-
-Output Requirement:
-Return ONLY a valid JSON array of objects. No explanations, no markdown block (like \`\`\`json), just the raw JSON text ready to be parsed by the Add Panel's backend logic.
-
-Example JSON Output Structure:
-[
-  {
-    "Curriculum": "Diploma in Engineering",
-    "Regulation": "2016 Probidhan",
-    "Semester": "5th Semester",
-    "Department": "Architecture",
-    "Department_Code": "",
-    "Subject_Name": "Architectural Design-4",
-    "Subject_Code": "66151",
-    "Date": "2021-10-17",
-    "Day": "Sunday",
-    "Time": "02:00 PM"
-  }
-]`;
-
-      const mimeType = req.file.mimetype;
-      const base64Data = req.file.buffer.toString('base64');
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          prompt,
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType
+      if (req.file.mimetype === "application/pdf") {
+        try {
+          const fileBuffer = req.file.buffer;
+          const pdfParseModule = await import("pdf-parse");
+          const pdfParse = pdfParseModule.default || pdfParseModule;
+          const data = await pdfParse(fileBuffer);
+          const fullText = data.text.replace(/\n/g, ' ');
+          
+          const routines: any[] = [];
+          const tokens = fullText.split(/\s+/).filter((t: string) => t.length > 0);
+          
+          let currentDate = "";
+          let currentDay = "";
+          let currentTime = "";
+          let currentSemester = "1st Semester";
+          let currentRegulation = "2016 Probidhan";
+          
+          const dateRegexInfo = /(\d{2}-\d{2}-\d{4}|[০-৯]{2}-[০-৯]{2}-[০-৯]{4})/;
+          const subjectCodeRegex = /^(\d{4,5}|[০-৯]{4,5})$/;
+          
+          for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            
+            if (dateRegexInfo.test(token)) {
+              currentDate = translateBengaliNum(token.match(dateRegexInfo)![0]);
+              for (let j = i; j < i + 10 && j < tokens.length; j++) {
+                  if (tokens[j].includes("বিামবাি") || tokens[j].includes("সোমবাি") || tokens[j] === "Monday") currentDay = "Monday";
+                  if (tokens[j].includes("মঙ্গলবাি") || tokens[j] === "Tuesday") currentDay = "Tuesday";
+                  if (tokens[j].includes("বুধবাি") || tokens[j] === "Wednesday") currentDay = "Wednesday";
+                  if (tokens[j].includes("বৃহেরতবাি") || tokens[j].includes("বৃহস্পতিবার") || tokens[j] === "Thursday") currentDay = "Thursday";
+                  if (tokens[j].includes("শুক্রবাি") || tokens[j].includes("শুক্রবার") || tokens[j] === "Friday") currentDay = "Friday";
+                  if (tokens[j].includes("শরিবাি") || tokens[j].includes("শনিবার") || tokens[j] === "Saturday") currentDay = "Saturday";
+                  if (tokens[j].includes("িরববাি") || tokens[j].includes("রবিবার") || tokens[j] === "Sunday") currentDay = "Sunday";
+                  if (tokens[j].includes("১০:০০") || tokens[j].includes("10:00") || tokens[j].includes("সকাল")) currentTime = "10:00 AM";
+                  if (tokens[j].includes("০২:০০") || tokens[j].includes("02:00") || tokens[j].includes("২:০০") || tokens[j].includes("বিকাল") || tokens[j].includes("PM")) currentTime = "02:00 PM";
+              }
+            }
+            
+            if (token.includes("পব") || token.includes("পর্ব") || token.includes("Semester")) {
+               let context = token + " " + (tokens[i+1]||"") + " " + (tokens[i+2]||"") + " " + (tokens[i-1]||"");
+               if (context.includes("২০১৬") || context.includes("2016")) currentRegulation = "2016 Probidhan";
+               if (context.includes("২০১০") || context.includes("2010")) currentRegulation = "2010 Probidhan";
+               if (context.includes("২০২২") || context.includes("2022")) currentRegulation = "2022 Probidhan";
+               if (context.includes("১ম") || context.includes("1st")) currentSemester = "1st Semester";
+               if (context.includes("২য়") || context.includes("2nd")) currentSemester = "2nd Semester";
+               if (context.includes("৩য়") || context.includes("3rd")) currentSemester = "3rd Semester";
+               if (context.includes("৪র্") || context.includes("4th")) currentSemester = "4th Semester";
+               if (context.includes("৫ম") || context.includes("5th")) currentSemester = "5th Semester";
+               if (context.includes("৬ষ্ঠ") || context.includes("6th")) currentSemester = "6th Semester";
+               if (context.includes("৭ম") || context.includes("7th")) currentSemester = "7th Semester";
+               if (context.includes("৮ম") || context.includes("8th")) currentSemester = "8th Semester";
+            }
+            
+            if (subjectCodeRegex.test(token)) {
+              if (token.length >= 4 && token.length <= 5) {
+                const code = translateBengaliNum(token);
+                let rest = [];
+                for (let j = i + 1; j < tokens.length; j++) {
+                    if (/^(?:\d+|[০-৯]+)[\.।]$/.test(tokens[j])) break; 
+                    if (/^(\d{4,5}|[০-৯]{4,5})$/.test(tokens[j])) break; 
+                    if (dateRegexInfo.test(tokens[j])) break; 
+                    if (tokens[j] === "িাং") break;
+                    rest.push(tokens[j]);
+                }
+                let subjectName = rest.join(' ').trim();
+                
+                let tech = "Other";
+                if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "Architecture"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
+                else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "Automobile"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
+                else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "Chemical"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
+                else if (subjectName.includes("রিরভল") || subjectName.includes("সিভিল") || subjectName.includes("Civil")) { tech = "Civil"; subjectName = subjectName.replace(/রিরভল|সিভিল|Civil/g, '').trim(); }
+                else if (subjectName.includes("করিউটাি") || subjectName.includes("কম্পিউটার") || subjectName.includes("Computer")) { tech = "Computer"; subjectName = subjectName.replace(/করিউটাি|কম্পিউটার|Computer/g, '').trim(); }
+                else if (subjectName.includes("ইদলকরট্রকুাল") || subjectName.includes("ইলেকট্রিক্যাল") || subjectName.includes("Electrical")) { tech = "Electrical"; subjectName = subjectName.replace(/ইদলকরট্রকুাল|ইলেকট্রিক্যাল|Electrical/g, '').trim(); }
+                else if (subjectName.includes("ইদলকট্ররিক্স") || subjectName.includes("ইলেকট্রনিক্স") || subjectName.includes("Electronics")) { tech = "Electronics"; subjectName = subjectName.replace(/ইদলকট্ররিক্স|ইলেকট্রনিক্স|Electronics/g, '').trim(); }
+                else if (subjectName.includes("বমকারিকুাল") || subjectName.includes("মেকানিক্যাল") || subjectName.includes("Mechanical")) { tech = "Mechanical"; subjectName = subjectName.replace(/বমকারিকুাল|মেকানিক্যাল|Mechanical/g, '').trim(); }
+                else if (subjectName.includes("পাওয়াি") || subjectName.includes("পাওয়ার") || subjectName.includes("Power")) { tech = "Power"; subjectName = subjectName.replace(/পাওয়াি|পাওয়ার|Power/g, '').trim(); }
+                
+                if (subjectName.endsWith(',')) subjectName = subjectName.slice(0, -1);
+                if (subjectName.trim() === '') subjectName = `Subject ${code}`;
+                
+                if (currentDate) {
+                  routines.push({
+                    Curriculum: "Diploma in Engineering",
+                    Regulation: currentRegulation,
+                    Semester: currentSemester,
+                    Department: tech,
+                    Department_Code: "",
+                    Subject_Name: subjectName.trim(),
+                    Subject_Code: code,
+                    Date: currentDate.replace(/\s+/g, ''),
+                    Day: currentDay || "Monday",
+                    Time: currentTime || "10:00 AM"
+                  });
+                }
+              }
             }
           }
-        ]
-      });
-      
-      let text = response.text || '';
-      // Clean up markdown block if the model ignores the instruction
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-      
-      const jsonData = JSON.parse(text);
-      return res.json({ success: true, data: jsonData });
+          console.log(`Parsed PDF tokens: ${tokens.length}. Found ${routines.length} routines.`);
+          return res.json({ success: true, data: routines });
+        } catch (pdfErr) {
+          console.error("pdf-parse error:", pdfErr);
+          return res.status(500).json({ success: false, error: 'Could not read text from PDF. Ensure it is not encrypted or an image-only PDF.' });
+        }
+      }
+
+      // If excel (Fallback), although user uploaded PDF
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "Please upload a PDF file containing the BTEB Routine.",
+        });
     } catch (error: any) {
-      console.error('Error in parse-routine:', error);
-      return res.status(500).json({ success: false, error: error.message });
+      console.error("Error in parse-routine-pdf:", error);
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: error.message || "Internal Server Error",
+        });
     }
   });
 
   app.get("/api/bteb/institutes", (req, res) => {
     try {
-      const institutesPath = path.join(process.cwd(), "src", "data", "all_institutes.json");
+      const institutesPath = path.join(
+        process.cwd(),
+        "src",
+        "data",
+        "all_institutes.json",
+      );
       if (fs.existsSync(institutesPath)) {
         const data = fs.readFileSync(institutesPath, "utf-8");
         return res.json({ success: true, data: JSON.parse(data) });
@@ -155,37 +204,52 @@ Example JSON Output Structure:
   app.get("/api/bteb/institute-results/:code", async (req, res) => {
     try {
       const { code } = req.params;
-      const response = await fetch(`https://btebresultszone.com/institute-results/${code}`, {
-        headers: {
-          'Accept': 'text/html',
-          'User-Agent': 'Mozilla/5.0'
-        }
-      });
-      if (!response.ok) return res.status(response.status).json({ success: false, error: "BTEB Server Error" });
+      const response = await fetch(
+        `https://btebresultszone.com/institute-results/${code}`,
+        {
+          headers: {
+            Accept: "text/html",
+            "User-Agent": "Mozilla/5.0",
+          },
+        },
+      );
+      if (!response.ok)
+        return res
+          .status(response.status)
+          .json({ success: false, error: "BTEB Server Error" });
 
       const html = await response.text();
       const $ = cheerio.load(html);
-      
-      let instituteName = $("h1, h2, h3").first().text().replace('Institute ', '').trim();
+
+      let instituteName = $("h1, h2, h3")
+        .first()
+        .text()
+        .replace("Institute ", "")
+        .trim();
       const titleText = $("title").text();
-      if (titleText && titleText.includes('|')) {
-         instituteName = titleText.split('|')[0].replace(`[${code}]`, '').trim();
+      if (titleText && titleText.includes("|")) {
+        instituteName = titleText.split("|")[0].replace(`[${code}]`, "").trim();
       }
-      
+
       const results: any[] = [];
       $(`a[href^='/institute-results/${code}/']`).each((i, el) => {
-        const href = $(el).attr('href');
-        const parts = href?.split('/') || [];
-        const dateStr = parts[parts.length - 1]; 
-        
-        const card = $(el).closest('.rounded-xl, .shadow-sm, [data-slot="card"], .border-gray-100'); 
-        let rawText = card.text() || '';
-        
+        const href = $(el).attr("href");
+        const parts = href?.split("/") || [];
+        const dateStr = parts[parts.length - 1];
+
+        const card = $(el).closest(
+          '.rounded-xl, .shadow-sm, [data-slot="card"], .border-gray-100',
+        );
+        let rawText = card.text() || "";
+
         let fileCount = "Unknown";
         let matchFile = rawText.match(/(\d+) File[s]?/);
         if (matchFile) fileCount = matchFile[0];
 
-        let passed = "", failed = "", total = "", curr = "";
+        let passed = "",
+          failed = "",
+          total = "",
+          curr = "";
         let matchPass = rawText.match(/Passed([\d.]+%)\s*(\d+)/);
         if (matchPass) passed = `${matchPass[1]} (${matchPass[2]})`;
 
@@ -195,9 +259,14 @@ Example JSON Output Structure:
         let matchTotal = rawText.match(/Total.*?(\d+)/);
         if (matchTotal) total = matchTotal[1];
 
-        results.push({ href, dateStr, rawText, stats: { fileCount, passed, failed, total } });
+        results.push({
+          href,
+          dateStr,
+          rawText,
+          stats: { fileCount, passed, failed, total },
+        });
       });
-      
+
       return res.json({ success: true, instituteName, data: results });
     } catch (error) {
       console.error(error);
@@ -208,23 +277,29 @@ Example JSON Output Structure:
   app.get("/api/bteb/institute-results/:code/:date", async (req, res) => {
     try {
       const { code, date } = req.params;
-      const response = await fetch(`https://btebresultszone.com/institute-results/${code}/${date}`, {
-        headers: {
-          'Accept': 'text/html',
-          'User-Agent': 'Mozilla/5.0'
-        }
-      });
-      if (!response.ok) return res.status(response.status).json({ success: false, error: "BTEB Server Error" });
+      const response = await fetch(
+        `https://btebresultszone.com/institute-results/${code}/${date}`,
+        {
+          headers: {
+            Accept: "text/html",
+            "User-Agent": "Mozilla/5.0",
+          },
+        },
+      );
+      if (!response.ok)
+        return res
+          .status(response.status)
+          .json({ success: false, error: "BTEB Server Error" });
 
       const html = await response.text();
       const $ = cheerio.load(html);
-      
+
       const pdfs: string[] = [];
       $('a[href$=".pdf"]').each((i, el) => {
-        const href = $(el).attr('href');
+        const href = $(el).attr("href");
         if (href) pdfs.push(href);
       });
-      
+
       return res.json({ success: true, pdfs });
     } catch (error) {
       console.error(error);
@@ -233,12 +308,21 @@ Example JSON Output Structure:
   });
 
   // Simple custom proxy for BTEB
-  const proxyRoutes = ['/institute-results', '/_next/data', '/_next/static', '/latest-results', '/group-results'];
+  const proxyRoutes = [
+    "/institute-results",
+    "/_next/data",
+    "/_next/static",
+    "/latest-results",
+    "/group-results",
+  ];
   app.use(async (req, res, next) => {
     // Only intercept paths that match our proxyRoutes
-    const shouldProxy = proxyRoutes.some(route => req.path.startsWith(route)) || 
-                        (req.path.startsWith('/api/') && !req.path.startsWith('/api/bteb/institutes') && !req.path.startsWith('/api/results'));
-    
+    const shouldProxy =
+      proxyRoutes.some((route) => req.path.startsWith(route)) ||
+      (req.path.startsWith("/api/") &&
+        !req.path.startsWith("/api/bteb/institutes") &&
+        !req.path.startsWith("/api/results"));
+
     if (!shouldProxy) {
       return next();
     }
@@ -246,12 +330,19 @@ Example JSON Output Structure:
     try {
       const targetUrl = `https://btebresultszone.com${req.originalUrl}`;
       const fetchHeaders: Record<string, string> = {
-        'Accept': req.headers.accept || '*/*',
-        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: req.headers.accept || "*/*",
+        "User-Agent":
+          req.headers["user-agent"] ||
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       };
-      
+
       if (req.headers.cookie) fetchHeaders.cookie = req.headers.cookie;
-      if (req.headers['x-nextjs-data']) fetchHeaders['x-nextjs-data'] = Array.isArray(req.headers['x-nextjs-data']) ? req.headers['x-nextjs-data'][0] : req.headers['x-nextjs-data'];
+      if (req.headers["x-nextjs-data"])
+        fetchHeaders["x-nextjs-data"] = Array.isArray(
+          req.headers["x-nextjs-data"],
+        )
+          ? req.headers["x-nextjs-data"][0]
+          : req.headers["x-nextjs-data"];
 
       const response = await fetch(targetUrl, {
         method: req.method,
@@ -259,37 +350,45 @@ Example JSON Output Structure:
       });
 
       // Filter headers
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get("content-type");
       if (contentType) {
-        res.setHeader('Content-Type', contentType);
+        res.setHeader("Content-Type", contentType);
       }
-      
+
       const buffer = await response.arrayBuffer();
 
-      if (contentType && contentType.includes('text/html')) {
-        let html = Buffer.from(buffer).toString('utf-8');
-        
+      if (contentType && contentType.includes("text/html")) {
+        let html = Buffer.from(buffer).toString("utf-8");
+
         // Inject CSS to hide header, footer, top nav, main top padding etc
-        html = html.replace('</head>', `
+        html = html.replace(
+          "</head>",
+          `
           <style>
             header, footer, nav[aria-label="breadcrumb"], .print\\:hidden, #nprogress { display: none !important; }
             main { padding-top: 0 !important; margin-top: 0 !important; }
             .min-h-screen-minus-topnav { min-height: 0 !important; }
           </style>
-        </head>`);
-        
+        </head>`,
+        );
+
         return res.send(html);
       } else {
         return res.send(Buffer.from(buffer));
       }
     } catch (error: any) {
-      console.error('Proxy manual error:', error);
-      res.status(500).send('Proxy error');
+      console.error("Proxy manual error:", error);
+      res.status(500).send("Proxy error");
     }
   });
 
   app.get("/api/results", async (req, res) => {
-    console.log("ALL ENV:", Object.keys(process.env).filter(k => k.includes('FIREBASE')).map(k => `${k}=${process.env[k]}`));
+    console.log(
+      "ALL ENV:",
+      Object.keys(process.env)
+        .filter((k) => k.includes("FIREBASE"))
+        .map((k) => `${k}=${process.env[k]}`),
+    );
     try {
       const type = req.query.type as string;
       const roll = req.query.roll as string;
@@ -297,23 +396,31 @@ Example JSON Output Structure:
       const curriculum = req.query.curriculumId as string;
       const regulation = req.query.regulation as string;
 
-      if (type === 'institute') {
+      if (type === "institute") {
         if (!instituteCode) {
-           return res.status(400).json({ success: false, error: 'Missing instituteCode' });
+          return res
+            .status(400)
+            .json({ success: false, error: "Missing instituteCode" });
         }
-        
+
         // Fetch from Firebase via REST API
-        const projectId = process.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0079376731";
+        const projectId =
+          process.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0079376731";
         let databaseId = process.env.VITE_FIREBASE_DATABASE_ID || "(default)";
         if (databaseId === "123") {
-            databaseId = "(default)";
+          databaseId = "(default)";
         }
         if (!projectId) {
-           return res.status(500).json({ success: false, error: 'Firebase configuration missing on server' });
+          return res
+            .status(500)
+            .json({
+              success: false,
+              error: "Firebase configuration missing on server",
+            });
         }
-        
+
         const apiKey = process.env.VITE_FIREBASE_API_KEY;
-        const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents:runQuery${apiKey ? `?key=${apiKey}` : ''}`;
+        const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents:runQuery${apiKey ? `?key=${apiKey}` : ""}`;
         const body = {
           structuredQuery: {
             from: [{ collectionId: "results" }],
@@ -321,155 +428,202 @@ Example JSON Output Structure:
               fieldFilter: {
                 field: { fieldPath: "institute.code" },
                 op: "EQUAL",
-                value: { integerValue: parseInt(instituteCode, 10) }
-              }
+                value: { integerValue: parseInt(instituteCode, 10) },
+              },
             },
-            limit: 1000
-          }
+            limit: 1000,
+          },
         };
-        
-        console.log("SERVER DB ID IS:", databaseId);
-        const fbRes = await fetch(url, { method: "POST", body: JSON.stringify(body) });
-        if (!fbRes.ok) {
-           console.log(`Firebase query returned ${fbRes.status} status. Check server configuration (API Key, Project ID restrict access).`);
-        } else {
-           const fbData = await fbRes.json();
-           const parsedData: any[] = [];
-           
-           for (const doc of fbData) {
-              if (doc.document && doc.document.fields) {
-                  const fields = doc.document.fields;
-                  const item: any = { id: doc.document.name.split('/').pop() };
-                  for (const key in fields) {
-                     if (fields[key].stringValue !== undefined) item[key] = fields[key].stringValue;
-                     else if (fields[key].integerValue !== undefined) item[key] = parseInt(fields[key].integerValue, 10);
-                     else if (fields[key].doubleValue !== undefined) item[key] = parseFloat(fields[key].doubleValue);
-                     else if (fields[key].booleanValue !== undefined) item[key] = fields[key].booleanValue;
-                  }
-                  
-                  if (!curriculum || item.curriculum === curriculum || item.curriculumId === curriculum) {
-                     parsedData.push(item);
-                  }
-              }
-           }
 
-           if (parsedData.length > 0) {
-              return res.json({ success: true, data: parsedData });
-           }
+        console.log("SERVER DB ID IS:", databaseId);
+        const fbRes = await fetch(url, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        if (!fbRes.ok) {
+          console.log(
+            `Firebase query returned ${fbRes.status} status. Check server configuration (API Key, Project ID restrict access).`,
+          );
+        } else {
+          const fbData = await fbRes.json();
+          const parsedData: any[] = [];
+
+          for (const doc of fbData) {
+            if (doc.document && doc.document.fields) {
+              const fields = doc.document.fields;
+              const item: any = { id: doc.document.name.split("/").pop() };
+              for (const key in fields) {
+                if (fields[key].stringValue !== undefined)
+                  item[key] = fields[key].stringValue;
+                else if (fields[key].integerValue !== undefined)
+                  item[key] = parseInt(fields[key].integerValue, 10);
+                else if (fields[key].doubleValue !== undefined)
+                  item[key] = parseFloat(fields[key].doubleValue);
+                else if (fields[key].booleanValue !== undefined)
+                  item[key] = fields[key].booleanValue;
+              }
+
+              if (
+                !curriculum ||
+                item.curriculum === curriculum ||
+                item.curriculumId === curriculum
+              ) {
+                parsedData.push(item);
+              }
+            }
+          }
+
+          if (parsedData.length > 0) {
+            return res.json({ success: true, data: parsedData });
+          }
         }
-        
+
         // Since BTEB API doesn't support instituteCode directly in student-results and there's no open institute API,
         // and Firebase is either missing or empty, we must return empty data rather than crash.
         // In the future, the admin can upload institute data to Firebase.
-        
+
         // Providing some mock data so the UI layout can be previewed!
         if (instituteCode === "56055" || true) {
           const mockData = [
             {
               rollNumber: "123456",
-              institute: { name: "Sample Polytechnic Institute", code: instituteCode, district: "Sample District" },
+              institute: {
+                name: "Sample Polytechnic Institute",
+                code: instituteCode,
+                district: "Sample District",
+              },
               curriculumId: "diploma_in_engineering",
               regulation: "2022",
               createdAt: new Date().toISOString(),
               semester1: "3.50",
-              semester2: '{"type":"referred","subjects":[{"name":"Math-1","code":"1234"}],"total":1}',
+              semester2:
+                '{"type":"referred","subjects":[{"name":"Math-1","code":"1234"}],"total":1}',
               semester3: "3.25",
-              latestResults: [{ semester: "3", failedSubjects: [] }]
+              latestResults: [{ semester: "3", failedSubjects: [] }],
             },
             {
               rollNumber: "123457",
-              institute: { name: "Sample Polytechnic Institute", code: instituteCode, district: "Sample District" },
+              institute: {
+                name: "Sample Polytechnic Institute",
+                code: instituteCode,
+                district: "Sample District",
+              },
               curriculumId: "diploma_in_engineering",
               regulation: "2022",
               createdAt: new Date().toISOString(),
               semester1: "3.80",
               semester2: "3.90",
               semester3: "3.75",
-              latestResults: [{ semester: "3", failedSubjects: [] }]
-            }
+              latestResults: [{ semester: "3", failedSubjects: [] }],
+            },
           ];
           return res.json({ success: true, data: mockData });
         }
 
         return res.json({ success: true, data: [] });
       }
-      
-      const fetchFromBteb = async (url: string, retries = 2, delayMs = 1500): Promise<any> => {
+
+      const fetchFromBteb = async (
+        url: string,
+        retries = 2,
+        delayMs = 1500,
+      ): Promise<any> => {
         try {
-            const response = await fetch(url, {
+          const response = await fetch(url, {
             headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              Accept: "application/json",
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            },
+          });
+          if (response.status === 429) {
+            if (retries > 0) {
+              console.log(`Rate limited on ${url}, waiting ${delayMs}ms...`);
+              await new Promise((r) => setTimeout(r, delayMs));
+              return await fetchFromBteb(url, retries - 1, delayMs * 1.5);
             }
-            });
-            if (response.status === 429) {
-                if (retries > 0) {
-                    console.log(`Rate limited on ${url}, waiting ${delayMs}ms...`);
-                    await new Promise(r => setTimeout(r, delayMs));
-                    return await fetchFromBteb(url, retries - 1, delayMs * 1.5);
-                }
-                throw new Error('Rate Limited by BTEB Server. Please wait a few minutes and try again with a smaller range.');
-            }
-            if (!response.ok) {
-            console.error("BTEB Fetch Error:", response.status, response.statusText);
+            throw new Error(
+              "Rate Limited by BTEB Server. Please wait a few minutes and try again with a smaller range.",
+            );
+          }
+          if (!response.ok) {
+            console.error(
+              "BTEB Fetch Error:",
+              response.status,
+              response.statusText,
+            );
             try {
-                const text = await response.text();
-                let btebError = '';
-                try {
-                    const parsed = JSON.parse(text);
-                    if (parsed.error) btebError = parsed.error;
-                } catch(jsonErr) {
-                    // Ignore JSON parse errors
-                }
-                if (btebError) throw new Error(btebError);
-                
-                if (text.includes("Cloudflare") || text.includes("1015")) {
-                    throw new Error('IP Temporarily Blocked by BTEB due to high traffic. Please try again later.');
-                }
-                console.error("BTEB Response text:", text);
-            } catch(e: any) {
-                if (e.message && e.message !== "Failed to fetch from BTEB source") throw e;
+              const text = await response.text();
+              let btebError = "";
+              try {
+                const parsed = JSON.parse(text);
+                if (parsed.error) btebError = parsed.error;
+              } catch (jsonErr) {
+                // Ignore JSON parse errors
+              }
+              if (btebError) throw new Error(btebError);
+
+              if (text.includes("Cloudflare") || text.includes("1015")) {
+                throw new Error(
+                  "IP Temporarily Blocked by BTEB due to high traffic. Please try again later.",
+                );
+              }
+              console.error("BTEB Response text:", text);
+            } catch (e: any) {
+              if (e.message && e.message !== "Failed to fetch from BTEB source")
+                throw e;
             }
-            throw new Error('Failed to fetch from BTEB source');
-            }
-            try {
+            throw new Error("Failed to fetch from BTEB source");
+          }
+          try {
             return await response.json();
-            } catch (e) {
-            throw new Error('Invalid JSON response from BTEB server. They might be blocking the request.');
-            }
+          } catch (e) {
+            throw new Error(
+              "Invalid JSON response from BTEB server. They might be blocking the request.",
+            );
+          }
         } catch (error: any) {
-             if ((error.message.includes('fetch failed') || error.cause?.code === 'ECONNRESET') && retries > 0) {
-                 await new Promise(r => setTimeout(r, delayMs));
-                 return await fetchFromBteb(url, retries - 1, delayMs * 1.5);
-             }
-             throw error;
+          if (
+            (error.message.includes("fetch failed") ||
+              error.cause?.code === "ECONNRESET") &&
+            retries > 0
+          ) {
+            await new Promise((r) => setTimeout(r, delayMs));
+            return await fetchFromBteb(url, retries - 1, delayMs * 1.5);
+          }
+          throw error;
         }
       };
 
       if (roll) {
         // Remove spaces and normalize
-        const normalizedRollStr = roll.replace(/\s+/g, '');
-        const hasRange = normalizedRollStr.includes('-');
-        const hasComma = normalizedRollStr.includes(',');
-        let isGroup = type === 'group' || hasRange || hasComma;
-        
+        const normalizedRollStr = roll.replace(/\s+/g, "");
+        const hasRange = normalizedRollStr.includes("-");
+        const hasComma = normalizedRollStr.includes(",");
+        let isGroup = type === "group" || hasRange || hasComma;
+
         if (isGroup && !hasRange && !hasComma) {
-            isGroup = false; // "Roll combination is too short" fallback if they entered just 1 roll
+          isGroup = false; // "Roll combination is too short" fallback if they entered just 1 roll
         }
 
         if (!isGroup) {
           let apiUrl = `https://btebresultszone.com/api/student-results?roll=${normalizedRollStr}`;
-          apiUrl += `&curriculumId=${curriculum || 'diploma_in_engineering'}`;
-          apiUrl += `&regulation=${regulation || '2022'}`;
+          apiUrl += `&curriculumId=${curriculum || "diploma_in_engineering"}`;
+          apiUrl += `&regulation=${regulation || "2022"}`;
           const data = await fetchFromBteb(apiUrl);
-          if (data && data.error === 'No results found') {
+          if (data && data.error === "No results found") {
             return res.json({ success: true, data: [] });
           }
           return res.json(data);
         } else {
           // Multiple rolls
           if (!curriculum) {
-             return res.status(400).json({ success: false, error: 'Curriculum is required for group searches.' });
+            return res
+              .status(400)
+              .json({
+                success: false,
+                error: "Curriculum is required for group searches.",
+              });
           }
           const finalRegulation = regulation || "2022";
 
@@ -478,318 +632,383 @@ Example JSON Output Structure:
           let filterRolls = new Set<string>();
           let isFilterMode = false;
           let rolls: number[] = [];
-          
-          if (ranges.includes('-') || ranges.includes(',')) {
-              const parts = ranges.split(',');
-              parts.forEach(part => {
-                  if (part.includes('-')) {
-                      const [startStr, endStr] = part.split('-');
-                      const s = parseInt(startStr, 10);
-                      const e = parseInt(endStr, 10);
-                      if (!isNaN(s) && !isNaN(e) && s <= e) {
-                          for (let i = s; i <= e; i++) {
-                              rolls.push(i);
-                          }
-                      }
-                  } else {
-                      const r = parseInt(part, 10);
-                      if (!isNaN(r)) rolls.push(r);
+
+          if (ranges.includes("-") || ranges.includes(",")) {
+            const parts = ranges.split(",");
+            parts.forEach((part) => {
+              if (part.includes("-")) {
+                const [startStr, endStr] = part.split("-");
+                const s = parseInt(startStr, 10);
+                const e = parseInt(endStr, 10);
+                if (!isNaN(s) && !isNaN(e) && s <= e) {
+                  for (let i = s; i <= e; i++) {
+                    rolls.push(i);
                   }
-              });
-              rolls = Array.from(new Set(rolls)).sort((a, b) => a - b);
+                }
+              } else {
+                const r = parseInt(part, 10);
+                if (!isNaN(r)) rolls.push(r);
+              }
+            });
+            rolls = Array.from(new Set(rolls)).sort((a, b) => a - b);
           }
-          
+
           let rawStudents: any[] = [];
           try {
-             const CHUNK_SIZE = 30; // Max rolls per request to BTEB to bypass 29 limit
-             const chunks = [];
-             for (let i = 0; i < rolls.length; i += CHUNK_SIZE) {
-                 chunks.push(rolls.slice(i, i + CHUNK_SIZE));
-             }
-             
-             if (chunks.length === 0) {
-                 // Fallback if parsing failed
-                 let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${ranges}`;
-                 groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
-                 const response = await fetchFromBteb(groupApiUrl);
-                 if (response && response.success && response.data && response.data.studentResults) {
-                     rawStudents = response.data.studentResults;
-                 }
-             } else {
-                 // Fetch all chunks sequentially (or with a small delay)
-                 for (let i = 0; i < chunks.length; i++) {
-                     const chunk = chunks[i];
-                    const chunkRange = `${chunk[0]}-${chunk[chunk.length - 1]}`;
-                    let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${chunkRange}`;
-                    groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
-                    console.log(`Fetching chunk ${i+1}/${chunks.length}: ${groupApiUrl}`);
-                     
-                     const response = await fetchFromBteb(groupApiUrl);
-                     if (response && response.success && response.data && response.data.studentResults) {
-                         // Filter out strictly requested rolls to avoid extra results spanning the range gaps
-                         const validResults = response.data.studentResults.filter((s: any) => chunk.includes(Number(s.roll)));
-                         rawStudents.push(...validResults);
-                     }
-                     if (i < chunks.length - 1) {
-                         await new Promise(r => setTimeout(r, 1000));
-                     }
-                 }
-             }
-             
-             if (rawStudents.length > 0) {
-                 // deduplicate students by roll just in case
-                 const seen = new Set();
-                 rawStudents = rawStudents.filter(s => {
-                     if (seen.has(s.roll)) return false;
-                     seen.add(s.roll);
-                     return true;
-                 });
-                 
-                 // 1. Identify minimal rolls to fetch to get ALL subject names
-                 const unmetSubjects = new Set<string | number>();
-                 const studentFailedSubs = new Map<string | number, (string | number)[]>();
+            const CHUNK_SIZE = 30; // Max rolls per request to BTEB to bypass 29 limit
+            const chunks = [];
+            for (let i = 0; i < rolls.length; i += CHUNK_SIZE) {
+              chunks.push(rolls.slice(i, i + CHUNK_SIZE));
+            }
 
-                 rawStudents.forEach((s: any) => {
-                     const subs = new Set<string | number>();
-                     s.results.forEach((r: any) => {
-                         if (r.failedSubjects && Array.isArray(r.failedSubjects)) {
-                             r.failedSubjects.forEach((f: any) => {
-                                 const code = f.subCode || f.code;
-                                 if (code) {
-                                     subs.add(code);
-                                     unmetSubjects.add(code);
-                                 }
-                             });
-                         }
-                     });
-                     if (subs.size > 0) studentFailedSubs.set(s.roll, Array.from(subs));
-                 });
+            if (chunks.length === 0) {
+              // Fallback if parsing failed
+              let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${ranges}`;
+              groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
+              const response = await fetchFromBteb(groupApiUrl);
+              if (
+                response &&
+                response.success &&
+                response.data &&
+                response.data.studentResults
+              ) {
+                rawStudents = response.data.studentResults;
+              }
+            } else {
+              // Fetch all chunks sequentially (or with a small delay)
+              for (let i = 0; i < chunks.length; i++) {
+                const chunk = chunks[i];
+                const chunkRange = `${chunk[0]}-${chunk[chunk.length - 1]}`;
+                let groupApiUrl = `https://btebresultszone.com/api/group-results?rollRanges=${chunkRange}`;
+                groupApiUrl += `&curriculumId=${curriculum}&regulation=${finalRegulation}`;
+                console.log(
+                  `Fetching chunk ${i + 1}/${chunks.length}: ${groupApiUrl}`,
+                );
 
-                 const rollsToFetch: (string | number)[] = [];
-                 
-                 // 1A. Identify clusters to ensure we fetch at least one roll per cluster for institute mapping
-                 const sortedRollsForClusters = rawStudents.map((s: any) => Number(s.roll)).filter((r: number) => !isNaN(r)).sort((a: number, b: number) => a - b);
-                 const clusters: number[][] = [];
-                 if (sortedRollsForClusters.length > 0) {
-                     let currentCluster = [sortedRollsForClusters[0]];
-                     for (let i = 1; i < sortedRollsForClusters.length; i++) {
-                         if (sortedRollsForClusters[i] - sortedRollsForClusters[i-1] > 500) {
-                             clusters.push(currentCluster);
-                             currentCluster = [sortedRollsForClusters[i]];
-                         } else {
-                             currentCluster.push(sortedRollsForClusters[i]);
-                         }
-                     }
-                     clusters.push(currentCluster);
-                 }
+                const response = await fetchFromBteb(groupApiUrl);
+                if (
+                  response &&
+                  response.success &&
+                  response.data &&
+                  response.data.studentResults
+                ) {
+                  // Filter out strictly requested rolls to avoid extra results spanning the range gaps
+                  const validResults = response.data.studentResults.filter(
+                    (s: any) => chunk.includes(Number(s.roll)),
+                  );
+                  rawStudents.push(...validResults);
+                }
+                if (i < chunks.length - 1) {
+                  await new Promise((r) => setTimeout(r, 1000));
+                }
+              }
+            }
 
-                 // Ensure we fetch at least one roll from each cluster
-                 for (const c of clusters) {
-                     if (rollsToFetch.length < 15) {
-                         const firstRollStr = c[0].toString();
-                         rollsToFetch.push(firstRollStr);
-                         if (studentFailedSubs.has(firstRollStr)) {
-                             studentFailedSubs.get(firstRollStr)!.forEach(s => unmetSubjects.delete(s));
-                             studentFailedSubs.delete(firstRollStr);
-                         } else if (studentFailedSubs.has(c[0])) {
-                             studentFailedSubs.get(c[0])!.forEach(s => unmetSubjects.delete(s));
-                             studentFailedSubs.delete(c[0]);
-                         }
-                     }
-                 }
-                 
-                 while (unmetSubjects.size > 0 && rollsToFetch.length < 15) { // cap to avoid rate limits
-                     let bestRoll: string | number | null = null;
-                     let maxCovered = 0;
-                     let bestCoveredSet: (string | number)[] = [];
+            if (rawStudents.length > 0) {
+              // deduplicate students by roll just in case
+              const seen = new Set();
+              rawStudents = rawStudents.filter((s) => {
+                if (seen.has(s.roll)) return false;
+                seen.add(s.roll);
+                return true;
+              });
 
-                     for (const [roll, subs] of studentFailedSubs.entries()) {
-                         const covering = subs.filter(s => unmetSubjects.has(s));
-                         if (covering.length > maxCovered) {
-                             maxCovered = covering.length;
-                             bestRoll = roll;
-                             bestCoveredSet = covering;
-                         }
-                     }
+              // 1. Identify minimal rolls to fetch to get ALL subject names
+              const unmetSubjects = new Set<string | number>();
+              const studentFailedSubs = new Map<
+                string | number,
+                (string | number)[]
+              >();
 
-                     if (!bestRoll && rollsToFetch.length > 0) break; 
-                     
-                     if (bestRoll) {
-                         rollsToFetch.push(bestRoll);
-                         bestCoveredSet.forEach(s => unmetSubjects.delete(s));
-                         studentFailedSubs.delete(bestRoll);
-                     }
-                 }
+              rawStudents.forEach((s: any) => {
+                const subs = new Set<string | number>();
+                s.results.forEach((r: any) => {
+                  if (r.failedSubjects && Array.isArray(r.failedSubjects)) {
+                    r.failedSubjects.forEach((f: any) => {
+                      const code = f.subCode || f.code;
+                      if (code) {
+                        subs.add(code);
+                        unmetSubjects.add(code);
+                      }
+                    });
+                  }
+                });
+                if (subs.size > 0)
+                  studentFailedSubs.set(s.roll, Array.from(subs));
+              });
 
-                 // 2. Fetch those specific rolls individually sequentially with delay
-                 const subjectMap: Record<string, string> = {};
-                 const fetchedInstitutes = new Map<number, { code: number, district: string, name: string }>();
-                 if (rollsToFetch.length > 0) {
-                     try {
-                         const details: any[] = [];
-                         for (let i = 0; i < rollsToFetch.length; i++) {
-                             const rNum = rollsToFetch[i];
-                             const url = `https://btebresultszone.com/api/student-results?roll=${rNum}&curriculumId=${curriculum}&regulation=${finalRegulation}`;
-                             try {
-                                 const res = await fetchFromBteb(url);
-                                 details.push(res);
-                             } catch(e: any) {
-                                 console.warn(`Could not fetch details for roll ${rNum}: ${e.message}`);
-                             }
-                             if (i < rollsToFetch.length - 1) {
-                                 await new Promise(r => setTimeout(r, 800)); // wait 800ms between individual requests
-                             }
-                         }
-                         
-                         details.forEach(detailRes => {
-                             if (detailRes?.success && detailRes?.data?.[0]) {
-                                 const pData = detailRes.data[0];
-                                 if (pData.institute && pData.roll) {
-                                     fetchedInstitutes.set(Number(pData.roll), pData.institute);
-                                 }
-                                 // populate subject map
-                                 const allFailedLists = [
-                                     ...(pData.currentFailedSubjects || []),
-                                 ];
-                                 if (pData.semesterResults) {
-                                     pData.semesterResults.forEach((sr: any) => {
-                                         if (sr.results) {
-                                             sr.results.forEach((rs: any) => {
-                                                 if (rs.failedSubjects) allFailedLists.push(...rs.failedSubjects);
-                                             });
-                                         }
-                                     });
-                                 }
-                                 
-                                 allFailedLists.forEach(f => {
-                                     const code = f.subCode || f.code;
-                                     if (code && f.subName) {
-                                         subjectMap[code.toString()] = f.subName;
-                                     }
-                                 });
-                             }
-                         });
-                     } catch (err) {
-                         console.error("Failed fetching detail rolls for subject names", err);
-                     }
-                 }
+              const rollsToFetch: (string | number)[] = [];
 
-                 // 3. Map final data, injecting subject names and institute
-                 const mappedData = rawStudents.map((student: any) => {
-                     // 1. Map all attempts, injecting subName into failedSubjects
-                     student.results.forEach((r: any) => {
-                         if (r.failedSubjects && Array.isArray(r.failedSubjects)) {
-                             r.failedSubjects.forEach((f: any) => {
-                                 const code = f.subCode || f.code;
-                                 f.subName = f.subName || subjectMap[code?.toString()] || `Subject ${code}`;
-                                 f.type = f.type || 'T';
-                             });
-                         }
-                     });
+              // 1A. Identify clusters to ensure we fetch at least one roll per cluster for institute mapping
+              const sortedRollsForClusters = rawStudents
+                .map((s: any) => Number(s.roll))
+                .filter((r: number) => !isNaN(r))
+                .sort((a: number, b: number) => a - b);
+              const clusters: number[][] = [];
+              if (sortedRollsForClusters.length > 0) {
+                let currentCluster = [sortedRollsForClusters[0]];
+                for (let i = 1; i < sortedRollsForClusters.length; i++) {
+                  if (
+                    sortedRollsForClusters[i] - sortedRollsForClusters[i - 1] >
+                    500
+                  ) {
+                    clusters.push(currentCluster);
+                    currentCluster = [sortedRollsForClusters[i]];
+                  } else {
+                    currentCluster.push(sortedRollsForClusters[i]);
+                  }
+                }
+                clusters.push(currentCluster);
+              }
 
-                     // 2. Identify the FIRST semester each subject was failed
-                     const sortedAsc = [...student.results].sort((a,b) => {
-                         const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
-                         if (timeDiff !== 0) return timeDiff;
-                         return a.semester - b.semester;
-                     });
-                     
-                     const subjectOriginSem = new Map<number, number>();
-                     sortedAsc.forEach((r: any) => {
-                         if (r.failedSubjects && Array.isArray(r.failedSubjects)) {
-                             r.failedSubjects.forEach((f: any) => {
-                                 const code = f.subCode || f.code;
-                                 if (code && !subjectOriginSem.has(code)) {
-                                     subjectOriginSem.set(code, r.semester);
-                                 }
-                             });
-                         }
-                     });
+              // Ensure we fetch at least one roll from each cluster
+              for (const c of clusters) {
+                if (rollsToFetch.length < 15) {
+                  const firstRollStr = c[0].toString();
+                  rollsToFetch.push(firstRollStr);
+                  if (studentFailedSubs.has(firstRollStr)) {
+                    studentFailedSubs
+                      .get(firstRollStr)!
+                      .forEach((s) => unmetSubjects.delete(s));
+                    studentFailedSubs.delete(firstRollStr);
+                  } else if (studentFailedSubs.has(c[0])) {
+                    studentFailedSubs
+                      .get(c[0])!
+                      .forEach((s) => unmetSubjects.delete(s));
+                    studentFailedSubs.delete(c[0]);
+                  }
+                }
+              }
 
-                     // 3. Find the LATEST OVERALL result to extract the truly "current" failed subjects
-                     const sortedDesc = [...student.results].sort((a,b) => {
-                         const timeDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-                         if (timeDiff !== 0) return timeDiff;
-                         return b.semester - a.semester; // larger semester first on same date
-                     });
-                     
-                     const latestResult = sortedDesc[0] || {};
-                     const currentFailedRaw = latestResult.failedSubjects || [];
-                     
-                     const currentFailedSubjects = currentFailedRaw.map((f: any) => {
-                         const code = f.subCode || f.code;
-                         return {
-                             subCode: code,
-                             subName: f.subName || subjectMap[code?.toString()] || `Subject ${code}`,
-                             type: f.type || 'T',
-                             originSemester: subjectOriginSem.get(code) || latestResult.semester,
-                             passed: false
-                         };
-                     });
+              while (unmetSubjects.size > 0 && rollsToFetch.length < 15) {
+                // cap to avoid rate limits
+                let bestRoll: string | number | null = null;
+                let maxCovered = 0;
+                let bestCoveredSet: (string | number)[] = [];
 
-                     // 4. Group results by semester to avoid duplicates in ResultView
-                     const groupedSems = new Map<number, any[]>();
-                     student.results.forEach((r: any) => {
-                         if (!groupedSems.has(r.semester)) {
-                             groupedSems.set(r.semester, []);
-                         }
-                         groupedSems.get(r.semester)!.push(r);
-                     });
-                     
-                     const properSemesterResults = Array.from(groupedSems.entries()).map(([sem, resArray]) => {
-                         // Sort chronological desc to find latest status of this particular semester
-                         resArray.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                         const latestForSem = resArray[0];
-                         const status = (latestForSem.failedSubjects && latestForSem.failedSubjects.length > 0) ? 'failed' : 'passed';
-                         return {
-                             semester: sem,
-                             status: status,
-                             results: resArray
-                         };
-                     });
+                for (const [roll, subs] of studentFailedSubs.entries()) {
+                  const covering = subs.filter((s) => unmetSubjects.has(s));
+                  if (covering.length > maxCovered) {
+                    maxCovered = covering.length;
+                    bestRoll = roll;
+                    bestCoveredSet = covering;
+                  }
+                }
 
-                     // 5. Find the closest fetched institute
-                     let bestInstitute = { name: "Unknown Institute", code: 0, district: "" };
-                     if (fetchedInstitutes.size > 0) {
-                         let minDiff = Infinity;
-                         const sRoll = Number(student.roll);
-                         for (const [rNum, inst] of fetchedInstitutes.entries()) {
-                             const diff = Math.abs(rNum - sRoll);
-                             if (diff < minDiff) {
-                                 minDiff = diff;
-                                 bestInstitute = inst;
-                             }
-                         }
-                     }
+                if (!bestRoll && rollsToFetch.length > 0) break;
 
-                     return {
-                         roll: student.roll,
-                         curriculumId: curriculum,
-                         regulation: regulation,
-                         institute: bestInstitute,
-                         currentFailedSubjects: currentFailedSubjects,
-                         semesterResults: properSemesterResults,
-                         latestResults: sortedDesc
-                     };
-                 });
-                 // return exact format that ResultView component expects as json.data array
-                 return res.json({ success: true, data: mappedData });
-             } else {
-                 return res.json({ success: true, data: [] });
-             }
+                if (bestRoll) {
+                  rollsToFetch.push(bestRoll);
+                  bestCoveredSet.forEach((s) => unmetSubjects.delete(s));
+                  studentFailedSubs.delete(bestRoll);
+                }
+              }
+
+              // 2. Fetch those specific rolls individually sequentially with delay
+              const subjectMap: Record<string, string> = {};
+              const fetchedInstitutes = new Map<
+                number,
+                { code: number; district: string; name: string }
+              >();
+              if (rollsToFetch.length > 0) {
+                try {
+                  const details: any[] = [];
+                  for (let i = 0; i < rollsToFetch.length; i++) {
+                    const rNum = rollsToFetch[i];
+                    const url = `https://btebresultszone.com/api/student-results?roll=${rNum}&curriculumId=${curriculum}&regulation=${finalRegulation}`;
+                    try {
+                      const res = await fetchFromBteb(url);
+                      details.push(res);
+                    } catch (e: any) {
+                      console.warn(
+                        `Could not fetch details for roll ${rNum}: ${e.message}`,
+                      );
+                    }
+                    if (i < rollsToFetch.length - 1) {
+                      await new Promise((r) => setTimeout(r, 800)); // wait 800ms between individual requests
+                    }
+                  }
+
+                  details.forEach((detailRes) => {
+                    if (detailRes?.success && detailRes?.data?.[0]) {
+                      const pData = detailRes.data[0];
+                      if (pData.institute && pData.roll) {
+                        fetchedInstitutes.set(
+                          Number(pData.roll),
+                          pData.institute,
+                        );
+                      }
+                      // populate subject map
+                      const allFailedLists = [
+                        ...(pData.currentFailedSubjects || []),
+                      ];
+                      if (pData.semesterResults) {
+                        pData.semesterResults.forEach((sr: any) => {
+                          if (sr.results) {
+                            sr.results.forEach((rs: any) => {
+                              if (rs.failedSubjects)
+                                allFailedLists.push(...rs.failedSubjects);
+                            });
+                          }
+                        });
+                      }
+
+                      allFailedLists.forEach((f) => {
+                        const code = f.subCode || f.code;
+                        if (code && f.subName) {
+                          subjectMap[code.toString()] = f.subName;
+                        }
+                      });
+                    }
+                  });
+                } catch (err) {
+                  console.error(
+                    "Failed fetching detail rolls for subject names",
+                    err,
+                  );
+                }
+              }
+
+              // 3. Map final data, injecting subject names and institute
+              const mappedData = rawStudents.map((student: any) => {
+                // 1. Map all attempts, injecting subName into failedSubjects
+                student.results.forEach((r: any) => {
+                  if (r.failedSubjects && Array.isArray(r.failedSubjects)) {
+                    r.failedSubjects.forEach((f: any) => {
+                      const code = f.subCode || f.code;
+                      f.subName =
+                        f.subName ||
+                        subjectMap[code?.toString()] ||
+                        `Subject ${code}`;
+                      f.type = f.type || "T";
+                    });
+                  }
+                });
+
+                // 2. Identify the FIRST semester each subject was failed
+                const sortedAsc = [...student.results].sort((a, b) => {
+                  const timeDiff =
+                    new Date(a.date).getTime() - new Date(b.date).getTime();
+                  if (timeDiff !== 0) return timeDiff;
+                  return a.semester - b.semester;
+                });
+
+                const subjectOriginSem = new Map<number, number>();
+                sortedAsc.forEach((r: any) => {
+                  if (r.failedSubjects && Array.isArray(r.failedSubjects)) {
+                    r.failedSubjects.forEach((f: any) => {
+                      const code = f.subCode || f.code;
+                      if (code && !subjectOriginSem.has(code)) {
+                        subjectOriginSem.set(code, r.semester);
+                      }
+                    });
+                  }
+                });
+
+                // 3. Find the LATEST OVERALL result to extract the truly "current" failed subjects
+                const sortedDesc = [...student.results].sort((a, b) => {
+                  const timeDiff =
+                    new Date(b.date).getTime() - new Date(a.date).getTime();
+                  if (timeDiff !== 0) return timeDiff;
+                  return b.semester - a.semester; // larger semester first on same date
+                });
+
+                const latestResult = sortedDesc[0] || {};
+                const currentFailedRaw = latestResult.failedSubjects || [];
+
+                const currentFailedSubjects = currentFailedRaw.map((f: any) => {
+                  const code = f.subCode || f.code;
+                  return {
+                    subCode: code,
+                    subName:
+                      f.subName ||
+                      subjectMap[code?.toString()] ||
+                      `Subject ${code}`,
+                    type: f.type || "T",
+                    originSemester:
+                      subjectOriginSem.get(code) || latestResult.semester,
+                    passed: false,
+                  };
+                });
+
+                // 4. Group results by semester to avoid duplicates in ResultView
+                const groupedSems = new Map<number, any[]>();
+                student.results.forEach((r: any) => {
+                  if (!groupedSems.has(r.semester)) {
+                    groupedSems.set(r.semester, []);
+                  }
+                  groupedSems.get(r.semester)!.push(r);
+                });
+
+                const properSemesterResults = Array.from(
+                  groupedSems.entries(),
+                ).map(([sem, resArray]) => {
+                  // Sort chronological desc to find latest status of this particular semester
+                  resArray.sort(
+                    (a, b) =>
+                      new Date(b.date).getTime() - new Date(a.date).getTime(),
+                  );
+                  const latestForSem = resArray[0];
+                  const status =
+                    latestForSem.failedSubjects &&
+                    latestForSem.failedSubjects.length > 0
+                      ? "failed"
+                      : "passed";
+                  return {
+                    semester: sem,
+                    status: status,
+                    results: resArray,
+                  };
+                });
+
+                // 5. Find the closest fetched institute
+                let bestInstitute = {
+                  name: "Unknown Institute",
+                  code: 0,
+                  district: "",
+                };
+                if (fetchedInstitutes.size > 0) {
+                  let minDiff = Infinity;
+                  const sRoll = Number(student.roll);
+                  for (const [rNum, inst] of fetchedInstitutes.entries()) {
+                    const diff = Math.abs(rNum - sRoll);
+                    if (diff < minDiff) {
+                      minDiff = diff;
+                      bestInstitute = inst;
+                    }
+                  }
+                }
+
+                return {
+                  roll: student.roll,
+                  curriculumId: curriculum,
+                  regulation: regulation,
+                  institute: bestInstitute,
+                  currentFailedSubjects: currentFailedSubjects,
+                  semesterResults: properSemesterResults,
+                  latestResults: sortedDesc,
+                };
+              });
+              // return exact format that ResultView component expects as json.data array
+              return res.json({ success: true, data: mappedData });
+            } else {
+              return res.json({ success: true, data: [] });
+            }
           } catch (err: any) {
-             console.error(`Group fetch error:`, err.message);
-             if (err.message === 'No results found') {
-                 return res.json({ success: true, data: [] });
-             }
-             return res.status(500).json({ success: false, error: err.message });
+            console.error(`Group fetch error:`, err.message);
+            if (err.message === "No results found") {
+              return res.json({ success: true, data: [] });
+            }
+            return res.status(500).json({ success: false, error: err.message });
           }
         }
       } else {
-         return res.status(400).json({ success: false, error: 'Missing roll or instituteCode' });
+        return res
+          .status(400)
+          .json({ success: false, error: "Missing roll or instituteCode" });
       }
     } catch (error: any) {
-      console.error('API proxy error:', error);
+      console.error("API proxy error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
@@ -802,10 +1021,10 @@ Example JSON Output Structure:
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 

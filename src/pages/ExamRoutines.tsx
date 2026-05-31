@@ -608,10 +608,6 @@ export default function ExamRoutines() {
               ))}
             </tbody>
           </table>
-
-          <div className="mt-12 pt-6 border-t border-gray-300 text-center text-gray-500 text-sm font-medium">
-            <p>Downloaded from BTEB Result Library</p>
-          </div>
         </div>
       </div>
         <SeoBlocks 

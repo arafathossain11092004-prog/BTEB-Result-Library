@@ -51,31 +51,59 @@ export default function AdminExamRoutines() {
         body: formData,
       });
 
-      const resData = await response.json();
-      if (resData.success && resData.data && resData.data.length > 0) {
-        const first = resData.data[0];
-        setCurriculum(first.Curriculum || '');
-        setRegulation(first.Regulation || '');
-        setSemester(first.Semester || '');
-        setDepartment(first.Department || '');
-        setDepartmentCode(first.Department_Code || '');
+      let resData;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        resData = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
 
-        const newSubjects = resData.data.map((item: any) => ({
-          subjectName: item.Subject_Name || '',
-          subjectCode: item.Subject_Code || '',
-          date: item.Date || '',
-          day: item.Day || '',
-          time: item.Time || '',
-        }));
-        
-        setSubjects(newSubjects);
-        alert(`Successfully parsed ${newSubjects.length} subjects! Please review the dates and times.`);
+      if (resData && resData.success && resData.data && resData.data.length > 0) {
+        try {
+          const chunks = [];
+          for (let i = 0; i < resData.data.length; i += 400) {
+            chunks.push(resData.data.slice(i, i + 400));
+          }
+          
+          let count = 0;
+          for (const chunk of chunks) {
+            const batch = writeBatch(db);
+            for (const item of chunk) {
+              const newDocRef = doc(collection(db, 'examRoutines'));
+              batch.set(newDocRef, {
+                curriculum: item.Curriculum || 'Diploma in Engineering',
+                regulation: item.Regulation || '2016 Probidhan',
+                semester: item.Semester || '1st Semester',
+                department: item.Department || 'Other',
+                departmentCode: item.Department_Code || '',
+                subjectName: item.Subject_Name || '',
+                subjectCode: item.Subject_Code || '',
+                date: item.Date || '',
+                day: item.Day || '',
+                time: item.Time || '',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              });
+              count++;
+            }
+            await batch.commit();
+          }
+          
+          alert(`Successfully parsed and saved ${count} exam routines from the PDF!`);
+          setShowForm(false);
+          fetchRoutines().catch(console.error);
+        } catch (e) {
+          console.error("Batch save error", e);
+          alert("Error saving parsed routines to Firebase.");
+        }
       } else {
         alert(resData.error || 'Failed to parse routine properly.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Error parsing file.');
+      alert(error.message || 'Error processing file.');
     } finally {
       setIsParsing(false);
       if (e.target) e.target.value = '';
@@ -157,39 +185,40 @@ export default function AdminExamRoutines() {
           <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Exam Routines</h1>
           <p className="text-sm text-gray-500">Add or remove exam routines by semester.</p>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(!showForm);
-            setSubjects([{ subjectName: '', subjectCode: '', date: '', time: '' }]);
-          }}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Subject
-        </button>
+        <div className="flex gap-2">
+          <div className="relative">
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+              title="Upload Routine PDF"
+            />
+            <button
+              type="button"
+              className={`inline-flex items-center px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors ${isParsing ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isParsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarRange className="w-4 h-4 mr-2" />}
+              {isParsing ? 'Parsing PDF...' : 'Import from PDF'}
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setShowForm(!showForm);
+              setSubjects([{ subjectName: '', subjectCode: '', date: '', time: '' }]);
+            }}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Subject
+          </button>
+        </div>
       </div>
 
       {showForm && (
         <form onSubmit={handleSave} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">Add Subjects</h2>
-            
-            <div className="relative">
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                title="Upload PDF or Image"
-              />
-              <button
-                type="button"
-                className={`inline-flex items-center px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors ${isParsing ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                {isParsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarRange className="w-4 h-4 mr-2" />}
-                {isParsing ? 'Parsing with AI...' : 'Magic Parse with AI'}
-              </button>
-            </div>
           </div>
           
           <div className="flex flex-col md:flex-row gap-4">

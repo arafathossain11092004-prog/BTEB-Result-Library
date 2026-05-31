@@ -45,7 +45,7 @@ const SeoBlocks = memo(({
   };
 
   return (
-    <div className="w-full bg-slate-50 mt-16 py-12 px-4 sm:px-8 xl:px-12 rounded-3xl border border-slate-200 shadow-sm relative z-20">
+    <div className="w-full bg-slate-50 mt-16 py-12 px-4 sm:px-8 xl:px-12 rounded-3xl border border-slate-200 shadow-sm relative z-20 print:hidden">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={metaDescription} />

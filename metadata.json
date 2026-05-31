@@ -2,5 +2,7 @@
   "name": "BTEB Result Library",
   "description": "Diploma Result in Bangladesh. Modern platform for checking BTEB results with accurate data, schedules, and a comprehensive admin portal for result management.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
