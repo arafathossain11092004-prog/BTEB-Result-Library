@@ -23,15 +23,14 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
 });
 
-const app = express();
-export const viteNodeApp = app;
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
 
-const PORT = 3000;
+  app.use(cors());
+  app.use(express.json());
 
-app.use(cors());
-app.use(express.json());
-
-const upload = multer({ storage: multer.memoryStorage() });
+  const upload = multer({ storage: multer.memoryStorage() });
 
   const translateBengaliNum = (str: string) => {
     const benToEng = {
@@ -64,7 +63,7 @@ const upload = multer({ storage: multer.memoryStorage() });
         try {
           const fileBuffer = req.file.buffer;
           const pdfParseModule = await import("pdf-parse");
-          const pdfParse = (pdfParseModule as any).default || pdfParseModule;
+          const pdfParse = pdfParseModule.default || pdfParseModule;
           const data = await pdfParse(fileBuffer);
           const fullText = data.text.replace(/\n/g, ' ');
           
@@ -202,72 +201,106 @@ const upload = multer({ storage: multer.memoryStorage() });
     }
   });
 
-  app.get("/api/bteb-institute-results", async (req, res) => {
+  app.get("/api/bteb/institute-results/:code", async (req, res) => {
     try {
-      const code = req.query.code as string;
-      const date = req.query.date as string;
-      
-      if (!code) return res.status(400).json({ success: false, error: "Code missing" });
-      
-      if (date) {
-        const response = await fetch(`https://btebresultszone.com/institute-results/${code}/${date}`, {
-          headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" },
-        });
-        if (!response.ok) return res.status(response.status).json({ success: false, error: "BTEB Server Error" });
+      const { code } = req.params;
+      const response = await fetch(
+        `https://btebresultszone.com/institute-results/${code}`,
+        {
+          headers: {
+            Accept: "text/html",
+            "User-Agent": "Mozilla/5.0",
+          },
+        },
+      );
+      if (!response.ok)
+        return res
+          .status(response.status)
+          .json({ success: false, error: "BTEB Server Error" });
 
-        const html = await response.text();
-        const $ = cheerio.load(html);
+      const html = await response.text();
+      const $ = cheerio.load(html);
 
-        const pdfs: string[] = [];
-        $('a[href$=".pdf"]').each((i, el) => {
-          const href = $(el).attr("href");
-          if (href) pdfs.push(href);
-        });
-
-        return res.json({ success: true, pdfs });
-      } else {
-        const response = await fetch(`https://btebresultszone.com/institute-results/${code}`, {
-          headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" },
-        });
-        if (!response.ok) return res.status(response.status).json({ success: false, error: "BTEB Server Error" });
-
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        let instituteName = $("h1, h2, h3").first().text().replace("Institute ", "").trim();
-        const titleText = $("title").text();
-        if (titleText && titleText.includes("|")) {
-          instituteName = titleText.split("|")[0].replace(`[${code}]`, "").trim();
-        }
-
-        const results: any[] = [];
-        $(`a[href^='/institute-results/${code}/']`).each((i, el) => {
-          const href = $(el).attr("href");
-          const parts = href?.split("/") || [];
-          const dateStr = parts[parts.length - 1];
-
-          const card = $(el).closest('.rounded-xl, .shadow-sm, [data-slot="card"], .border-gray-100');
-          let rawText = card.text() || "";
-
-          let fileCount = "Unknown";
-          let matchFile = rawText.match(/(\d+) File[s]?/);
-          if (matchFile) fileCount = matchFile[0];
-
-          let passed = "", failed = "", total = "";
-          let matchPass = rawText.match(/Passed([\d.]+%)\s*(\d+)/);
-          if (matchPass) passed = `${matchPass[1]} (${matchPass[2]})`;
-
-          let matchFail = rawText.match(/Failed([\d.]+%)\s*(\d+)/);
-          if (matchFail) failed = `${matchFail[1]} (${matchFail[2]})`;
-
-          let matchTotal = rawText.match(/Total.*?(\d+)/);
-          if (matchTotal) total = matchTotal[1];
-
-          results.push({ href, dateStr, rawText, stats: { fileCount, passed, failed, total } });
-        });
-
-        return res.json({ success: true, instituteName, data: results });
+      let instituteName = $("h1, h2, h3")
+        .first()
+        .text()
+        .replace("Institute ", "")
+        .trim();
+      const titleText = $("title").text();
+      if (titleText && titleText.includes("|")) {
+        instituteName = titleText.split("|")[0].replace(`[${code}]`, "").trim();
       }
+
+      const results: any[] = [];
+      $(`a[href^='/institute-results/${code}/']`).each((i, el) => {
+        const href = $(el).attr("href");
+        const parts = href?.split("/") || [];
+        const dateStr = parts[parts.length - 1];
+
+        const card = $(el).closest(
+          '.rounded-xl, .shadow-sm, [data-slot="card"], .border-gray-100',
+        );
+        let rawText = card.text() || "";
+
+        let fileCount = "Unknown";
+        let matchFile = rawText.match(/(\d+) File[s]?/);
+        if (matchFile) fileCount = matchFile[0];
+
+        let passed = "",
+          failed = "",
+          total = "",
+          curr = "";
+        let matchPass = rawText.match(/Passed([\d.]+%)\s*(\d+)/);
+        if (matchPass) passed = `${matchPass[1]} (${matchPass[2]})`;
+
+        let matchFail = rawText.match(/Failed([\d.]+%)\s*(\d+)/);
+        if (matchFail) failed = `${matchFail[1]} (${matchFail[2]})`;
+
+        let matchTotal = rawText.match(/Total.*?(\d+)/);
+        if (matchTotal) total = matchTotal[1];
+
+        results.push({
+          href,
+          dateStr,
+          rawText,
+          stats: { fileCount, passed, failed, total },
+        });
+      });
+
+      return res.json({ success: true, instituteName, data: results });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, error: "Server error" });
+    }
+  });
+
+  app.get("/api/bteb/institute-results/:code/:date", async (req, res) => {
+    try {
+      const { code, date } = req.params;
+      const response = await fetch(
+        `https://btebresultszone.com/institute-results/${code}/${date}`,
+        {
+          headers: {
+            Accept: "text/html",
+            "User-Agent": "Mozilla/5.0",
+          },
+        },
+      );
+      if (!response.ok)
+        return res
+          .status(response.status)
+          .json({ success: false, error: "BTEB Server Error" });
+
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      const pdfs: string[] = [];
+      $('a[href$=".pdf"]').each((i, el) => {
+        const href = $(el).attr("href");
+        if (href) pdfs.push(href);
+      });
+
+      return res.json({ success: true, pdfs });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ success: false, error: "Server error" });
@@ -279,10 +312,8 @@ const upload = multer({ storage: multer.memoryStorage() });
     "/institute-results",
     "/_next/data",
     "/_next/static",
-    "/_next/image",
     "/latest-results",
     "/group-results",
-    "/proxy-exam-routines", // changed from /exam-routines
   ];
   app.use(async (req, res, next) => {
     // Only intercept paths that match our proxyRoutes
@@ -290,7 +321,6 @@ const upload = multer({ storage: multer.memoryStorage() });
       proxyRoutes.some((route) => req.path.startsWith(route)) ||
       (req.path.startsWith("/api/") &&
         !req.path.startsWith("/api/bteb/institutes") &&
-        !req.path.startsWith("/api/bteb-exam-routines") &&
         !req.path.startsWith("/api/results"));
 
     if (!shouldProxy) {
@@ -298,12 +328,7 @@ const upload = multer({ storage: multer.memoryStorage() });
     }
 
     try {
-      let targetPath = req.originalUrl;
-      // Rewrite /proxy-exam-routines to /exam-routines on the target
-      if (targetPath.startsWith('/proxy-exam-routines')) {
-        targetPath = targetPath.replace('/proxy-exam-routines', '/exam-routines');
-      }
-      const targetUrl = `https://btebresultszone.com${targetPath}`;
+      const targetUrl = `https://btebresultszone.com${req.originalUrl}`;
       const fetchHeaders: Record<string, string> = {
         Accept: req.headers.accept || "*/*",
         "User-Agent":
@@ -340,17 +365,9 @@ const upload = multer({ storage: multer.memoryStorage() });
           "</head>",
           `
           <style>
-            /* Hide generic navigation and footers */
-            header, footer, nav, .footer, .header, #header, #footer { display: none !important; }
-            /* Specific overrides for this site */
-            .sticky.top-0, nav.sticky { display: none !important; }
-            div[class*="footer"] { display: none !important; }
-            .print\\:hidden, #nprogress { display: none !important; }
+            header, footer, nav[aria-label="breadcrumb"], .print\\:hidden, #nprogress { display: none !important; }
             main { padding-top: 0 !important; margin-top: 0 !important; }
             .min-h-screen-minus-topnav { min-height: 0 !important; }
-            
-            /* Remove bottom padding if there is a main tag */
-            body, main { padding-bottom: 0 !important; margin-bottom: 0 !important; }
           </style>
         </head>`,
         );
@@ -362,158 +379,6 @@ const upload = multer({ storage: multer.memoryStorage() });
     } catch (error: any) {
       console.error("Proxy manual error:", error);
       res.status(500).send("Proxy error");
-    }
-  });
-
-  app.get("/api/bteb-exam-routines", async (req, res) => {
-    try {
-      const response = await fetch("https://btebresultszone.com/exam-routines", {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-        },
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch exam routines");
-      }
-      const html = await response.text();
-      const $ = cheerio.load(html);
-      
-      const routines: any[] = [];
-      $('a[href^="/exam-routines/"]').each((i, el) => {
-         const href = $(el).attr('href');
-         const title = $(el).find('div[class*="text-lg font-semibold"]').text();
-         const dates = $(el).find('.lucide-calendar').next('span').text();
-         
-         const bottomText = $(el).find('.flex.gap-4.text-xs.text-gray-600').text();
-         let regulations = '';
-         let semesters = '';
-         
-         if (bottomText) {
-             const lower = bottomText.toLowerCase();
-             const regMatch = lower.match(/regulations:\s*([0-9,\s&]+)/i);
-             const semMatch = lower.match(/semesters:\s*([0-9,\s&]+)/i);
-             // Alternatively, since our cheerio logic extracted them concatenated without spaces nicely:
-             // Because in the div structure it was Regulations: 2022
-         }
-
-         if (title && href) {
-             routines.push({ 
-                 href: "/exam-routines" + href.replace('/exam-routines', ''), 
-                 title, 
-                 dates, 
-                 bottomText 
-             });
-         }
-      });
-      
-      return res.json({ success: true, data: routines });
-    } catch (e: any) {
-      return res.status(500).json({ success: false, error: e.message });
-    }
-  });
-
-  app.get("/api/bteb-exam-routines-scrape", async (req, res) => {
-    try {
-      const targetPath = req.query.path as string;
-      if (!targetPath) return res.status(400).json({ success: false, error: "Path missing" });
-
-      const response = await fetch(`https://btebresultszone.com/exam-routines${targetPath}`, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-      });
-      if (!response.ok) throw new Error("Failed to fetch");
-      const html = await response.text();
-      const $ = cheerio.load(html);
-
-      // Determine level
-      const pathParts = targetPath.split('/').filter(Boolean);
-
-      if (pathParts.length === 1) {
-        // Level 2 (Program -> list of technologies)
-        const items: any[] = [];
-        $('a[href^="/exam-routines/"]').each((i, el) => {
-           const href = $(el).attr('href');
-           if (!href) return;
-           const titleNode = $(el).find('h3');
-           // try to separate text from badge
-           const badgeText = titleNode.find('[data-slot="badge"]').text();
-           const fullText = titleNode.text();
-           let title = fullText;
-           if (badgeText) {
-             title = fullText.replace(badgeText, '').trim();
-             // Some titles have badge immediately following
-           }
-           
-           if (!titleNode.length) {
-              const divTitle = $(el).find('div[class*="text-lg font-semibold"]').text();
-              if (divTitle) title = divTitle;
-           }
-
-           if (title && href) {
-               const cleanHref = href.replace('/exam-routines', '');
-               if (cleanHref.endsWith('/customize') || cleanHref.endsWith('/all-technologies')) {
-                  return;
-               }
-               items.push({ 
-                   href: "/exam-routines" + cleanHref, 
-                   title,
-                   badge: badgeText || ''
-               });
-           }
-        });
-        return res.json({ success: true, type: 'program', data: items });
-      } else {
-        // Level 3 (Technology -> list of subjects and dates)
-        const semestersData: any[] = [];
-        $('div[data-slot="card"]').each((i, el) => {
-            const table = $(el).find('table');
-            if (table.length === 0) return;
-            
-            const title = $(el).find('div[data-slot="card-title"]').text().trim();
-            const headerText = $(el).find('div[data-slot="card-header"]').text().trim();
-            const semesterName = headerText.replace(title, '').trim() || `Table ${semestersData.length + 1}`;
-            
-            const routineTable: any[] = [];
-            table.find('tr').each((j, tr) => {
-                const tds = $(tr).find('td');
-                if (tds.length >= 4) {
-                     routineTable.push({
-                         date: $(tds[0]).text().trim(),
-                         code: $(tds[1]).text().trim(),
-                         subject: $(tds[2]).text().trim(),
-                         time: $(tds[3]).text().trim(),
-                         day: tds.length >= 5 ? $(tds[4]).text().trim() : '',
-                     });
-                }
-            });
-            
-            semestersData.push({ semester: semesterName, routine: routineTable });
-        });
-
-        // If no cards found, fallback to generic table scan
-        if (semestersData.length === 0) {
-           const routineTable: any[] = [];
-           $('tr').each((i, el) => {
-               const tds = $(el).find('td');
-               if (tds.length >= 4) {
-                    routineTable.push({
-                        date: $(tds[0]).text().trim(),
-                        code: $(tds[1]).text().trim(),
-                        subject: $(tds[2]).text().trim(),
-                        time: $(tds[3]).text().trim(),
-                        day: tds.length >= 5 ? $(tds[4]).text().trim() : '',
-                    });
-               }
-           });
-           semestersData.push({ semester: 'All', routine: routineTable });
-        }
-
-        const pageTitle = $('h1').text().trim() || "Exam Routine";
-
-        return res.json({ success: true, type: 'technology', title: pageTitle, data: semestersData });
-      }
-
-    } catch (e: any) {
-      return res.status(500).json({ success: false, error: e.message });
     }
   });
 
@@ -1149,29 +1014,26 @@ const upload = multer({ storage: multer.memoryStorage() });
   });
 
   // Vite middleware for development
-  async function setupViteAndListen() {
-    if (process.env.NODE_ENV !== "production") {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-    } else {
-      const distPath = path.join(process.cwd(), "dist");
-      app.use(express.static(distPath));
-      app.get("*", (req, res) => {
-        res.sendFile(path.join(distPath, "index.html"));
-      });
-    }
-
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  if (process.env.VERCEL !== "1") {
-    setupViteAndListen().catch((err) => {
-      console.error("Failed to start server:", err);
-      process.exit(1);
-    });
-  }
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});

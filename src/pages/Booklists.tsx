@@ -51,17 +51,10 @@ export default function Booklists() {
   };
 
   useEffect(() => {
-    fetchBooklists().catch((e) => {
-      // Ignored
-      setLoading(false);
-    });
+    fetchBooklists().catch(console.error);
   }, []);
 
   const fetchBooklists = async () => {
-    if (!import.meta.env.VITE_FIREBASE_PROJECT_ID || !db) {
-      setLoading(false);
-      return;
-    }
     try {
       const q = query(collection(db, "booklists"), limit(2000));
       const snapshot = await getDocs(q);
@@ -242,7 +235,7 @@ export default function Booklists() {
 
       const footer = document.createElement("div");
       footer.className =
-        "mt-auto p-8 border-t border-slate-100 flex flex-col justify-center items-center text-center bg-white text-slate-500 font-medium text-sm";
+        "mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm";
       const currentDomain = window.location.hostname;
       
       let qrCodeImg = "";
@@ -253,14 +246,13 @@ export default function Booklists() {
       }
 
       footer.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <div style="width: 80px;"></div>
-          <div style="text-align: center; flex: 1;">
-            <div style="color: #2563eb; font-weight: bold; font-size: 1.25rem; margin-bottom: 4px;">BTEB Result Library</div>
-            <div style="color: #94a3b8; font-size: 1rem;">${currentDomain}</div>
-          </div>
-          ${qrCodeImg ? `<div style="display: flex; flex-direction: column; align-items: center; width: 80px;"><img src="${qrCodeImg}" alt="QR Code" width="80" height="80" style="margin-bottom: 4px;"/><span style="font-size: 10px; color: #64748b; white-space: nowrap;">Scan for booklist</span></div>` : '<div style="width: 80px;"></div>'}
+        <div class="flex items-center gap-2">
+           <div>
+             <div class="text-blue-600 font-bold text-lg mb-1">BTEB Result Library</div>
+             <div class="text-base text-slate-400">${currentDomain}</div>
+           </div>
         </div>
+        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="96" height="96" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
       `;
       printContent.appendChild(footer);
 
@@ -665,15 +657,14 @@ export default function Booklists() {
           </table>
 
           <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600">
-            <div className="w-[80px]"></div> {/* Spacer for centering */}
-            <div className="text-center flex-1">
-              <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
-              <p className="text-sm mt-1 font-medium">{window.location.host}</p>
+            <div>
+              <p className="font-bold text-gray-900 text-lg">BTEB Result Library</p>
+              <p className="text-sm mt-1">{window.location.origin}</p>
             </div>
             {typeof window !== 'undefined' && (
-              <div className="flex flex-col items-center w-[80px]">
-                <QRCodeSVG value={window.location.href} size={80} />
-                <span className="text-[10px] mt-1 text-gray-500 font-medium whitespace-nowrap">Scan for booklist</span>
+              <div className="flex flex-col items-center">
+                <QRCodeSVG value={window.location.href} size={96} />
+                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
               </div>
             )}
           </div>

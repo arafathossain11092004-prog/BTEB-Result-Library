@@ -18,9 +18,6 @@ export default function Home() {
   useEffect(() => {
     let isMounted = true;
     const fetchSettings = async () => {
-      if (!import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-        return;
-      }
       try {
         const docRef = doc(db, 'settings', 'general');
         const docSnap = await getDoc(docRef);

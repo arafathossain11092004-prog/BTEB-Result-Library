@@ -1,20 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, addDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
-import { Plus, Trash2, Loader2, CalendarRange, X, BookCopy, Folder, FolderOpen } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Plus, Trash2, Loader2, CalendarRange, X } from 'lucide-react';
 
 export default function AdminExamRoutines() {
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
-  
-  const [expandedCurr, setExpandedCurr] = useState<string | null>(null);
-  const [expandedReg, setExpandedReg] = useState<string | null>(null);
-  const [expandedSem, setExpandedSem] = useState<string | null>(null);
-  const [expandedDept, setExpandedDept] = useState<string | null>(null);
   
   const [semester, setSemester] = useState('');
   const [department, setDepartment] = useState('');
@@ -68,16 +61,16 @@ export default function AdminExamRoutines() {
             for (const item of chunk) {
               const newDocRef = doc(collection(db, 'examRoutines'));
               batch.set(newDocRef, {
-                curriculum: (item.Curriculum || 'Diploma in Engineering').slice(0, 50),
-                regulation: (item.Regulation || '2016 Probidhan').slice(0, 50),
-                semester: (item.Semester || '1st Semester').slice(0, 100),
-                department: (item.Department || 'Other').slice(0, 100),
-                departmentCode: (item.Department_Code || '').slice(0, 50),
-                subjectName: (item.Subject_Name || '').slice(0, 200),
-                subjectCode: (item.Subject_Code || '').slice(0, 100),
-                date: (item.Date || '').slice(0, 100),
-                day: (item.Day || '').slice(0, 50),
-                time: (item.Time || '').slice(0, 100),
+                curriculum: item.Curriculum || 'Diploma in Engineering',
+                regulation: item.Regulation || '2016 Probidhan',
+                semester: item.Semester || '1st Semester',
+                department: item.Department || 'Other',
+                departmentCode: item.Department_Code || '',
+                subjectName: item.Subject_Name || '',
+                subjectCode: item.Subject_Code || '',
+                date: item.Date || '',
+                day: item.Day || '',
+                time: item.Time || '',
                 createdAt: Date.now(),
                 updatedAt: Date.now()
               });
@@ -89,9 +82,9 @@ export default function AdminExamRoutines() {
           alert(`Successfully parsed and saved ${count} exam routines from the PDF!`);
           setShowForm(false);
           fetchRoutines().catch(console.error);
-        } catch (e: any) {
+        } catch (e) {
           console.error("Batch save error", e);
-          alert("Error saving parsed routines to Firebase: " + (e.message || "Unknown error"));
+          alert("Error saving parsed routines to Firebase.");
         }
       } else {
         alert('No valid routines found in this PDF.');
@@ -160,38 +153,6 @@ export default function AdminExamRoutines() {
     }
   };
 
-  const handleDeleteAll = async () => {
-    if (confirm('Are you REALLY sure you want to delete ALL routines? This cannot be undone.')) {
-      setLoading(true);
-      try {
-        const batch = writeBatch(db);
-        let count = 0;
-        
-        for (const r of routines) {
-          batch.delete(doc(db, 'examRoutines', r.id));
-          count++;
-          if (count === 500) {
-              await batch.commit();
-              count = 0;
-          }
-        }
-        
-        if (count > 0) {
-            await batch.commit();
-        }
-
-        fetchRoutines().catch(console.error);
-        alert('All routines deleted.');
-      } catch (error) {
-        try {
-          handleFirestoreError(error, OperationType.DELETE, `examRoutines`);
-        } catch (e) {}
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this routine?')) {
       try {
@@ -205,21 +166,6 @@ export default function AdminExamRoutines() {
     }
   };
 
-  const grouped = routines.reduce((acc: any, curr: any) => {
-    const curriculum = curr.curriculum || 'Unknown';
-    const regulation = curr.regulation || 'Unknown';
-    const semester = curr.semester || 'Unknown';
-    const dept = curr.department || 'Unknown';
-
-    if (!acc[curriculum]) acc[curriculum] = {};
-    if (!acc[curriculum][regulation]) acc[curriculum][regulation] = {};
-    if (!acc[curriculum][regulation][semester]) acc[curriculum][regulation][semester] = {};
-    if (!acc[curriculum][regulation][semester][dept]) acc[curriculum][regulation][semester][dept] = { code: curr.departmentCode || '', subjects: [] };
-    
-    acc[curriculum][regulation][semester][dept].subjects.push(curr);
-    return acc;
-  }, {});
-
   return (
     <div className="max-w-5xl mx-auto space-y-6 lg:px-0 px-4">
       <div className="flex justify-between items-center border-b border-gray-200 pb-6 mb-6">
@@ -228,15 +174,6 @@ export default function AdminExamRoutines() {
           <p className="text-sm text-gray-500">Add or remove exam routines by semester.</p>
         </div>
         <div className="flex gap-2">
-          {routines.length > 0 && (
-            <button
-              onClick={handleDeleteAll}
-              className="inline-flex items-center px-4 py-2 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete All
-            </button>
-          )}
           <div className="relative">
             <input
               type="file"
@@ -396,141 +333,48 @@ export default function AdminExamRoutines() {
       {loading ? (
          <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          {Object.keys(grouped).length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No routines found.</div>
-          ) : (
-            <ul className="divide-y divide-gray-100 text-sm">
-              {Object.keys(grouped).map(curr => (
-                <li key={curr}>
-                  <button
-                    onClick={() => setExpandedCurr(expandedCurr === curr ? null : curr)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {expandedCurr === curr ? <FolderOpen className="w-6 h-6 text-blue-500" /> : <Folder className="w-6 h-6 text-blue-500" />}
-                      <span className="font-semibold text-gray-800 text-base">{curr}</span>
-                    </div>
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedCurr === curr && (
-                      <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="bg-gray-50/50 border-t border-gray-100 overflow-hidden">
-                        {Object.keys(grouped[curr]).map(reg => (
-                          <li key={reg} className="pl-6 border-b border-gray-100 last:border-b-0">
-                            <button
-                              onClick={() => setExpandedReg(expandedReg === `${curr}-${reg}` ? null : `${curr}-${reg}`)}
-                              className="w-full flex items-center p-4 hover:bg-blue-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                {expandedReg === `${curr}-${reg}` ? <FolderOpen className="w-5 h-5 text-indigo-400" /> : <Folder className="w-5 h-5 text-indigo-400" />}
-                                <span className="font-medium text-gray-700">{reg}</span>
-                              </div>
-                            </button>
-                            
-                            <AnimatePresence>
-                              {expandedReg === `${curr}-${reg}` && (
-                                <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                  {Object.keys(grouped[curr][reg]).map(sem => (
-                                    <li key={sem} className="pl-6 border-t border-gray-100">
-                                      <button
-                                        onClick={() => setExpandedSem(expandedSem === `${curr}-${reg}-${sem}` ? null : `${curr}-${reg}-${sem}`)}
-                                        className="w-full flex items-center p-4 hover:bg-orange-50 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          {expandedSem === `${curr}-${reg}-${sem}` ? <FolderOpen className="w-4 h-4 text-orange-400" /> : <Folder className="w-4 h-4 text-orange-400" />}
-                                          <span className="font-medium text-gray-700">{sem}</span>
-                                        </div>
-                                      </button>
-
-                                      <AnimatePresence>
-                                        {expandedSem === `${curr}-${reg}-${sem}` && (
-                                          <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                            {Object.keys(grouped[curr][reg][sem]).map(dept => (
-                                              <li key={dept} className="pl-6 border-t border-gray-100">
-                                                <button
-                                                  onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${sem}-${dept}` ? null : `${curr}-${reg}-${sem}-${dept}`)}
-                                                  className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
-                                                >
-                                                  <div className="flex items-center gap-3">
-                                                    {expandedDept === `${curr}-${reg}-${sem}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
-                                                    <span className="font-medium text-gray-700">{dept}</span>
-                                                  </div>
-                                                  {grouped[curr][reg][sem][dept].code && (
-                                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
-                                                      Code: {grouped[curr][reg][sem][dept].code}
-                                                    </span>
-                                                  )}
-                                                </button>
-
-                                                <AnimatePresence>
-                                                  {expandedDept === `${curr}-${reg}-${sem}-${dept}` && (
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="pl-6 pr-4 pb-4 overflow-hidden">
-                                                      <div className="bg-white border text-left border-gray-200 rounded-xl overflow-hidden mt-2 p-4">
-                                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                                                          <h3 className="font-bold text-gray-800">{dept} - {sem}</h3>
-                                                        </div>
-                                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
-                                                          <table className="w-full text-sm text-left">
-                                                            <thead className="bg-gray-50 text-gray-700 uppercase text-[11px] tracking-wider">
-                                                              <tr>
-                                                                <th className="px-4 py-3 border-b font-semibold">Subject Name</th>
-                                                                <th className="px-4 py-3 border-b font-semibold">Code</th>
-                                                                <th className="px-4 py-3 border-b font-semibold">Date, Day & Time</th>
-                                                                <th className="px-4 py-3 border-b font-semibold text-right">Actions</th>
-                                                              </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-gray-100">
-                                                              {grouped[curr][reg][sem][dept].subjects.map((subject: any) => (
-                                                                <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
-                                                                  <td className="px-4 py-3 font-medium text-gray-800">
-                                                                    <div className="flex gap-2 items-start sm:items-center flex-col sm:flex-row">
-                                                                      <BookCopy className="w-4 h-4 text-gray-400 hidden sm:block" />
-                                                                      <span>{subject.subjectName}</span>
-                                                                    </div>
-                                                                  </td>
-                                                                  <td className="px-4 py-3">
-                                                                    <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">
-                                                                      {subject.subjectCode}
-                                                                    </span>
-                                                                  </td>
-                                                                  <td className="px-4 py-3">
-                                                                    <div className="text-gray-900 font-medium">{subject.date} <span className="text-gray-500 font-normal">({subject.day})</span></div>
-                                                                    <div className="text-gray-500 text-xs mt-0.5">{subject.time}</div>
-                                                                  </td>
-                                                                  <td className="px-4 py-3 text-right">
-                                                                    <button onClick={() => handleDelete(subject.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
-                                                                      <Trash2 className="w-4 h-4" />
-                                                                    </button>
-                                                                  </td>
-                                                                </tr>
-                                                              ))}
-                                                            </tbody>
-                                                          </table>
-                                                        </div>
-                                                      </div>
-                                                    </motion.div>
-                                                  )}
-                                                </AnimatePresence>
-                                              </li>
-                                            ))}
-                                          </motion.ul>
-                                        )}
-                                      </AnimatePresence>
-                                    </li>
-                                  ))}
-                                </motion.ul>
-                              )}
-                            </AnimatePresence>
-                          </li>
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden text-sm">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 text-left">
+              <tr>
+                <th className="py-3 px-4 font-medium">Curriculum</th>
+                <th className="py-3 px-4 font-medium">Regulation</th>
+                <th className="py-3 px-4 font-medium">Semester</th>
+                <th className="py-3 px-4 font-medium">Department</th>
+                <th className="py-3 px-4 font-medium">Subject</th>
+                <th className="py-3 px-4 font-medium hidden sm:table-cell">Code</th>
+                <th className="py-3 px-4 font-medium">Date, Day & Time</th>
+                <th className="py-3 px-4 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {routines.length === 0 ? (
+                 <tr><td colSpan={8} className="py-8 text-center text-gray-500">No routines found.</td></tr>
+              ) : (
+                routines.map(r => (
+                  <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{r.curriculum || 'N/A'}</td>
+                    <td className="py-3 px-4 text-gray-900 font-medium">{r.regulation || 'N/A'}</td>
+                    <td className="py-3 px-4 text-gray-900 font-medium">{r.semester}</td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {r.department || 'N/A'}
+                      {r.departmentCode && <span className="block text-xs text-blue-600 font-semibold">{r.departmentCode}</span>}
+                    </td>
+                    <td className="py-3 px-4 text-gray-900">{r.subjectName}</td>
+                    <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{r.subjectCode}</td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {r.date} {r.day && `(${r.day})`} <span className="text-gray-400">at</span> {r.time}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button onClick={() => handleDelete(r.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

@@ -8,7 +8,7 @@ const bengaliToEnglishNumbers: { [key: string]: string } = {
   "৫": "5", "৬": "6", "৭": "7", "৮": "8", "৯": "9",
 };
 
-export function translateBengaliNum(str: string): string {
+function translateBengaliNum(str: string): string {
   return str.replace(/[০-৯]/g, (match) => bengaliToEnglishNumbers[match]);
 }
 
@@ -22,7 +22,7 @@ export async function parsePdfToRoutines(file: File) {
     fullText += textContent.items.map((s: any) => s.str).join(" ") + " ";
   }
   
-  fullText = fullText.replace(/\n/g, " ").replace(/\s*-\s*/g, "-").replace(/\s*:\s*/g, ":");
+  fullText = fullText.replace(/\n/g, " ");
 
   const routines: any[] = [];
   const tokens = fullText.split(/\s+/).filter((t: string) => t.length > 0);
@@ -33,7 +33,7 @@ export async function parsePdfToRoutines(file: File) {
   let currentSemester = "1st Semester";
   let currentRegulation = "2016 Probidhan";
   
-  const dateRegexInfo = /(\d{2}\s*[-\/.]\s*\d{2}\s*[-\/.]\s*\d{4}|[০-৯]{2}\s*[-\/.]\s*[০-৯]{2}\s*[-\/.]\s*[০-৯]{4})/;
+  const dateRegexInfo = /(\d{2}-\d{2}-\d{4}|[০-৯]{2}-[০-৯]{2}-[০-৯]{4})/;
   const subjectCodeRegex = /^(\d{4,5}|[০-৯]{4,5})$/;
   
   for (let i = 0; i < tokens.length; i++) {
@@ -82,7 +82,7 @@ export async function parsePdfToRoutines(file: File) {
         }
         let subjectName = rest.join(' ').trim();
         
-        let tech = "All";
+        let tech = "Other";
         if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "Architecture"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
         else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "Automobile"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
         else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "Chemical"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
@@ -104,10 +104,10 @@ export async function parsePdfToRoutines(file: File) {
             Department: tech,
             Department_Code: "",
             Subject_Name: subjectName.trim(),
-            Subject_Code: translateBengaliNum(code),
-            Date: translateBengaliNum(currentDate),
-            Day: currentDay,
-            Time: currentTime
+            Subject_Code: code,
+            Date: currentDate.replace(/\s+/g, ''),
+            Day: currentDay || "Monday",
+            Time: currentTime || "10:00 AM"
           });
         }
       }
