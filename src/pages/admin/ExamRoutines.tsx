@@ -153,6 +153,38 @@ export default function AdminExamRoutines() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (confirm('Are you REALLY sure you want to delete ALL routines? This cannot be undone.')) {
+      setLoading(true);
+      try {
+        const batch = writeBatch(db);
+        let count = 0;
+        
+        for (const r of routines) {
+          batch.delete(doc(db, 'examRoutines', r.id));
+          count++;
+          if (count === 500) {
+              await batch.commit();
+              count = 0;
+          }
+        }
+        
+        if (count > 0) {
+            await batch.commit();
+        }
+
+        fetchRoutines().catch(console.error);
+        alert('All routines deleted.');
+      } catch (error) {
+        try {
+          handleFirestoreError(error, OperationType.DELETE, `examRoutines`);
+        } catch (e) {}
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this routine?')) {
       try {
@@ -174,6 +206,15 @@ export default function AdminExamRoutines() {
           <p className="text-sm text-gray-500">Add or remove exam routines by semester.</p>
         </div>
         <div className="flex gap-2">
+          {routines.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              className="inline-flex items-center px-4 py-2 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete All
+            </button>
+          )}
           <div className="relative">
             <input
               type="file"
