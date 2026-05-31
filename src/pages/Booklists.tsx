@@ -246,13 +246,14 @@ export default function Booklists() {
       }
 
       footer.innerHTML = `
-        <div class="flex flex-col items-center gap-2 mb-4">
-           <div>
-             <div class="text-blue-600 font-bold text-xl mb-1">BTEB Result Library</div>
-             <div class="text-base text-slate-400">${currentDomain}</div>
-           </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div style="width: 80px;"></div>
+          <div style="text-align: center; flex: 1;">
+            <div style="color: #2563eb; font-weight: bold; font-size: 1.25rem; margin-bottom: 4px;">BTEB Result Library</div>
+            <div style="color: #94a3b8; font-size: 1rem;">${currentDomain}</div>
+          </div>
+          ${qrCodeImg ? `<div style="display: flex; flex-direction: column; align-items: center; width: 80px;"><img src="${qrCodeImg}" alt="QR Code" width="80" height="80" style="margin-bottom: 4px;"/><span style="font-size: 10px; color: #64748b; white-space: nowrap;">Scan for booklist</span></div>` : '<div style="width: 80px;"></div>'}
         </div>
-        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="80" height="80" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
       `;
       printContent.appendChild(footer);
 
@@ -656,15 +657,16 @@ export default function Booklists() {
             </tbody>
           </table>
 
-          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex flex-col justify-center items-center text-center text-gray-600 gap-4">
-            <div>
+          <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600">
+            <div className="w-[80px]"></div> {/* Spacer for centering */}
+            <div className="text-center flex-1">
               <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
-              <p className="text-sm mt-1 font-medium">{window.location.origin}</p>
+              <p className="text-sm mt-1 font-medium">{window.location.host}</p>
             </div>
             {typeof window !== 'undefined' && (
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center w-[80px]">
                 <QRCodeSVG value={window.location.href} size={80} />
-                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual booklist</span>
+                <span className="text-[10px] mt-1 text-gray-500 font-medium whitespace-nowrap">Scan for booklist</span>
               </div>
             )}
           </div>

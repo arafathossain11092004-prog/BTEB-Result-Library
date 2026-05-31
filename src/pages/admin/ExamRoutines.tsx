@@ -228,12 +228,6 @@ export default function AdminExamRoutines() {
           <p className="text-sm text-gray-500">Add or remove exam routines by semester.</p>
         </div>
         <div className="flex gap-2">
-          <Link 
-            to="/admin/markdown-generator"
-            className="inline-flex items-center px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors"
-          >
-            Markdown Generator
-          </Link>
           {routines.length > 0 && (
             <button
               onClick={handleDeleteAll}

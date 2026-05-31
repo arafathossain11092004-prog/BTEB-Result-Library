@@ -1057,18 +1057,19 @@ export default function ResultView() {
            </div>
         )}
 
-        <div id="print-footer" className="mt-16 border-t border-gray-200 pt-6 flex-col justify-center items-center text-center hidden print:flex h-[150px]" data-html2canvas-ignore="false">
-            <div className="flex flex-col items-center">
+        <div id="print-footer" className="mt-16 border-t font-sans border-gray-300 pt-6 justify-between items-center text-gray-600 hidden print:flex h-[150px]" data-html2canvas-ignore="false">
+            <div className="w-[96px]"></div> {/* Spacer for centering */}
+            <div className="text-center flex-1">
               <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
-              <p className="text-sm mt-1 text-gray-600 font-medium">{window.location.origin}</p>
+              <p className="text-sm mt-1 font-medium">{window.location.host}</p>
               <p className="text-xs text-gray-400 mt-2">
                 Generated on: {new Date().toLocaleString()}
               </p>
             </div>
             {typeof window !== 'undefined' && (
-              <div className="flex flex-col items-center mt-4">
-                <QRCodeSVG value={window.location.href} size={96} />
-                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
+              <div className="flex flex-col items-center w-[96px]">
+                <QRCodeSVG value={window.location.href} size={80} />
+                <span className="text-[10px] mt-1 text-gray-500 font-medium whitespace-nowrap">Scan for result</span>
               </div>
             )}
         </div>
