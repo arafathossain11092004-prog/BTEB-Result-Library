@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, BookOpen, Calendar as CalendarIcon, Clock, Hash, Printer, Share2, Download } from "lucide-react";
-import { toPng } from "html-to-image";
-import jsPDF from "jspdf";
+import { toJpeg } from "html-to-image";
 
 export default function ExamRoutineView() {
   const location = useLocation();
@@ -66,21 +65,14 @@ export default function ExamRoutineView() {
     buttons.forEach(b => b.style.display = 'none');
     
     try {
-      const dataUrl = await toPng(element, { pixelRatio: 2, backgroundColor: '#ffffff' });
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
-      
-      const pdfHeight = (img.height * pdfWidth) / img.width;
-      
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${data?.title || 'routine'}-${semesterName}.pdf`);
+      const dataUrl = await toJpeg(element, { pixelRatio: 2, backgroundColor: '#ffffff', quality: 0.95 });
+      const link = document.createElement('a');
+      link.download = `${data?.title || 'routine'}-${semesterName}.jpg`;
+      link.href = dataUrl;
+      link.click();
     } catch (err) {
-      console.error("Failed to generate PDF", err);
-      alert("Failed to download PDF.");
+      console.error("Failed to generate image", err);
+      alert("Failed to download image.");
     } finally {
       // Show buttons again
       buttons.forEach(b => b.style.display = '');
@@ -107,21 +99,14 @@ export default function ExamRoutineView() {
     const element = document.getElementById('routine-content');
     if (!element) return;
     try {
-      const dataUrl = await toPng(element, { pixelRatio: 2, backgroundColor: '#ffffff' });
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
-      
-      const pdfHeight = (img.height * pdfWidth) / img.width;
-      
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${data?.title || 'routine'}.pdf`);
+      const dataUrl = await toJpeg(element, { pixelRatio: 2, backgroundColor: '#ffffff', quality: 0.95 });
+      const link = document.createElement('a');
+      link.download = `${data?.title || 'routine'}.jpg`;
+      link.href = dataUrl;
+      link.click();
     } catch (err) {
-      console.error("Failed to generate PDF", err);
-      alert("Failed to download PDF.");
+      console.error("Failed to generate image", err);
+      alert("Failed to download image.");
     }
   };
 
