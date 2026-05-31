@@ -42,29 +42,17 @@ export default function AdminExamRoutines() {
     if (!file) return;
 
     setIsParsing(true);
-    const formData = new FormData();
-    formData.append('file', file);
     
     try {
-      const response = await fetch('/api/parse-routine', {
-        method: 'POST',
-        body: formData,
-      });
+      // Lazy load to avoid bundle size issues
+      const { parsePdfToRoutines } = await import('../../lib/pdfParser');
+      const routines = await parsePdfToRoutines(file);
 
-      let resData;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        resData = await response.json();
-      } else {
-        const text = await response.text();
-        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
-      }
-
-      if (resData && resData.success && resData.data && resData.data.length > 0) {
+      if (routines && routines.length > 0) {
         try {
           const chunks = [];
-          for (let i = 0; i < resData.data.length; i += 400) {
-            chunks.push(resData.data.slice(i, i + 400));
+          for (let i = 0; i < routines.length; i += 400) {
+            chunks.push(routines.slice(i, i + 400));
           }
           
           let count = 0;
@@ -99,7 +87,7 @@ export default function AdminExamRoutines() {
           alert("Error saving parsed routines to Firebase.");
         }
       } else {
-        alert(resData.error || 'Failed to parse routine properly.');
+        alert('No valid routines found in this PDF.');
       }
     } catch (error: any) {
       console.error(error);
