@@ -1057,8 +1057,8 @@ export default function ResultView() {
            </div>
         )}
 
-        <div id="print-footer" className="mt-16 border-t border-gray-200 pt-6 justify-between items-center hidden print:flex h-[90px]" data-html2canvas-ignore="false">
-            <div>
+        <div id="print-footer" className="mt-16 border-t border-gray-200 pt-6 flex-col justify-center items-center text-center hidden print:flex h-[150px]" data-html2canvas-ignore="false">
+            <div className="flex flex-col items-center">
               <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
               <p className="text-sm mt-1 text-gray-600 font-medium">{window.location.origin}</p>
               <p className="text-xs text-gray-400 mt-2">
@@ -1066,7 +1066,7 @@ export default function ResultView() {
               </p>
             </div>
             {typeof window !== 'undefined' && (
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center mt-4">
                 <QRCodeSVG value={window.location.href} size={96} />
                 <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
               </div>

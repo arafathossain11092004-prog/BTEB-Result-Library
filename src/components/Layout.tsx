@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LogOut, LayoutDashboard, Search, FileText, Users, Building2, CalendarRange, Calculator, Menu, X, Lock, BookCopy } from 'lucide-react';
-import { signOut } from '../lib/firebase';
+import { signOut, auth } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
@@ -125,7 +125,7 @@ export default function Layout() {
               )}
               {user && (
                 <button
-                  onClick={() => signOut().catch(console.error)}
+                  onClick={() => signOut(auth).catch(console.error)}
                   className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors bg-gray-100"
                   title="Sign out"
                 >
@@ -190,7 +190,7 @@ export default function Layout() {
                   </Link>
                 )}
                 {user && (
-                  <button onClick={() => { signOut().catch(console.error); setIsMobileMenuOpen(false); }} className="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <button onClick={() => { signOut(auth).catch(console.error); setIsMobileMenuOpen(false); }} className="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
                     <LogOut className="w-5 h-5" /> Sign out
                   </button>
                 )}

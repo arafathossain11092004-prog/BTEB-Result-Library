@@ -22,7 +22,7 @@ export async function parsePdfToRoutines(file: File) {
     fullText += textContent.items.map((s: any) => s.str).join(" ") + " ";
   }
   
-  fullText = fullText.replace(/\n/g, " ");
+  fullText = fullText.replace(/\n/g, " ").replace(/\s*-\s*/g, "-").replace(/\s*:\s*/g, ":");
 
   const routines: any[] = [];
   const tokens = fullText.split(/\s+/).filter((t: string) => t.length > 0);
@@ -33,7 +33,7 @@ export async function parsePdfToRoutines(file: File) {
   let currentSemester = "1st Semester";
   let currentRegulation = "2016 Probidhan";
   
-  const dateRegexInfo = /(\d{2}-\d{2}-\d{4}|[০-৯]{2}-[০-৯]{2}-[০-৯]{4})/;
+  const dateRegexInfo = /(\d{2}\s*[-\/.]\s*\d{2}\s*[-\/.]\s*\d{4}|[০-৯]{2}\s*[-\/.]\s*[০-৯]{2}\s*[-\/.]\s*[০-৯]{4})/;
   const subjectCodeRegex = /^(\d{4,5}|[০-৯]{4,5})$/;
   
   for (let i = 0; i < tokens.length; i++) {
@@ -135,7 +135,19 @@ export async function parsePdfToRoutines(file: File) {
             semester: banglaSemester,
             subject_code: translateBengaliNum(code),
             subject_name: subjectName.trim(),
-            technology: tech
+            technology: tech,
+            
+            // To maintain compatibility with older usages
+            Curriculum: "Diploma in Engineering",
+            Regulation: banglaRegulation,
+            Semester: banglaSemester,
+            Department: tech,
+            Department_Code: "",
+            Subject_Name: subjectName.trim(),
+            Subject_Code: translateBengaliNum(code),
+            Date: banglaDate,
+            Day: banglaDay,
+            Time: banglaTime
           });
         }
       }

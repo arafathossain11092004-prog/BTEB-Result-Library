@@ -235,7 +235,7 @@ export default function Booklists() {
 
       const footer = document.createElement("div");
       footer.className =
-        "mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm";
+        "mt-auto p-8 border-t border-slate-100 flex flex-col justify-center items-center text-center bg-white text-slate-500 font-medium text-sm";
       const currentDomain = window.location.hostname;
       
       let qrCodeImg = "";
@@ -246,13 +246,13 @@ export default function Booklists() {
       }
 
       footer.innerHTML = `
-        <div class="flex items-center gap-2">
+        <div class="flex flex-col items-center gap-2 mb-4">
            <div>
-             <div class="text-blue-600 font-bold text-lg mb-1">BTEB Result Library</div>
+             <div class="text-blue-600 font-bold text-xl mb-1">BTEB Result Library</div>
              <div class="text-base text-slate-400">${currentDomain}</div>
            </div>
         </div>
-        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="96" height="96" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
+        ${qrCodeImg ? `<div class="flex flex-col items-center"><img src="${qrCodeImg}" alt="QR Code" width="80" height="80" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual booklist</span></div>` : ''}
       `;
       printContent.appendChild(footer);
 
