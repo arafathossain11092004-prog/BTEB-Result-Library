@@ -133,7 +133,7 @@ export default function Booklists() {
         (b.curriculum || "Unknown") === activeCurriculum &&
         (b.regulation || "Unknown") === activeRegulation &&
         (b.semester || "Unknown") === activeSemester &&
-        (activeDepartment === "All Departments" || (b.department || "Unknown") === activeDepartment),
+        ((b.department || "Unknown") === activeDepartment || (b.department === "All Department"))
     );
   }, [
     booklists,
@@ -519,9 +519,7 @@ export default function Booklists() {
                           <option value="" disabled>
                             Select Department
                           </option>
-                          {activeCurriculum?.toLowerCase().includes("diploma in engineering") && (
-                            <option value="All Departments">All Departments</option>
-                          )}
+
                           {departments.map((dept) => {
                             const match = dept.match(/^(\d+)\s+(.+)$/);
                             const display = match ? `${match[2]} (${match[1]})` : dept;

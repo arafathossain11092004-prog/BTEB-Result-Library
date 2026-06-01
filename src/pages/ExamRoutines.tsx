@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Building2,
   Download,
+  Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toJpeg } from "html-to-image";
@@ -26,6 +27,12 @@ export default function ExamRoutines() {
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
   const [activeSemester, setActiveSemester] = useState<string | null>(null);
   const [activeDepartment, setActiveDepartment] = useState<string | null>(null);
+
+  const displayPublishDate = useMemo(() => {
+    const published = routines.filter((r) => r.publishDate);
+    if (published.length === 0) return null;
+    return published.sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())[0].publishDate;
+  }, [routines]);
 
   useEffect(() => {
     fetchRoutines().catch(console.error);
@@ -109,7 +116,7 @@ export default function ExamRoutines() {
         (r.curriculum || "Unknown") === activeCurriculum &&
         (r.regulation || "Unknown") === activeRegulation &&
         (r.semester || "Unknown") === activeSemester &&
-        (activeDepartment === "All Departments" || (r.department || "Unknown") === activeDepartment),
+        ((r.department || "Unknown") === activeDepartment || (r.department === "All Department"))
     );
   }, [
     routines,
@@ -333,6 +340,25 @@ export default function ExamRoutines() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:hidden">
           {/* Sidebar Filters */}
           <div className="lg:col-span-4 space-y-6">
+            
+            {/* Publish Date Badge */}
+            {displayPublishDate && (
+              <div className="bg-emerald-50 border border-emerald-200/60 rounded-3xl p-5 flex items-center justify-between shadow-sm relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-widest mb-0.5">Publish Date</h3>
+                    <p className="text-emerald-700 font-medium text-sm">
+                      {new Date(displayPublishDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Curriculum */}
             <div className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100/50 p-6 relative">
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
@@ -463,9 +489,7 @@ export default function ExamRoutines() {
                           <option value="" disabled>
                             Select Department
                           </option>
-                          {activeCurriculum?.toLowerCase().includes("diploma in engineering") && (
-                            <option value="All Departments">All Departments</option>
-                          )}
+
                           {departments.map((dept) => {
                             const match = dept.match(/^(\d+)\s+(.+)$/);
                             const display = match ? `${match[2]} (${match[1]})` : dept;

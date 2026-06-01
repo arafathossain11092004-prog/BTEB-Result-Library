@@ -346,7 +346,7 @@ export default function AdminExamRoutines() {
               curriculum: dateBlock.curriculum || 'Diploma In Engineering',
               regulation: dateBlock.regulation || '2022',
               semester: sub.semesters.map(s => s.semesterName).join(', '),
-              department: sub.semesters.map(s => s.departments.join(', ') || 'All Departments').join(' | '),
+              department: sub.semesters.map(s => s.departments.join(', ') || 'All Department').join(' | '),
               subjectName: sub.subjectName,
               subjectCode: sub.subjectCode,
               date: formattedDate,
@@ -572,6 +572,9 @@ export default function AdminExamRoutines() {
                                            </div>
                                            <select value="" onChange={e => { if(e.target.value) handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, e.target.value); }} className="w-full px-1.5 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 transition-all bg-white font-medium cursor-pointer">
                                               <option value="" disabled>+ Add Dept</option>
+                                              {!sem.departments.includes("All Department") && (
+                                                <option value="All Department">All Department</option>
+                                              )}
                                               {(CURRICULUM_DEPARTMENTS[dateBlock.curriculum] || []).filter(d => !sem.departments.includes(d)).map(d => {
                                                 const match = d.match(/^(\d+)\s+(.+)$/);
                                                 const display = match ? `${match[2]} (${match[1]})` : d;

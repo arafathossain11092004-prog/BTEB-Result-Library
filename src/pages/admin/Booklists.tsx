@@ -320,6 +320,7 @@ export default function AdminBooklists() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
                   <select required value={block.department} onChange={e => handleBlockChange(block.id, 'department', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                      <option value="">Select Department</option>
+                     <option value="All Department">All Department</option>
                      {(CURRICULUM_DEPARTMENTS[block.curriculum] || []).map(d => {
                        const match = d.match(/^(\d+)\s+(.+)$/);
                        const display = match ? `${match[2]} (${match[1]})` : d;
@@ -335,11 +336,6 @@ export default function AdminBooklists() {
                     <input required type="text" value={block.customDepartment} onChange={e => handleBlockChange(block.id, 'customDepartment', e.target.value)} placeholder="Enter department name" className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
                   </div>
                 )}
-                
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department Code</label>
-                  <input type="text" value={block.departmentCode} onChange={e => handleBlockChange(block.id, 'departmentCode', e.target.value)} placeholder="e.g. 666" className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-                </div>
               </div>
 
               <div className="space-y-4">
