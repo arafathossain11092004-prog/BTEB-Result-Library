@@ -59,7 +59,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Helmet>
-        <title>BTEB Result Library - Fast Diploma Results</title>
+        <title>BTEB Result Library - Diploma Result in Bangladesh</title>
         <meta name="description" content="Check Bangladesh Technical Education Board (BTEB) Diploma in Engineering results easily. Calculate your CGPA or find your exam routine instantly." />
         <meta name="keywords" content="BTEB result, diploma result Bangladesh, CGPA calculator, BTEB diploma result, Polytechnic result, BTEB results 2024" />
         <script type="application/ld+json">

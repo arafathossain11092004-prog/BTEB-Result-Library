@@ -433,18 +433,24 @@ export default function ResultView() {
       footerElement.style.setProperty('display', 'flex', 'important');
     }
     
-    // Inject styles to force desktop layout regardless of actual viewport
+    // Force A4 layouts
     const isMobile = window.innerWidth < 1024;
     let styleEl: HTMLStyleElement | null = null;
     let prevWidth = element.style.width;
     let prevMaxWidth = element.style.maxWidth;
+    let prevMinHeight = element.style.minHeight;
+    let prevBorderRadius = element.style.borderRadius;
     
+    element.style.width = '794px';
+    element.style.maxWidth = '794px';
+    element.style.minHeight = '1123px';
+    element.style.borderRadius = '0px';
+
     if (isMobile) {
-      element.style.width = '1024px';
-      element.style.maxWidth = '1024px';
       styleEl = document.createElement('style');
       styleEl.innerHTML = `
         .lg\\:hidden { display: none !important; }
+        .sm\\:hidden { display: none !important; }
         .lg\\:block { display: block !important; }
         .lg\\:flex { display: flex !important; }
         .md\\:flex-row { flex-direction: row !important; }
@@ -456,24 +462,39 @@ export default function ResultView() {
         .sm\\:gap-4 { gap: 1rem !important; }
         .sm\\:w-48 { width: 12rem !important; }
         .sm\\:max-w-\\[200px\\] { max-width: 200px !important; }
+        .sm\\:max-w-\\[120px\\] { max-width: 120px !important; }
         .sm\\:inline { display: inline !important; }
+        .sm\\:flex-row { flex-direction: row !important; }
+        .sm\\:grid { display: grid !important; }
+        .sm\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+        .sm\\:col-span-4 { grid-column: span 4 / span 4 !important; }
+        .sm\\:col-span-8 { grid-column: span 8 / span 8 !important; }
+        .lg\\:col-span-3 { grid-column: span 3 / span 3 !important; }
+        .lg\\:col-span-9 { grid-column: span 9 / span 9 !important; }
+        .sm\\:items-center { align-items: center !important; }
+        .sm\\:items-start { align-items: flex-start !important; }
+        .sm\\:justify-start { justify-content: flex-start !important; }
+        .sm\\:justify-between { justify-content: space-between !important; }
+        .sm\\:text-left { text-align: left !important; }
+        .sm\\:border-b-0 { border-bottom-width: 0px !important; }
+        .sm\\:border-r { border-right-width: 1px !important; }
+        .sm\\:mx-0 { margin-left: 0px !important; margin-right: 0px !important; }
+        .hidden.sm\\:grid { display: grid !important; }
       `;
       document.head.appendChild(styleEl);
     }
     
     try {
-      const targetWidth = isMobile ? 1024 : element.scrollWidth;
-      
       const dataUrl = await toJpeg(element, {
         cacheBust: true,
         quality: 1.0,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
-        width: targetWidth,
-        style: isMobile ? {
-          width: '1024px',
-          minWidth: '1024px'
-        } : {},
+        width: 794,
+        style: {
+          width: '794px',
+          minWidth: '794px'
+        },
         filter: (node) => {
           if (node instanceof HTMLElement && node.dataset?.html2canvasIgnore === 'true') {
             return false;
@@ -482,22 +503,24 @@ export default function ResultView() {
         }
       });
       
-      if (isMobile) {
-        element.style.width = prevWidth;
-        element.style.maxWidth = prevMaxWidth;
-        if (styleEl && styleEl.parentNode) {
-          styleEl.parentNode.removeChild(styleEl);
-        }
+      element.style.width = prevWidth;
+      element.style.maxWidth = prevMaxWidth;
+      element.style.minHeight = prevMinHeight;
+      element.style.borderRadius = prevBorderRadius;
+
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
       }
       if (footerElement) footerElement.style.display = '';
       download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
     } catch(err) {
-      if (isMobile) {
-        element.style.width = prevWidth;
-        element.style.maxWidth = prevMaxWidth;
-        if (styleEl && styleEl.parentNode) {
-          styleEl.parentNode.removeChild(styleEl);
-        }
+      element.style.width = prevWidth;
+      element.style.maxWidth = prevMaxWidth;
+      element.style.minHeight = prevMinHeight;
+      element.style.borderRadius = prevBorderRadius;
+
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
       }
       if (footerElement) footerElement.style.display = '';
       console.error("Failed to generate image:", err);
@@ -581,7 +604,7 @@ export default function ResultView() {
         <meta name="description" content={type === 'institute' ? `Check the BTEB examination results, pass rates, and PDFs for institute ${instituteCode}.` : `View the complete diploma academic result for roll number ${roll} from Bangladesh Technical Education Board (BTEB).`} />
         <link rel="canonical" href={`https://btebresultlibrary.vercel.app/result?roll=${roll}&type=${type}&curriculum=${curriculum}&regulation=${regulation}`} />
       </Helmet>
-      <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0">
+      <div className="max-w-6xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0">
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -636,7 +659,7 @@ export default function ResultView() {
         {type === 'individual' ? (
            <div className="space-y-12 print:space-y-6">
              {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
-               <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4 print:space-y-4">
+               <div key={resultItem.id} className="max-w-5xl w-full mx-auto space-y-6 print:space-y-4">
                   {/* Modern Result Header */}
                   <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-emerald-900 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
@@ -662,31 +685,29 @@ export default function ResultView() {
                             </span>
                           </div>
                         </div>
-                    </div>
+                     </div>
                   </div>
 
-                  <div className="pb-6 border-b border-indigo-100 print:pb-4">
-                     <div className="bg-slate-50/50 rounded-xl overflow-hidden p-4 border border-slate-100 shadow-sm print:shadow-none print:border-none print:bg-transparent print:p-0">
-                       <table className="w-full text-left text-sm sm:text-base print:text-base">
-                         <tbody className="divide-y divide-slate-100 print:divide-gray-200">
-                           <tr className="hover:bg-slate-50 transition-colors print:bg-transparent">
-                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 w-32 sm:w-48 align-top uppercase tracking-wider text-xs sm:text-sm">Roll No</td>
-                             <td className="py-2.5 px-4 print:px-0 font-black text-indigo-900 print:text-black">: {resultItem.rollNumber}</td>
-                           </tr>
-                           <tr className="hover:bg-slate-50 transition-colors bg-white print:bg-transparent">
-                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 align-top uppercase tracking-wider text-xs sm:text-sm">Institute</td>
-                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-800 print:text-black">: {resultItem.instituteName}</td>
-                           </tr>
-                           <tr className="hover:bg-slate-50 transition-colors print:bg-transparent">
-                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 align-top uppercase tracking-wider text-xs sm:text-sm">Curriculum</td>
-                             <td className="py-2.5 px-4 print:px-0 font-semibold text-slate-800 print:text-black">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
-                           </tr>
-                           <tr className="hover:bg-slate-50 transition-colors bg-white print:bg-transparent">
-                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 align-top uppercase tracking-wider text-xs sm:text-sm">Regulation</td>
-                             <td className="py-2.5 px-4 print:px-0 font-semibold text-slate-800 print:text-black">: {resultItem.regulation || 'N/A'}</td>
-                           </tr>
-                         </tbody>
-                       </table>
+                   <div className="pb-6 border-b border-indigo-100 print:pb-4">
+                     <div className="bg-slate-50/50 rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm print:shadow-none print:border-none print:bg-transparent print:p-0">
+                       <div className="flex flex-col divide-y divide-slate-100 print:divide-gray-200">
+                         <div className="flex flex-col sm:flex-row py-3 px-2 sm:px-4 hover:bg-slate-50 transition-colors print:bg-transparent text-center sm:text-left items-center sm:items-start">
+                           <div className="font-bold text-slate-500 sm:text-slate-700 w-full sm:w-48 uppercase tracking-wider text-[11px] sm:text-sm mb-0.5 sm:mb-0">Roll No</div>
+                           <div className="font-extrabold text-indigo-900 print:text-black text-[22px] sm:text-base leading-none sm:leading-normal"><span className="hidden sm:inline mr-1">:</span>{resultItem.rollNumber}</div>
+                         </div>
+                         <div className="flex flex-col sm:flex-row py-3 px-2 sm:px-4 hover:bg-slate-50 transition-colors print:bg-transparent text-center sm:text-left items-center sm:items-start">
+                           <div className="font-bold text-slate-500 sm:text-slate-700 w-full sm:w-48 uppercase tracking-wider text-[11px] sm:text-sm mb-0.5 sm:mb-0">Institute</div>
+                           <div className="font-bold text-slate-800 print:text-black text-lg sm:text-base leading-tight sm:leading-normal"><span className="hidden sm:inline mr-1">:</span>{resultItem.instituteName}</div>
+                         </div>
+                         <div className="flex flex-col sm:flex-row py-3 px-2 sm:px-4 hover:bg-slate-50 transition-colors print:bg-transparent text-center sm:text-left items-center sm:items-start">
+                           <div className="font-bold text-slate-500 sm:text-slate-700 w-full sm:w-48 uppercase tracking-wider text-[11px] sm:text-sm mb-0.5 sm:mb-0">Curriculum</div>
+                           <div className="font-semibold text-slate-800 print:text-black text-base sm:text-base"><span className="hidden sm:inline mr-1">:</span>{resultItem.curriculum || 'Diploma in Engineering'}</div>
+                         </div>
+                         <div className="flex flex-col sm:flex-row py-3 px-2 sm:px-4 hover:bg-slate-50 transition-colors print:bg-transparent text-center sm:text-left items-center sm:items-start">
+                           <div className="font-bold text-slate-500 sm:text-slate-700 w-full sm:w-48 uppercase tracking-wider text-[11px] sm:text-sm mb-0.5 sm:mb-0">Regulation</div>
+                           <div className="font-semibold text-slate-800 print:text-black text-base sm:text-base"><span className="hidden sm:inline mr-1">:</span>{resultItem.regulation || 'N/A'}</div>
+                         </div>
+                       </div>
                      </div>
                   </div>
 
@@ -775,28 +796,25 @@ export default function ResultView() {
                             ⚠️ Student has {totalReferredCount} referred subject{totalReferredCount > 1 ? 's' : ''} in total.
                           </div>
                         )}
-                        <div className="mt-8 print:mt-4 border border-indigo-100 overflow-hidden rounded-xl shadow-sm print:shadow-none">
-                          <table className="w-full text-left text-sm sm:text-base print:text-base bg-white">
-                            <thead className="bg-[#f8fafc] border-b-2 border-indigo-100/60 text-indigo-900">
-                              <tr>
-                                <th className="py-4 px-5 print:py-2 print:px-3 font-bold border-r border-indigo-100/50 w-1/3 uppercase tracking-wider text-xs">Semester</th>
-                                <th className="py-4 px-5 print:py-2 print:px-3 font-bold uppercase tracking-wider text-xs">Result Details</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 print:divide-gray-200">
+                        <div className="mt-8 print:mt-4 border border-indigo-100/80 rounded-2xl shadow-md print:shadow-none bg-white overflow-hidden">
+                          <div className="hidden sm:grid grid-cols-12 bg-indigo-50/50 border-b border-indigo-100 text-indigo-900">
+                            <div className="col-span-4 lg:col-span-3 py-4 px-5 font-bold border-r border-indigo-100/50 uppercase tracking-wider text-xs">Semester</div>
+                            <div className="col-span-8 lg:col-span-9 py-4 px-5 font-bold uppercase tracking-wider text-xs">Result Details</div>
+                          </div>
+                          <div className="flex flex-col divide-y divide-slate-100 print:divide-gray-200">
                               {semestersList.map((sem, i) => {
                                  const parsed = parseSemester(sem.value);
                                  if (!parsed) return null;
                                  const isPassed = parsed.type === 'passed';
                                  
                                  return (
-                                   <tr key={i} className="hover:bg-slate-50 transition-colors print:bg-transparent print:break-inside-avoid">
-                                     <td className="py-4 px-5 print:py-2 print:px-3 border-r border-slate-100 print:border-gray-200 align-top bg-white print:bg-transparent">
-                                       <div className="font-bold text-slate-800 break-words leading-snug text-sm sm:text-base">{sem.label}</div>
+                                   <div key={i} className="flex flex-col sm:grid sm:grid-cols-12 hover:bg-indigo-50/30 transition-colors print:bg-transparent print:break-inside-avoid group/tr text-center sm:text-left">
+                                     <div className="sm:col-span-4 lg:col-span-3 py-4 px-4 sm:px-5 print:py-2 print:px-3 border-b sm:border-b-0 sm:border-r border-slate-100 print:border-gray-200 align-top print:bg-transparent transition-colors flex flex-col items-center sm:items-start justify-center">
+                                       <div className="font-extrabold text-slate-800 break-words leading-snug text-[15px] sm:text-base">{sem.label}</div>
                                        {parsed.date && (
-                                         <div className="text-xs print:text-[10px] text-indigo-600 mt-2 flex items-start sm:items-center bg-indigo-50/50 print:bg-transparent px-2.5 py-1.5 print:p-0 rounded-md border border-indigo-100 print:border-none w-fit shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] print:shadow-none">
+                                         <div className="text-[11px] print:text-[10px] text-indigo-600 mt-2 flex items-center bg-white print:bg-transparent px-2.5 py-1.5 print:p-0 rounded-md border border-indigo-100 print:border-none w-fit shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] print:shadow-none group-hover/tr:bg-indigo-50/50 transition-colors mx-auto sm:mx-0">
                                             <Calendar className="w-3.5 h-3.5 print:w-3 print:h-3 mr-1.5 text-indigo-500 print:text-slate-600 shrink-0" />
-                                            <span className="font-bold tracking-wide whitespace-normal break-words leading-tight">
+                                            <span className="font-bold tracking-wide break-words leading-tight">
                                             {(() => {
                                               try {
                                                 const dateStr = parsed.date.split('T')[0];
@@ -820,38 +838,38 @@ export default function ResultView() {
                                             </span>
                                          </div>
                                        )}
-                                     </td>
-                                     <td className="py-4 px-5 print:py-2 print:px-3 align-top bg-white print:bg-transparent">
+                                     </div>
+                                     <div className="sm:col-span-8 lg:col-span-9 py-4 px-3 sm:px-5 print:py-2 print:px-3 align-top print:bg-transparent transition-colors flex flex-col items-center sm:items-start justify-center">
                                         {isPassed || parsed.gpa ? (
-                                          <div className="font-bold border border-emerald-200 text-emerald-800 bg-emerald-50 print:bg-transparent inline-flex items-center px-3 py-1.5 rounded-lg shadow-sm print:shadow-none print:border-none">
-                                            <span className="flex items-center gap-1.5">
-                                              <span className="w-2 h-2 rounded-full bg-emerald-500 print:hidden"></span>
+                                          <div className="font-bold border border-emerald-200 text-emerald-800 bg-emerald-50 print:bg-transparent inline-flex items-center px-4 py-2 rounded-xl shadow-sm print:shadow-none print:border-none">
+                                            <span className="flex items-center gap-2">
+                                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 print:hidden shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                                               Passed
                                             </span>
                                             {parsed.gpa && parsed.gpa !== 'Passed' && (
                                               <>
-                                                <span className="text-emerald-300 font-semibold mx-2 print:text-black">/</span> <span className="font-black">GPA: {parsed.gpa}</span>
+                                                <span className="text-emerald-300 font-semibold mx-3 print:text-black">/</span> <span className="font-black text-emerald-900">GPA: {parsed.gpa}</span>
                                               </>
                                             )}
                                           </div>
                                         ) : (
-                                          <div className="text-rose-700 bg-rose-50/50 print:bg-transparent rounded-xl border border-rose-100 print:border-none p-4 sm:p-5 print:p-0">
-                                            <div className="font-bold text-sm mb-4 flex items-center print:text-black">
-                                              <div className="w-2 h-2 rounded-full bg-rose-500 mr-2 animate-pulse print:hidden"></div>
+                                          <div className="text-rose-700 bg-rose-50/50 print:bg-transparent rounded-xl border border-rose-100 print:border-none p-4 sm:p-5 print:p-0 w-full text-left">
+                                            <div className="font-bold text-sm mb-4 flex items-center justify-center sm:justify-start print:text-black">
+                                              <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mr-2.5 animate-pulse print:hidden shadow-[0_0_8px_rgba(244,63,94,0.5)]"></div>
                                               Referred in {parsed.total} Subject{parsed.total > 1 ? 's' : ''}:
                                             </div>
                                             <ul className="flex flex-col gap-3">
                                               {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
                                                 <li key={idx}>
-                                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 sm:p-4 print:p-0 rounded-xl border border-rose-100/60 print:border-none bg-white print:bg-transparent shadow-sm print:shadow-none transition-colors hover:border-rose-200 group">
+                                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 sm:p-4 print:p-0 rounded-xl border border-rose-100/60 print:border-none bg-white print:bg-transparent shadow-sm print:shadow-none transition-colors hover:border-rose-200 group text-center sm:text-left">
                                                     <div className="font-bold text-slate-800 text-sm break-words leading-snug flex-1 print:text-sm">
                                                       {sub.subName || sub.name || 'Subject'}
                                                     </div>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0 shrink-0">
+                                                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-1 sm:mt-0 shrink-0">
                                                       <span className="font-mono text-slate-600 bg-slate-50 print:bg-transparent print:border-none px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-bold border border-slate-200 whitespace-nowrap group-hover:bg-rose-50/50 transition-colors">
                                                         {sub.code || sub.subCode}
                                                       </span>
-                                                      <span className="text-[10px] uppercase tracking-widest font-black text-rose-600 bg-rose-50 print:bg-transparent print:border-none px-2 py-1 rounded border border-rose-100 whitespace-nowrap">
+                                                      <span className="text-[10px] uppercase tracking-widest font-black text-rose-600 bg-rose-50 print:bg-transparent print:border-none px-2 py-1 rounded border border-rose-100/80 whitespace-nowrap">
                                                         {sub.type === 'T' ? 'Theory' : sub.type === 'P' ? 'Practical' : sub.type}
                                                       </span>
                                                     </div>
@@ -859,17 +877,16 @@ export default function ResultView() {
                                                 </li>
                                               ))}
                                               {(!parsed.subjects || parsed.subjects.length === 0) && (
-                                                <li className="text-red-400 italic text-sm py-2">No subject details provided</li>
+                                                <li className="text-red-400 italic text-sm py-2 text-center sm:text-left">No subject details provided</li>
                                               )}
                                             </ul>
                                           </div>
                                         )}
-                                     </td>
-                                   </tr>
+                                     </div>
+                                   </div>
                                  );
                               })}
-                            </tbody>
-                          </table>
+                          </div>
                         </div>
 
 
@@ -994,7 +1011,7 @@ export default function ResultView() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
                 <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
-                  <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                  <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 </div>
 
                 <div className="relative z-10 flex flex-col gap-4">
@@ -1028,8 +1045,8 @@ export default function ResultView() {
 
               <div className="w-full pb-4">
                  {/* Desktop Table View */}
-                 <div className="bg-white rounded-xl border border-indigo-100 shadow-sm w-full overflow-hidden hidden lg:block print:block">
-                   <table className="w-full text-left text-sm bg-white">
+                 <div className="bg-white rounded-xl border border-indigo-100 shadow-sm w-full overflow-x-auto hidden lg:block print:block">
+                   <table className="w-full text-left text-sm bg-white min-w-[600px]">
                      <thead className="bg-[#f8fafc] border-b-2 border-indigo-100 text-indigo-900 tracking-wider text-[10px] sm:text-[11px] font-bold">
                        <tr>
                          <th className="py-2 px-2 sm:py-4 sm:px-4 border-r border-indigo-100/50 uppercase">Roll No & Institute</th>
@@ -1129,34 +1146,34 @@ export default function ResultView() {
                      const sortedSems = Array.from(allSems).sort((a, b) => a - b);
 
                      return (
-                       <div key={r.id || r.rollNumber} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition-shadow">
-                         <div className="mb-4 pb-3 border-b border-gray-100">
-                            <div className="font-bold text-gray-900 text-lg mb-1">{r.rollNumber || r.roll || '--'}</div>
-                            <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5" title={r.instituteName}>
-                               <Building className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                       <div key={r.id || r.rollNumber} className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                         <div className="mb-4 pb-4 border-b border-indigo-50">
+                            <div className="font-extrabold tracking-tight text-indigo-900 text-xl mb-1.5">{r.rollNumber || r.roll || '--'}</div>
+                            <div className="text-xs text-slate-500 font-semibold flex items-center gap-2" title={r.instituteName}>
+                               <Building className="w-4 h-4 shrink-0 text-indigo-500" />
                                <span className="truncate">{r.instituteName || (r.institute && r.institute.name) || 'Unknown Institute'}</span>
                             </div>
                          </div>
-                         <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
+                         <div className="grid grid-cols-4 sm:grid-cols-3 gap-2.5">
                             {sortedSems.map(semNum => {
                                const semData = r[`semester${semNum}`];
                                const parsed = semData ? parseSemester(semData) : null;
                                
                                return (
-                                 <div key={semNum} className="flex flex-col items-center justify-center p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                   <span className="text-[10px] text-slate-500 font-semibold uppercase mb-1">{semNum === 1 ? '1st' : semNum === 2 ? '2nd' : semNum === 3 ? '3rd' : `${semNum}th`}</span>
+                                 <div key={semNum} className="flex flex-col items-center justify-center p-2.5 bg-slate-50/70 rounded-xl border border-slate-100">
+                                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{semNum === 1 ? '1st' : semNum === 2 ? '2nd' : semNum === 3 ? '3rd' : `${semNum}th`}</span>
                                    {parsed ? (
                                      parsed.type === 'passed' ? (
-                                       <span className="text-xs font-bold text-emerald-700">{parsed.gpa || parsed.cgpa || '-'}</span>
+                                       <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border border-emerald-100/50">{parsed.gpa || parsed.cgpa || '-'}</span>
                                      ) : (
                                        <div className="group relative">
-                                          <span className="text-[10px] font-bold text-red-600 uppercase cursor-help bg-red-100 px-1 py-0.5 rounded">Fail({parsed.total})</span>
-                                          <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded p-2 z-50 pointer-events-none">
-                                            <div className="font-semibold mb-1 border-b border-gray-700 pb-1">Failed Subjects:</div>
-                                            <ul className="text-left list-disc pl-3">
+                                          <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest cursor-help bg-rose-50 px-1.5 py-0.5 rounded shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border border-rose-100/50">Fail({parsed.total})</span>
+                                          <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-xs rounded-xl p-3 z-50 pointer-events-none shadow-xl border border-slate-700">
+                                            <div className="font-bold mb-2 border-b border-slate-700 pb-1.5 text-rose-400 uppercase tracking-wider text-[10px]">Failed Subjects:</div>
+                                            <ul className="text-left list-disc pl-3 flex flex-col gap-1">
                                               {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
-                                                <li key={idx} className="truncate">
-                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-300 ml-1 text-[10px]">({sub.code || sub.subCode})</span>
+                                                <li key={idx} className="truncate text-slate-200">
+                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-slate-400 ml-1 text-[10px]">({sub.code || sub.subCode})</span>
                                                 </li>
                                               ))}
                                             </ul>
@@ -1164,7 +1181,7 @@ export default function ResultView() {
                                        </div>
                                      )
                                    ) : (
-                                     <span className="text-gray-300 font-medium">-</span>
+                                     <span className="text-slate-300 font-bold">-</span>
                                    )}
                                  </div>
                                );

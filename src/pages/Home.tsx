@@ -84,9 +84,9 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center w-full font-sans bg-slate-50 relative overflow-hidden">
       <Helmet>
-        <title>BTEB Result Archive | Check Diploma Result BD</title>
-        <meta name="description" content="Check Bangladesh Diploma Result instantly online. Fast, mobile-friendly result checker for BTEB polytechnic semester results, plus CGPA tools." />
-        <meta name="keywords" content="Diploma Result, Diploma Result 2026, BTEB Result Archive, Polytechnic Semester Result, Diploma in Engineering Result, Bangladesh Result Checker" />
+        <title>BTEB Result Library - Diploma Result in Bangladesh</title>
+        <meta name="description" content="Check Bangladesh Technical Education Board (BTEB) Diploma in Engineering results easily. Calculate your CGPA or find your exam routine instantly." />
+        <meta name="keywords" content="Diploma Result, Diploma Result 2026, BTEB Result Library, Polytechnic Semester Result, Diploma in Engineering Result, Bangladesh Result Checker" />
         <link rel="canonical" href="https://btebresultlibrary.vercel.app/" />
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
