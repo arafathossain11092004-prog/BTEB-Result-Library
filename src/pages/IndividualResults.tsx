@@ -229,7 +229,9 @@ export default function IndividualResults() {
                   <Hash className="w-5 h-5" />
                 </div>
                 <input
-                  type="text"
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   required
                   value={roll}
                   onChange={(e) => setRoll(e.target.value)}

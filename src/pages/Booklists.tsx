@@ -133,7 +133,7 @@ export default function Booklists() {
         (b.curriculum || "Unknown") === activeCurriculum &&
         (b.regulation || "Unknown") === activeRegulation &&
         (b.semester || "Unknown") === activeSemester &&
-        (b.department || "Unknown") === activeDepartment,
+        (activeDepartment === "All Departments" || (b.department || "Unknown") === activeDepartment),
     );
   }, [
     booklists,
@@ -271,9 +271,19 @@ export default function Booklists() {
       const generatedOn = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
       footer.innerHTML = `
-        <div class="w-1/3"></div>
+        <div class="flex flex-col gap-1 items-start w-1/3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-700 rounded flex items-center justify-center text-white font-bold text-xl">
+              B
+            </div>
+            <span class="font-bold text-xl text-blue-800 tracking-tight">
+              BTEB Result Library
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-10">Generated Document</div>
+        </div>
         
-        <div class="w-1/3"></div>
+        <div class="w-1/3 text-center pb-1"></div>
 
         <div class="w-1/3 flex justify-end">
           ${qrCodeImg ? `
@@ -509,11 +519,18 @@ export default function Booklists() {
                           <option value="" disabled>
                             Select Department
                           </option>
-                          {departments.map((dept) => (
-                            <option key={dept} value={dept}>
-                              {dept}
-                            </option>
-                          ))}
+                          {activeCurriculum?.toLowerCase().includes("diploma in engineering") && (
+                            <option value="All Departments">All Departments</option>
+                          )}
+                          {departments.map((dept) => {
+                            const match = dept.match(/^(\d+)\s+(.+)$/);
+                            const display = match ? `${match[2]} (${match[1]})` : dept;
+                            return (
+                              <option key={dept} value={dept}>
+                                {display}
+                              </option>
+                            );
+                          })}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
                           <ChevronRight className="w-4 h-4 rotate-90" />

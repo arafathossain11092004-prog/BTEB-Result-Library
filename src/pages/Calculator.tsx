@@ -549,7 +549,9 @@ export default function Calculator() {
                     <Hash className="w-5 h-5" />
                   </div>
                   <input
-                    type="text"
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50/50 text-sm font-medium border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white placeholder:text-slate-400 transition-all"

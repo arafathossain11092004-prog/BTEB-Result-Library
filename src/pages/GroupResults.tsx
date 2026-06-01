@@ -242,7 +242,9 @@ export default function GroupResults() {
                     <Hash className="w-5 h-5" />
                   </div>
                   <input
-                    type="text"
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     required
                     value={startRoll}
                     onChange={(e) => setStartRoll(e.target.value)}
@@ -261,7 +263,9 @@ export default function GroupResults() {
                     <Hash className="w-5 h-5" />
                   </div>
                   <input
-                    type="text"
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     required
                     value={endRoll}
                     onChange={(e) => setEndRoll(e.target.value)}
