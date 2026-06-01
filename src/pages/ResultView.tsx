@@ -637,30 +637,57 @@ export default function ResultView() {
            <div className="space-y-12 print:space-y-6">
              {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
                <div key={resultItem.id} className="max-w-3xl mx-auto space-y-4 print:space-y-4">
-                  <div className="pb-6 print:pb-4 border-b border-gray-200">
-                     <div className="text-center mb-8 print:mb-4">
-                       <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wider text-gray-800 print:text-xl">Academic Result</h2>
+                  {/* Modern Result Header */}
+                  <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-emerald-900 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+                    <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
+                      <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zM12 14l9 5-9 5-9-5 9-5z"></path></svg>
+                    </div>
+
+                    <div className="relative z-10 flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-1 uppercase">
+                              Academic Result
+                            </h2>
+                            <p className="text-blue-100/80 font-medium text-sm tracking-wide">
+                              BTEB Result Library
+                            </p>
+                          </div>
+                          <div className="hidden sm:block text-right">
+                            <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-white/90 text-sm font-medium backdrop-blur-md">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                              btebresultlibrary.vercel.app
+                            </span>
+                          </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div className="pb-6 border-b border-indigo-100 print:pb-4">
+                     <div className="bg-slate-50/50 rounded-xl overflow-hidden p-4 border border-slate-100 shadow-sm print:shadow-none print:border-none print:bg-transparent print:p-0">
+                       <table className="w-full text-left text-sm sm:text-base print:text-base">
+                         <tbody className="divide-y divide-slate-100 print:divide-gray-200">
+                           <tr className="hover:bg-slate-50 transition-colors print:bg-transparent">
+                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 w-32 sm:w-48 align-top uppercase tracking-wider text-xs sm:text-sm">Roll No</td>
+                             <td className="py-2.5 px-4 print:px-0 font-black text-indigo-900 print:text-black">: {resultItem.rollNumber}</td>
+                           </tr>
+                           <tr className="hover:bg-slate-50 transition-colors bg-white print:bg-transparent">
+                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 align-top uppercase tracking-wider text-xs sm:text-sm">Institute</td>
+                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-800 print:text-black">: {resultItem.instituteName}</td>
+                           </tr>
+                           <tr className="hover:bg-slate-50 transition-colors print:bg-transparent">
+                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 align-top uppercase tracking-wider text-xs sm:text-sm">Curriculum</td>
+                             <td className="py-2.5 px-4 print:px-0 font-semibold text-slate-800 print:text-black">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
+                           </tr>
+                           <tr className="hover:bg-slate-50 transition-colors bg-white print:bg-transparent">
+                             <td className="py-2.5 px-4 print:px-0 font-bold text-slate-700 align-top uppercase tracking-wider text-xs sm:text-sm">Regulation</td>
+                             <td className="py-2.5 px-4 print:px-0 font-semibold text-slate-800 print:text-black">: {resultItem.regulation || 'N/A'}</td>
+                           </tr>
+                         </tbody>
+                       </table>
                      </div>
-                     <table className="w-full text-left text-sm sm:text-base print:text-base">
-                       <tbody>
-                         <tr>
-                           <td className="py-1.5 print:py-2 font-semibold text-gray-600 w-32 sm:w-48 align-top">Roll No</td>
-                           <td className="py-1.5 print:py-2 font-bold text-gray-900 border-b border-gray-100">: {resultItem.rollNumber}</td>
-                         </tr>
-                         <tr>
-                           <td className="py-1.5 print:py-2 font-semibold text-gray-600 align-top">Institute</td>
-                           <td className="py-1.5 print:py-2 text-gray-800 border-b border-gray-100">: {resultItem.instituteName}</td>
-                         </tr>
-                         <tr>
-                           <td className="py-1.5 print:py-2 font-semibold text-gray-600 align-top">Curriculum</td>
-                           <td className="py-1.5 print:py-2 text-gray-800 border-b border-gray-100">: {resultItem.curriculum || 'Diploma in Engineering'}</td>
-                         </tr>
-                         <tr>
-                           <td className="py-1.5 print:py-2 font-semibold text-gray-600 align-top">Regulation</td>
-                           <td className="py-1.5 print:py-2 text-gray-800 border-b border-gray-100">: {resultItem.regulation || 'N/A'}</td>
-                         </tr>
-                       </tbody>
-                     </table>
                   </div>
 
                   {/* Actions */}
@@ -748,28 +775,28 @@ export default function ResultView() {
                             ⚠️ Student has {totalReferredCount} referred subject{totalReferredCount > 1 ? 's' : ''} in total.
                           </div>
                         )}
-                        <div className="mt-8 print:mt-4 border border-gray-300 overflow-hidden rounded-md shadow-sm print:shadow-none">
+                        <div className="mt-8 print:mt-4 border border-indigo-100 overflow-hidden rounded-xl shadow-sm print:shadow-none">
                           <table className="w-full text-left text-sm sm:text-base print:text-base bg-white">
-                            <thead className="bg-[#f2f2f2] border-b border-gray-300 text-gray-800">
+                            <thead className="bg-[#f8fafc] border-b-2 border-indigo-100/60 text-indigo-900">
                               <tr>
-                                <th className="py-3 px-4 print:py-2 print:px-3 font-semibold border-r border-gray-300 w-1/3">Semester</th>
-                                <th className="py-3 px-4 print:py-2 print:px-3 font-semibold">Result</th>
+                                <th className="py-4 px-5 print:py-2 print:px-3 font-bold border-r border-indigo-100/50 w-1/3 uppercase tracking-wider text-xs">Semester</th>
+                                <th className="py-4 px-5 print:py-2 print:px-3 font-bold uppercase tracking-wider text-xs">Result Details</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-slate-100 print:divide-gray-200">
                               {semestersList.map((sem, i) => {
                                  const parsed = parseSemester(sem.value);
                                  if (!parsed) return null;
                                  const isPassed = parsed.type === 'passed';
                                  
                                  return (
-                                   <tr key={i} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
-                                     <td className="py-3 px-4 print:py-2 print:px-3 border-r border-gray-200 align-top bg-white">
+                                   <tr key={i} className="hover:bg-slate-50 transition-colors print:bg-transparent print:break-inside-avoid">
+                                     <td className="py-4 px-5 print:py-2 print:px-3 border-r border-slate-100 print:border-gray-200 align-top bg-white print:bg-transparent">
                                        <div className="font-bold text-slate-800 break-words leading-snug text-sm sm:text-base">{sem.label}</div>
                                        {parsed.date && (
-                                         <div className="text-xs print:text-[10px] text-slate-600 mt-2 flex items-start sm:items-center bg-slate-50 print:bg-transparent px-2.5 py-1.5 print:p-0 rounded-md border border-slate-100 print:border-none w-fit shadow-sm print:shadow-none">
-                                            <Calendar className="w-3.5 h-3.5 print:w-3 print:h-3 mr-1.5 text-blue-500 print:text-black shrink-0" />
-                                            <span className="font-medium whitespace-normal break-words leading-tight">
+                                         <div className="text-xs print:text-[10px] text-indigo-600 mt-2 flex items-start sm:items-center bg-indigo-50/50 print:bg-transparent px-2.5 py-1.5 print:p-0 rounded-md border border-indigo-100 print:border-none w-fit shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] print:shadow-none">
+                                            <Calendar className="w-3.5 h-3.5 print:w-3 print:h-3 mr-1.5 text-indigo-500 print:text-slate-600 shrink-0" />
+                                            <span className="font-bold tracking-wide whitespace-normal break-words leading-tight">
                                             {(() => {
                                               try {
                                                 const dateStr = parsed.date.split('T')[0];
@@ -794,34 +821,37 @@ export default function ResultView() {
                                          </div>
                                        )}
                                      </td>
-                                     <td className="py-3 px-4 print:py-2 print:px-3 align-top">
+                                     <td className="py-4 px-5 print:py-2 print:px-3 align-top bg-white print:bg-transparent">
                                         {isPassed || parsed.gpa ? (
-                                          <div className="font-bold border border-green-200 text-green-700 bg-green-50 inline-flex items-center px-2 py-1 rounded">
-                                            Passed
+                                          <div className="font-bold border border-emerald-200 text-emerald-800 bg-emerald-50 print:bg-transparent inline-flex items-center px-3 py-1.5 rounded-lg shadow-sm print:shadow-none print:border-none">
+                                            <span className="flex items-center gap-1.5">
+                                              <span className="w-2 h-2 rounded-full bg-emerald-500 print:hidden"></span>
+                                              Passed
+                                            </span>
                                             {parsed.gpa && parsed.gpa !== 'Passed' && (
                                               <>
-                                                <span className="text-black font-semibold mx-1">/</span> GPA: {parsed.gpa}
+                                                <span className="text-emerald-300 font-semibold mx-2 print:text-black">/</span> <span className="font-black">GPA: {parsed.gpa}</span>
                                               </>
                                             )}
                                           </div>
                                         ) : (
-                                          <div className="text-red-700 bg-red-50/50 print:bg-transparent rounded-xl border border-red-100 print:border-none p-3 sm:p-4 print:p-0">
-                                            <div className="font-bold text-sm mb-3 flex items-center">
-                                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse print:hidden"></div>
+                                          <div className="text-rose-700 bg-rose-50/50 print:bg-transparent rounded-xl border border-rose-100 print:border-none p-4 sm:p-5 print:p-0">
+                                            <div className="font-bold text-sm mb-4 flex items-center print:text-black">
+                                              <div className="w-2 h-2 rounded-full bg-rose-500 mr-2 animate-pulse print:hidden"></div>
                                               Referred in {parsed.total} Subject{parsed.total > 1 ? 's' : ''}:
                                             </div>
-                                            <ul className="flex flex-col gap-2.5">
+                                            <ul className="flex flex-col gap-3">
                                               {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
                                                 <li key={idx}>
-                                                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-4 p-2.5 sm:p-3 print:p-1 rounded-lg border border-red-100 print:border-b print:border-x-0 print:border-t-0 print:rounded-none bg-white print:bg-transparent shadow-sm print:shadow-none transition-colors hover:border-red-200">
-                                                    <div className="font-medium text-slate-800 text-sm break-words leading-snug flex-1">
+                                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 sm:p-4 print:p-0 rounded-xl border border-rose-100/60 print:border-none bg-white print:bg-transparent shadow-sm print:shadow-none transition-colors hover:border-rose-200 group">
+                                                    <div className="font-bold text-slate-800 text-sm break-words leading-snug flex-1 print:text-sm">
                                                       {sub.subName || sub.name || 'Subject'}
                                                     </div>
                                                     <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0 shrink-0">
-                                                      <span className="font-mono text-slate-600 bg-slate-50 print:bg-transparent print:border-none px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-bold border border-slate-200 whitespace-nowrap">
+                                                      <span className="font-mono text-slate-600 bg-slate-50 print:bg-transparent print:border-none px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-bold border border-slate-200 whitespace-nowrap group-hover:bg-rose-50/50 transition-colors">
                                                         {sub.code || sub.subCode}
                                                       </span>
-                                                      <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold text-red-600 bg-red-50 print:bg-transparent px-1.5 py-0.5 rounded whitespace-nowrap">
+                                                      <span className="text-[10px] uppercase tracking-widest font-black text-rose-600 bg-rose-50 print:bg-transparent print:border-none px-2 py-1 rounded border border-rose-100 whitespace-nowrap">
                                                         {sub.type === 'T' ? 'Theory' : sub.type === 'P' ? 'Practical' : sub.type}
                                                       </span>
                                                     </div>
@@ -959,26 +989,50 @@ export default function ResultView() {
            </div>
         ) : (
            <div className="space-y-8">
-              <div className="text-center pb-6 border-b border-gray-100">
-                 <div className="inline-flex items-center justify-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                   Group Results
-                 </div>
-                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-                   Multiple Roll Results
-                 </h1>
-                 <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-gray-600">
-                   <span className="flex items-center font-medium"><BookOpen className="w-4 h-4 mr-2 text-blue-500"/> {results[0]?.curriculum || 'Diploma in Engineering'}</span>
-                   <span className="flex items-center font-medium"><Calendar className="w-4 h-4 mr-2 text-blue-500"/> {results[0]?.regulation ? `Regulation ${results[0]?.regulation}` : 'Regulation N/A'}</span>
-                 </div>
+              {/* Modern Group Result Header */}
+              <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-800 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6 max-w-4xl mx-auto">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+                <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
+                  <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </div>
+
+                <div className="relative z-10 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-1 uppercase">
+                          Group Results
+                        </h2>
+                        <p className="text-blue-100/80 font-medium text-sm tracking-wide">
+                          Multiple Roll View - BTEB Result Library
+                        </p>
+                      </div>
+                      <div className="hidden sm:block text-right">
+                        <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-white/90 text-sm font-medium backdrop-blur-md">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                          btebresultlibrary.vercel.app
+                        </span>
+                      </div>
+                    </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-indigo-400/30 flex flex-wrap gap-4 items-center">
+                    <span className="bg-indigo-950/40 text-blue-100 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-400/20 backdrop-blur-md flex items-center shadow-sm">
+                      <BookOpen className="w-4 h-4 mr-2 opacity-70"/> {results[0]?.curriculum || 'Diploma in Engineering'}
+                    </span>
+                    <span className="bg-indigo-950/40 text-emerald-100 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-400/20 backdrop-blur-md flex items-center shadow-sm">
+                      <Calendar className="w-4 h-4 mr-2 opacity-70"/> Regulation {results[0]?.regulation || 'N/A'}
+                    </span>
+                </div>
               </div>
 
               <div className="w-full pb-4">
                  {/* Desktop Table View */}
-                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full overflow-hidden hidden lg:block print:block">
+                 <div className="bg-white rounded-xl border border-indigo-100 shadow-sm w-full overflow-hidden hidden lg:block print:block">
                    <table className="w-full text-left text-sm bg-white">
-                     <thead className="bg-[#f8fafc] border-b border-gray-200 text-gray-500 tracking-wider text-[10px] sm:text-[11px] font-bold">
+                     <thead className="bg-[#f8fafc] border-b-2 border-indigo-100 text-indigo-900 tracking-wider text-[10px] sm:text-[11px] font-bold">
                        <tr>
-                         <th className="py-2 px-2 sm:py-4 sm:px-4 border-r border-gray-100 uppercase">Roll No & Institute</th>
+                         <th className="py-2 px-2 sm:py-4 sm:px-4 border-r border-indigo-100/50 uppercase">Roll No & Institute</th>
                          {(() => {
                            // Find all possible semester keys across all results
                            const allSems = new Set<number>();
@@ -1124,21 +1178,35 @@ export default function ResultView() {
            </div>
         )}
 
-        <div id="print-footer" className="mt-16 border-t border-gray-200 pt-6 flex justify-between items-center hidden print:flex h-[90px] relative" data-html2canvas-ignore="false">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-3">
-              <p className="font-bold text-gray-900 text-xl">BTEB Result Library</p>
-              <p className="text-sm mt-1 text-gray-600 font-medium">{window.location.origin}</p>
-              <p className="text-xs text-gray-400 mt-2">
-                Generated on: {new Date().toLocaleString()}
-              </p>
+        <div id="print-footer" className="mt-16 pt-6 flex justify-between items-end hidden print:flex relative" data-html2canvas-ignore="false">
+          <div className="flex flex-col gap-1 items-start w-1/3">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+              <span className="text-indigo-900 font-bold tracking-tight text-lg leading-none">BTEB Result Library</span>
             </div>
-            <div className="flex-1"></div>
+            <div className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-7">Generated Document</div>
+          </div>
+
+          <div className="w-1/3 text-center pb-1">
+            <div className="text-[11px] font-medium text-slate-400 mb-1">Generated On</div>
+            <div className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">
+              {new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+            </div>
+          </div>
+
+          <div className="w-1/3 flex justify-end">
             {typeof window !== 'undefined' && (
-              <div className="flex flex-col items-center ml-auto">
-                <QRCodeSVG value={window.location.href} size={96} />
-                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
+              <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-indigo-100 shadow-sm">
+                <div className="text-right">
+                  <div className="text-xs font-bold text-indigo-900 mb-0.5">Verify Online</div>
+                  <div className="text-[9px] text-slate-500 leading-tight">Scan this QR code<br/>to open live page</div>
+                </div>
+                <div className="w-[60px] h-[60px] bg-white rounded p-1">
+                  <QRCodeSVG value={window.location.href} size={52} fgColor="#1e1b4b" />
+                </div>
               </div>
             )}
+          </div>
         </div>
       </div>
 

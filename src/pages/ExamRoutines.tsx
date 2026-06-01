@@ -196,23 +196,45 @@ export default function ExamRoutines() {
 
       const footer = document.createElement("div");
       footer.className =
-        "mt-auto p-8 border-t border-slate-100 flex justify-between items-center bg-white text-slate-500 font-medium text-sm relative z-50";
+        "mt-auto p-6 md:p-8 bg-[#f8fafc] border-t-2 border-indigo-100 flex justify-between items-end text-slate-500 font-medium text-sm relative z-50 shrink-0";
       const currentDomain = window.location.hostname;
       
       let qrCodeImg = "";
       try {
-        qrCodeImg = await QRCode.toDataURL(window.location.href, { margin: 0, width: 96 });
+        qrCodeImg = await QRCode.toDataURL(window.location.href, { margin: 1, width: 90, color: { dark: '#1e1b4b' } });
       } catch (e) {
         console.error(e);
       }
 
+      const generatedOn = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+
       footer.innerHTML = `
-        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-slate-800 pointer-events-none mt-2">
-          <div class="text-blue-600 font-bold text-lg mb-0.5">BTEB Result Library</div>
-          <div class="text-xs text-slate-500">${currentDomain}</div>
+        <div class="flex flex-col gap-1 items-start w-1/3">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span class="text-indigo-900 font-bold tracking-tight text-lg leading-none">BTEB Result Library</span>
+          </div>
+          <div class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-7">Generated Document</div>
         </div>
-        <div class="flex-1 opacity-0 pointer-events-none">spacer</div>
-        ${qrCodeImg ? `<div class="flex flex-col items-center ml-auto relative z-10"><img src="${qrCodeImg}" alt="QR Code" width="96" height="96" /><span class="text-[10px] mt-1 text-slate-500 font-medium">Scan for actual routine</span></div>` : ''}
+        
+        <div class="w-1/3 text-center pb-1">
+          <div class="text-[11px] font-medium text-slate-400 mb-1">Generated On</div>
+          <div class="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">
+            ${generatedOn}
+          </div>
+        </div>
+
+        <div class="w-1/3 flex justify-end">
+          ${qrCodeImg ? `
+            <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-indigo-100 shadow-sm">
+              <div class="text-right">
+                <div class="text-xs font-bold text-indigo-900 mb-0.5">Verify Online</div>
+                <div class="text-[9px] text-slate-500 leading-tight">Scan this QR code<br/>to open live page</div>
+              </div>
+              <img src="${qrCodeImg}" alt="QR Code" class="w-[60px] h-[60px] rounded object-contain bg-white" />
+            </div>
+          ` : ''}
+        </div>
       `;
       printContent.appendChild(footer);
 
@@ -485,86 +507,109 @@ export default function ExamRoutines() {
 
                   <div
                     id="routine-card"
-                    className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative"
+                    className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative flex flex-col min-h-0"
                   >
-                    <div className="bg-slate-900 p-6 sm:p-8 text-white relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                        <FileText className="w-32 h-32" />
+                    {/* Modern Header */}
+                    <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-blue-900 p-6 sm:p-8 text-white relative overflow-hidden shrink-0">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                      <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+                      <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
+                        <FileText className="w-24 h-24" />
                       </div>
-                      <div className="relative z-10">
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <span className="bg-blue-500/20 text-blue-200 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
-                            {activeCurriculum}
-                          </span>
-                          <span className="bg-indigo-500/20 text-indigo-200 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
-                            {activeRegulation} Probidhan
-                          </span>
+                      
+                      <div className="relative z-10 flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-1">
+                              Exam Routine
+                            </h1>
+                            <p className="text-blue-100/80 font-medium text-sm tracking-wide">
+                              BTEB Result Library
+                            </p>
+                          </div>
+                          <div className="hidden sm:block text-right">
+                            <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-white/90 text-sm font-medium backdrop-blur-md">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                              btebresultlibrary.vercel.app
+                            </span>
+                          </div>
                         </div>
-                        <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-                          {activeDepartment}
-                        </h2>
-                        <p className="text-slate-300 text-base sm:text-lg flex items-center gap-2">
-                          {activeSemester} Semester
-                        </p>
+
+                        <div className="h-px w-full bg-gradient-to-r from-white/20 to-transparent my-1"></div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-between items-start sm:items-end">
+                          <div>
+                            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
+                              {activeDepartment}
+                            </h2>
+                            <p className="text-blue-200 font-medium text-base sm:text-lg flex items-center gap-2">
+                              {activeSemester} Semester
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                              {activeCurriculum}
+                            </span>
+                            <span className="bg-white/10 border border-white/20 text-blue-50 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                              {activeRegulation} Probidhan
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-6 sm:p-8 bg-white">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6">
-                        Exam Schedule
-                      </h3>
-
+                    <div className="p-6 sm:p-8 bg-white flex-1 overflow-hidden flex flex-col">
                       {filteredSubjects.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 flex-1">
                           <p className="text-slate-500">
                             No routines found for this selection.
                           </p>
                         </div>
                       ) : (
-                        <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-2xl border border-gray-200 shadow-sm">
-                          <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-0">
-                            <thead className="bg-slate-50 border-b border-gray-200 text-slate-600">
+                        <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
+                          <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-0 bg-white">
+                            <thead className="bg-[#f8fafc] border-b-2 border-indigo-100">
                               <tr>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm whitespace-nowrap">
+                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 whitespace-nowrap">
                                   Date & Day
                                 </th>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm">
+                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
                                   Time
                                 </th>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm">
+                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
                                   Subject Name
                                 </th>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm w-24 sm:w-auto">
+                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 whitespace-nowrap">
                                   Code
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 bg-white">
-                              {filteredSubjects.map((subject) => (
+                            <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                              {filteredSubjects.map((subject, idx) => (
                                 <tr
                                   key={subject.id}
-                                  className="hover:bg-blue-50/50 transition-colors"
+                                  className={`transition-colors hover:bg-indigo-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
                                 >
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4">
-                                    <div className="font-semibold text-gray-900 text-sm sm:text-base">
+                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-top">
+                                    <div className="font-bold text-slate-900 text-sm sm:text-base">
                                       {subject.date}
                                     </div>
                                     {subject.day && (
-                                      <div className="text-xs text-gray-500 mt-1">
+                                      <div className="text-xs font-semibold text-indigo-600/80 mt-0.5">
                                         {subject.day}
                                       </div>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4">
-                                    <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs sm:text-sm font-medium whitespace-nowrap">
+                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                    <span className="inline-flex items-center bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide whitespace-nowrap shadow-sm">
                                       {subject.time}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 font-medium text-gray-800 text-sm sm:text-base leading-tight">
+                                  <td className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-slate-800 text-sm sm:text-base leading-snug align-middle">
                                     {subject.subjectName}
                                   </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-top sm:align-middle">
-                                    <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-wider bg-slate-100 text-slate-700 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200">
+                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                    <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-emerald-50 text-emerald-800 px-2.5 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shadow-sm">
                                       {subject.subjectCode}
                                     </span>
                                   </td>
