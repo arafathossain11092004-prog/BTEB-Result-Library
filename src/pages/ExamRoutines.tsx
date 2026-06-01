@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toJpeg } from "html-to-image";
+import { jsPDF } from "jspdf";
 import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import SeoBlocks from "../components/SeoBlocks";
@@ -145,11 +146,10 @@ export default function ExamRoutines() {
       setActiveDepartment(null);
   }, [departments, activeDepartment, activeSemester]);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handleDownloadPNG = () => generateImageAndDownload('jpg');
+  const handlePrint = () => generateImageAndDownload('pdf');
 
-  const handleDownloadPNG = async () => {
+  const generateImageAndDownload = async (type: 'pdf' | 'jpg') => {
     const printContent = document.getElementById("routine-card");
     if (printContent) {
       const originalWidth = printContent.style.width;
@@ -167,6 +167,8 @@ export default function ExamRoutines() {
       // Force A4 size constraints (794x1123 at 96 DPI)
       printContent.style.width = "794px";
       printContent.style.maxWidth = "794px";
+      // We don't force minHeight to 1123px if the content is longer, 
+      // but let's keep it to keep layout consistent.
       printContent.style.minHeight = "1123px";
       printContent.style.display = "flex";
       printContent.style.flexDirection = "column";
@@ -249,12 +251,38 @@ export default function ExamRoutines() {
           },
         });
 
-        const link = document.createElement("a");
-        link.href = dataUrl;
-        link.download = `${activeDepartment}-${activeSemester}-Routine.jpg`;
-        link.click();
+        if (type === 'jpg') {
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = `${activeDepartment}-${activeSemester}-Routine.jpg`;
+          link.click();
+        } else if (type === 'pdf') {
+          // Create PDF
+          // We know the canvas was rendered at 794px width. We need to measure its actual height.
+          // Since we set pixelRatio: 2, the image itself might be 1588px wide.
+          
+          const img = new Image();
+          img.src = dataUrl;
+          await new Promise((resolve) => {
+             img.onload = resolve;
+          });
+          
+          // Calculate height in mm keeping aspect ratio
+          // A4 width is 210mm
+          const pdfWidth = 210;
+          const pdfHeight = (img.height * pdfWidth) / img.width;
+          
+          const pdf = new jsPDF({
+            orientation: pdfHeight > 297 ? "portrait" : "portrait", // mostly portrait
+            unit: "mm",
+            format: [pdfWidth, Math.max(pdfHeight, 297)] // A4 or longer if content is longer
+          });
+          
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`${activeDepartment}-${activeSemester}-Routine.pdf`);
+        }
       } catch (err) {
-        console.error("Error generating screenshot", err);
+        console.error("Error generating screenshot or PDF", err);
       } finally {
         if (styleEl && styleEl.parentNode) {
           styleEl.parentNode.removeChild(styleEl);

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toJpeg } from "html-to-image";
+import { jsPDF } from "jspdf";
 import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import { useSearchParams } from "react-router-dom";
@@ -190,10 +191,6 @@ export default function Booklists() {
     }
   }, [departments, activeDepartment, activeSemester, searchParams]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleShare = () => {
     if (navigator.share) {
       navigator
@@ -208,7 +205,10 @@ export default function Booklists() {
     }
   };
 
-  const handleDownloadPNG = async () => {
+  const handleDownloadPNG = () => generateImageAndDownload('jpg');
+  const handlePrint = () => generateImageAndDownload('pdf');
+
+  const generateImageAndDownload = async (type: 'pdf' | 'jpg') => {
     const printContent = document.getElementById("booklist-card");
     if (printContent) {
       const originalWidth = printContent.style.width;
@@ -311,12 +311,32 @@ export default function Booklists() {
           },
         });
 
-        const link = document.createElement("a");
-        link.href = dataUrl;
-        link.download = `${activeDepartment}-${activeSemester}-Booklist.jpg`;
-        link.click();
+        if (type === 'jpg') {
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = `${activeDepartment}-${activeSemester}-Booklist.jpg`;
+          link.click();
+        } else if (type === 'pdf') {
+          const img = new Image();
+          img.src = dataUrl;
+          await new Promise((resolve) => {
+             img.onload = resolve;
+          });
+          
+          const pdfWidth = 210;
+          const pdfHeight = (img.height * pdfWidth) / img.width;
+          
+          const pdf = new jsPDF({
+            orientation: pdfHeight > 297 ? "portrait" : "portrait", // mostly portrait
+            unit: "mm",
+            format: [pdfWidth, Math.max(pdfHeight, 297)]
+          });
+          
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`${activeDepartment}-${activeSemester}-Booklist.pdf`);
+        }
       } catch (err) {
-        console.error("Error generating screenshot", err);
+        console.error("Error generating screenshot or PDF", err);
       } finally {
         if (styleEl && styleEl.parentNode) {
           styleEl.parentNode.removeChild(styleEl);

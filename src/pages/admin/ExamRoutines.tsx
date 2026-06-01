@@ -4,37 +4,117 @@ import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Plus, Trash2, Loader2, CalendarRange, X, Save, SaveAll } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
+const CURRICULUM_DEPARTMENTS: Record<string, string[]> = {
+  "Diploma In Engineering": [
+    "61 Architecture Technology",
+    "62 Automobile Technology",
+    "63 Chemical Technology",
+    "64 Civil Technology",
+    "66 Civil (Wood) Technology",
+    "67 Electrical Technology",
+    "68 Electronics Technology",
+    "69 Food Technology",
+    "70 Mechanical Technology",
+    "71 Power Technology",
+    "72 Refrigeration and Air Conditioning (RAC) Technology",
+    "76 Ceramic Technology",
+    "77 Glass Technology",
+    "78 Surveying Technology",
+    "79 Marine Technology",
+    "80 Shipbuilding Technology",
+    "82 Aircraft Maintenance Technology (Aerospace)",
+    "83 Aircraft Maintenance Technology (Avionics)",
+    "85 Computer Science and Technology",
+    "86 Electromedical Technology",
+    "88 Construction Technology",
+    "90 Environmental Technology",
+    "92 Mechatronic Technology",
+    "94 Telecommunication Technology",
+    "95 Printing Technology",
+    "96 Graphic Design Technology"
+  ],
+  "Diploma In Textile Engineering": [
+    "Yarn Manufacturing Technology",
+    "Fabric Manufacturing Technology",
+    "Wet Process Technology",
+    "Garments Design and Pattern Making Technology"
+  ],
+  "Diploma In Agriculture": [
+    "Agriculture Technology"
+  ],
+  "Diploma In Fisheries": [
+    "Fisheries Technology"
+  ],
+  "Diploma In Forestry": [
+    "Forestry Technology"
+  ],
+  "Diploma In Livestock": [
+    "Livestock Technology"
+  ],
+  "Diploma In Medical Technology": [
+    "Medical Laboratory Technology",
+    "Radiology and Imaging Technology",
+    "Physiotherapy Technology",
+    "Dental Technology",
+    "Pharmacy Technology",
+    "Radiotherapy Technology",
+    "Operation Theatre Technology",
+    "Nutrition and Food Technology",
+    "Audiology Technology",
+    "Biomedical Technology"
+  ],
+  "Diploma In Tourism And Hospitality": [
+    "Tourism Technology",
+    "Hotel Management and Hospitality Technology"
+  ],
+  "Diploma In Commerce": [
+    "Accounting",
+    "Management",
+    "Marketing",
+    "Finance, Banking and Insurance"
+  ]
+};
+
+interface RoutineSemester {
+  id: string;
+  semesterName: string;
+  departments: string[];
+}
+
 interface RoutineSubject {
   id: string;
   subjectCode: string;
   subjectName: string;
-  department: string;
-}
-
-interface RoutineSemester {
-  id: string;
-  semesterPhase: string;
-  subjects: RoutineSubject[];
+  semesters: RoutineSemester[];
 }
 
 interface RoutineTimeSlot {
   id: string;
   timeShift: string;
-  semesters: RoutineSemester[];
+  subjects: RoutineSubject[];
 }
 
 interface RoutineDateBlock {
   id: string;
   examDate: string;
   day: string;
+  regulation?: string;
+  curriculum?: string;
   timeSlots: RoutineTimeSlot[];
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
-const generateEmptySubject = (): RoutineSubject => ({ id: generateId(), subjectCode: '', subjectName: '', department: '' });
-const generateEmptySemester = (): RoutineSemester => ({ id: generateId(), semesterPhase: '', subjects: [generateEmptySubject()] });
-const generateEmptyTimeSlot = (): RoutineTimeSlot => ({ id: generateId(), timeShift: '10:00 AM', semesters: [generateEmptySemester()] });
-const generateEmptyDateBlock = (): RoutineDateBlock => ({ id: generateId(), examDate: '', day: '', timeSlots: [generateEmptyTimeSlot()] });
+const generateEmptySemester = (): RoutineSemester => ({ id: generateId(), semesterName: '1st Semester', departments: [] });
+const generateEmptySubject = (): RoutineSubject => ({ id: generateId(), subjectCode: '', subjectName: '', semesters: [] });
+const generateEmptyTimeSlot = (): RoutineTimeSlot => ({ id: generateId(), timeShift: '10:00 AM', subjects: [generateEmptySubject()] });
+const generateEmptyDateBlock = (): RoutineDateBlock => ({ 
+  id: generateId(), 
+  examDate: '', 
+  day: '', 
+  regulation: '2022',
+  curriculum: 'Diploma In Engineering',
+  timeSlots: [generateEmptyTimeSlot()] 
+});
 
 export default function AdminExamRoutines() {
   const [routines, setRoutines] = useState<any[]>([]);
@@ -43,8 +123,6 @@ export default function AdminExamRoutines() {
   const [isParsing, setIsParsing] = useState(false);
   
   // Global Meta State
-  const [globalRegulation, setGlobalRegulation] = useState('2022');
-  const [globalCurriculum, setGlobalCurriculum] = useState('Diploma in Engineering');
   const [globalPublishDate, setGlobalPublishDate] = useState('');
   
   // Hierarchical State
@@ -92,7 +170,7 @@ export default function AdminExamRoutines() {
             for (const item of chunk) {
               const newDocRef = doc(collection(db, 'examRoutines'));
               batch.set(newDocRef, {
-                curriculum: item.Curriculum || 'Diploma in Engineering',
+                curriculum: item.Curriculum || 'Diploma In Engineering',
                 regulation: item.Regulation || '2016 Probidhan',
                 semester: item.Semester || '1st Semester',
                 department: item.Department || 'Other',
@@ -171,53 +249,63 @@ export default function AdminExamRoutines() {
     }
   };
 
-  const handleUpdateSemester = (dIndex: number, tsIndex: number, sIndex: number, field: keyof RoutineSemester, value: string) => {
+  const handleUpdateSubject = (dIndex: number, tsIndex: number, subIndex: number, field: keyof RoutineSubject, value: any) => {
     const newBlocks = structuredClone(dateBlocks);
-    newBlocks[dIndex].timeSlots[tsIndex].semesters[sIndex] = { ...newBlocks[dIndex].timeSlots[tsIndex].semesters[sIndex], [field]: value };
-    setDateBlocks(newBlocks);
-  };
-
-  const addSemester = (dIndex: number, tsIndex: number) => {
-    const newBlocks = structuredClone(dateBlocks);
-    newBlocks[dIndex].timeSlots[tsIndex].semesters.push(generateEmptySemester());
-    setDateBlocks(newBlocks);
-  };
-
-  const removeSemester = (dIndex: number, tsIndex: number, sIndex: number) => {
-    if (confirm('Delete this semester and all its subjects?')) {
-      const newBlocks = structuredClone(dateBlocks);
-      newBlocks[dIndex].timeSlots[tsIndex].semesters.splice(sIndex, 1);
-      setDateBlocks(newBlocks);
-    }
-  };
-
-  const handleUpdateSubject = (dIndex: number, tsIndex: number, sIndex: number, subIndex: number, field: keyof RoutineSubject, value: string) => {
-    const newBlocks = structuredClone(dateBlocks);
-    newBlocks[dIndex].timeSlots[tsIndex].semesters[sIndex].subjects[subIndex] = { 
-      ...newBlocks[dIndex].timeSlots[tsIndex].semesters[sIndex].subjects[subIndex], 
+    newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex] = { 
+      ...newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex], 
       [field]: value 
     };
     setDateBlocks(newBlocks);
   };
 
-  const addSubject = (dIndex: number, tsIndex: number, sIndex: number) => {
+  const handleAddSemester = (dIndex: number, tsIndex: number, subIndex: number, semesterName: string) => {
     const newBlocks = structuredClone(dateBlocks);
-    newBlocks[dIndex].timeSlots[tsIndex].semesters[sIndex].subjects.push(generateEmptySubject());
+    const subject = newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex];
+    if (!subject.semesters.find(s => s.semesterName === semesterName)) {
+      subject.semesters.push({ id: generateId(), semesterName, departments: [] });
+      setDateBlocks(newBlocks);
+    }
+  };
+
+  const handleRemoveSemester = (dIndex: number, tsIndex: number, subIndex: number, semIndex: number) => {
+    const newBlocks = structuredClone(dateBlocks);
+    const subject = newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex];
+    subject.semesters.splice(semIndex, 1);
     setDateBlocks(newBlocks);
   };
 
-  const removeSubject = (dIndex: number, tsIndex: number, sIndex: number, subIndex: number) => {
+  const handleToggleSemesterDepartment = (dIndex: number, tsIndex: number, subIndex: number, semIndex: number, department: string) => {
     const newBlocks = structuredClone(dateBlocks);
-    const sem = newBlocks[dIndex].timeSlots[tsIndex].semesters[sIndex];
-    if (sem.subjects.length > 1) {
-      sem.subjects.splice(subIndex, 1);
+    const sem = newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex].semesters[semIndex];
+    if (sem.departments.includes(department)) {
+      sem.departments = sem.departments.filter(d => d !== department);
     } else {
-      if (newBlocks[dIndex].timeSlots[tsIndex].semesters.length > 1) {
-         newBlocks[dIndex].timeSlots[tsIndex].semesters.splice(sIndex, 1);
-      } else {
-        alert("Cannot remove the last subject of the last semester. Remove the Date or Time Block instead.");
-        return;
-      }
+      sem.departments.push(department);
+    }
+    setDateBlocks(newBlocks);
+  };
+
+  const handleUpdateSemesterDepartment = (dIndex: number, tsIndex: number, subIndex: number, semIndex: number, text: string) => {
+    const newBlocks = structuredClone(dateBlocks);
+    const subject = newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex];
+    subject.semesters[semIndex].departments = [text];
+    setDateBlocks(newBlocks);
+  };
+
+  const addSubject = (dIndex: number, tsIndex: number) => {
+    const newBlocks = structuredClone(dateBlocks);
+    newBlocks[dIndex].timeSlots[tsIndex].subjects.push(generateEmptySubject());
+    setDateBlocks(newBlocks);
+  };
+
+  const removeSubject = (dIndex: number, tsIndex: number, subIndex: number) => {
+    const newBlocks = structuredClone(dateBlocks);
+    const ts = newBlocks[dIndex].timeSlots[tsIndex];
+    if (ts.subjects.length > 1) {
+      ts.subjects.splice(subIndex, 1);
+    } else {
+      alert("Cannot remove the last subject. Remove the Time Block instead.");
+      return;
     }
     setDateBlocks(newBlocks);
   };
@@ -229,16 +317,13 @@ export default function AdminExamRoutines() {
       if (!dbk.examDate) valid = false;
       for (let ts of dbk.timeSlots) {
         if (!ts.timeShift) valid = false;
-        for (let sem of ts.semesters) {
-          if (!sem.semesterPhase) valid = false;
-          for (let sub of sem.subjects) {
-            if (!sub.subjectCode || !sub.subjectName) valid = false;
-          }
+        for (let sub of ts.subjects) {
+          if (!sub.subjectCode || !sub.subjectName || sub.semesters.length === 0) valid = false;
         }
       }
     }
     if (!valid) {
-      alert("Please fill all required fields (Date, Time, Semester, Subject Code, Subject Name).");
+      alert("Please fill all required fields (Date, Time, Subject Code, Subject Name, at least one Semester).");
       return;
     }
 
@@ -247,32 +332,29 @@ export default function AdminExamRoutines() {
       const batch = writeBatch(db);
       
       dateBlocks.forEach(dateBlock => {
-        // Format date string from YYYY-MM-DD to standard if needed, or preserve Date object
         const inputDate = dateBlock.examDate; 
         let formattedDate = inputDate; 
         if (inputDate.includes('-')) {
           const [yyyy, mm, dd] = inputDate.split('-');
-          formattedDate = `${dd}-${mm}-${yyyy}`; // Align to BTEB PDF format often logged as DD-MM-YYYY
+          formattedDate = `${dd}-${mm}-${yyyy}`; 
         }
 
         dateBlock.timeSlots.forEach(timeSlot => {
-          timeSlot.semesters.forEach(sem => {
-            sem.subjects.forEach(sub => {
-              const newDocRef = doc(collection(db, 'examRoutines'));
-              batch.set(newDocRef, {
-                curriculum: globalCurriculum,
-                regulation: globalRegulation.includes('Probidhan') ? globalRegulation : `${globalRegulation} Probidhan`,
-                semester: sem.semesterPhase,
-                department: sub.department || 'Other',
-                subjectName: sub.subjectName,
-                subjectCode: sub.subjectCode,
-                date: formattedDate,
-                day: dateBlock.day,
-                time: timeSlot.timeShift,
-                publishDate: globalPublishDate,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-              });
+          timeSlot.subjects.forEach(sub => {
+            const newDocRef = doc(collection(db, 'examRoutines'));
+            batch.set(newDocRef, {
+              curriculum: dateBlock.curriculum || 'Diploma In Engineering',
+              regulation: (dateBlock.regulation || '2022').includes('Probidhan') ? dateBlock.regulation : `${dateBlock.regulation} Probidhan`,
+              semester: sub.semesters.map(s => s.semesterName).join(', '),
+              department: sub.semesters.map(s => s.departments.join(', ') || 'All Departments').join(' | '),
+              subjectName: sub.subjectName,
+              subjectCode: sub.subjectCode,
+              date: formattedDate,
+              day: dateBlock.day,
+              time: timeSlot.timeShift,
+              publishDate: globalPublishDate,
+              createdAt: Date.now(),
+              updatedAt: Date.now()
             });
           });
         });
@@ -300,136 +382,6 @@ export default function AdminExamRoutines() {
        }
     }
   };
-
-  // Rendering table logic
-  const renderRoutineTableBody = () => {
-    const rows: JSX.Element[] = [];
-    
-    dateBlocks.forEach((dateBlock, dIndex) => {
-      const totalSubjectsInDateBlock = dateBlock.timeSlots.reduce((sum1, ts) => 
-        sum1 + ts.semesters.reduce((sum2, sem) => sum2 + sem.subjects.length, 0)
-      , 0);
-
-      dateBlock.timeSlots.forEach((timeSlot, tsIndex) => {
-        const totalSubjectsInTimeSlot = timeSlot.semesters.reduce((sum, sem) => sum + sem.subjects.length, 0);
-
-        timeSlot.semesters.forEach((sem, sIndex) => {
-          const totalSubjectsInSem = sem.subjects.length;
-
-          sem.subjects.forEach((sub, subIndex) => {
-            const isFirstSubInSem = subIndex === 0;
-            const isFirstSemInTime = sIndex === 0;
-            const isFirstTimeInDate = tsIndex === 0;
-
-            const isFirstRowInSem = isFirstSubInSem;
-            const isFirstRowInTime = isFirstSubInSem && isFirstSemInTime;
-            const isFirstRowInDate = isFirstSubInSem && isFirstSemInTime && isFirstTimeInDate;
-
-            rows.push(
-              <tr key={sub.id} className="border-b border-gray-200 hover:bg-slate-50/50 transition-colors">
-                {/* Date Block */}
-                {isFirstRowInDate && (
-                  <td rowSpan={totalSubjectsInDateBlock} className="border-r border-gray-200 p-3 sm:p-4 bg-white w-48 align-top group/date">
-                    <div className="flex flex-col gap-3 relative h-full">
-                      <input type="date" value={dateBlock.examDate} onChange={e => handleUpdateDateBlock(dIndex, 'examDate', e.target.value)} className="w-full p-2.5 border border-indigo-200 shadow-sm rounded-lg text-sm outline-none focus:border-indigo-500 font-bold bg-indigo-50/20" />
-                      <input type="text" placeholder="Day" value={dateBlock.day} readOnly className="w-full p-2.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg text-sm cursor-not-allowed outline-none font-medium" />
-                      <div className="mt-auto pt-2 border-t border-slate-100 flex flex-col gap-2">
-                        {dateBlocks.length > 1 && (
-                          <button onClick={() => removeDateBlock(dIndex)} className="text-[11px] text-red-600 font-semibold hover:text-red-800 flex items-center bg-red-50 p-1.5 rounded-md hover:bg-red-100 transition-colors w-full justify-center border border-red-100">
-                             <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove Date
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                )}
-                
-                {/* Time Slot */}
-                {isFirstRowInTime && (
-                  <td rowSpan={totalSubjectsInTimeSlot} className="border-r border-gray-200 p-3 sm:p-4 bg-white w-40 align-top group/time">
-                     <div className="flex flex-col gap-3 relative h-full">
-                       <input type="text" placeholder="e.g. 10:00 AM" value={timeSlot.timeShift} onChange={e => handleUpdateTimeSlot(dIndex, tsIndex, 'timeShift', e.target.value)} className="w-full p-2.5 border border-sky-200 bg-sky-50/30 rounded-lg text-sm outline-none focus:border-sky-500 shadow-sm" />
-                       
-                       <div className="mt-auto pt-2 border-t border-slate-100 flex flex-col gap-2">
-                         <button onClick={() => addTimeSlot(dIndex)} className="text-[11px] text-sky-600 font-semibold hover:text-sky-800 flex items-center w-full justify-center bg-sky-50 p-1.5 rounded-md hover:bg-sky-100 transition-colors border border-sky-100">
-                           <Plus className="w-3.5 h-3.5 mr-1" /> Add Time
-                         </button>
-                         {dateBlock.timeSlots.length > 1 && (
-                           <button onClick={() => removeTimeSlot(dIndex, tsIndex)} className="text-[11px] text-rose-600 font-semibold hover:text-rose-800 flex items-center w-full justify-center p-1.5 rounded-md hover:bg-rose-50 transition-colors">
-                             <Trash2 className="w-3 h-3 mr-1" /> Remove
-                           </button>
-                         )}
-                       </div>
-                     </div>
-                  </td>
-                )}
-
-                {/* Semester */}
-                {isFirstRowInSem && (
-                  <td rowSpan={totalSubjectsInSem} className="border-r border-gray-200 p-3 sm:p-4 bg-white w-48 align-top group/sem">
-                    <div className="flex flex-col gap-3 relative h-full">
-                      <select value={sem.semesterPhase} onChange={e => handleUpdateSemester(dIndex, tsIndex, sIndex, 'semesterPhase', e.target.value)} className="w-full p-2.5 border border-emerald-200 shadow-sm rounded-lg text-sm outline-none focus:border-emerald-500 bg-emerald-50/30 font-semibold cursor-pointer">
-                        <option value="" disabled>Select Semester</option>
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                        <option value="3rd Semester">3rd Semester</option>
-                        <option value="4th Semester">4th Semester</option>
-                        <option value="5th Semester">5th Semester</option>
-                        <option value="6th Semester">6th Semester</option>
-                        <option value="7th Semester">7th Semester</option>
-                        <option value="8th Semester">8th Semester</option>
-                      </select>
-                      
-                      <div className="mt-auto pt-2 border-t border-slate-100 flex flex-col gap-2">
-                        <button onClick={() => addSubject(dIndex, tsIndex, sIndex)} className="text-[12px] text-white bg-slate-800 hover:bg-slate-900 font-semibold flex items-center justify-center p-1.5 rounded-md transition-colors shadow-sm">
-                          <Plus className="w-3.5 h-3.5 mr-1" /> Subj/Row
-                        </button>
-                        
-                        {timeSlot.semesters.length - 1 === sIndex && (
-                          <button onClick={() => addSemester(dIndex, tsIndex)} className="text-[11px] text-emerald-700 font-semibold hover:text-emerald-900 flex items-center justify-center p-1.5 bg-emerald-50 border border-emerald-100 rounded-md hover:bg-emerald-100 transition-colors mt-1">
-                            <Plus className="w-3 h-3 mr-1" /> Semester
-                          </button>
-                        )}
-                         {timeSlot.semesters.length > 1 && (
-                           <button onClick={() => removeSemester(dIndex, tsIndex, sIndex)} className="text-[11px] text-orange-600 font-semibold hover:text-orange-800 flex items-center w-full justify-center p-1.5 rounded-md hover:bg-orange-50 transition-colors">
-                             <Trash2 className="w-3 h-3 mr-1" /> Remove
-                           </button>
-                         )}
-                      </div>
-                    </div>
-                  </td>
-                )}
-
-                {/* Subject Code */}
-                <td className="border-r border-gray-200 p-3 sm:p-4 w-32 align-top">
-                  <input type="text" placeholder="e.g. 66151" value={sub.subjectCode} onChange={e => handleUpdateSubject(dIndex, tsIndex, sIndex, subIndex, 'subjectCode', e.target.value)} className="w-full p-2.5 border border-gray-300 shadow-sm rounded-lg text-sm font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white" />
-                </td>
-
-                {/* Subject Name */}
-                <td className="border-r border-gray-200 p-3 sm:p-4 min-w-[200px] align-top">
-                  <textarea rows={2} placeholder="Subject Name" value={sub.subjectName} onChange={e => handleUpdateSubject(dIndex, tsIndex, sIndex, subIndex, 'subjectName', e.target.value)} className="w-full p-2.5 border border-gray-300 shadow-sm rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white resize-none font-medium"></textarea>
-                </td>
-
-                {/* Department */}
-                <td className="border-r border-gray-200 p-3 sm:p-4 w-40 align-top">
-                  <input type="text" placeholder="e.g. Civil" value={sub.department} onChange={e => handleUpdateSubject(dIndex, tsIndex, sIndex, subIndex, 'department', e.target.value)} className="w-full p-2.5 border border-gray-300 shadow-sm rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white" />
-                </td>
-
-                {/* Action */}
-                <td className="p-3 sm:p-4 text-center w-16 align-middle">
-                  <button onClick={() => removeSubject(dIndex, tsIndex, sIndex, subIndex)} className="p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 rounded-lg border border-rose-100 transition-all shadow-sm" title="Remove Subject Row">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            );
-          });
-        });
-      });
-    });
-
-    return rows;
-  }
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-6 lg:px-0 px-4">
@@ -475,47 +427,195 @@ export default function AdminExamRoutines() {
       </div>
 
       {showForm && (
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-3xl border border-gray-200 shadow-sm mb-6 flex flex-col gap-8 pb-32">
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-3xl border border-gray-200 shadow-sm mb-6 flex flex-col gap-6 pb-32">
           
-          <div className="bg-gradient-to-r from-slate-50 to-indigo-50 border border-indigo-100 p-5 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm">
+          <div className="bg-gradient-to-r from-slate-50 to-indigo-50 border border-indigo-100 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Default Regulation *</label>
-              <select value={globalRegulation} onChange={e => setGlobalRegulation(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white shadow-sm">
-                 <option value="2022">2022 Probidhan</option>
-                 <option value="2016">2016 Probidhan</option>
-                 <option value="2010">2010 Probidhan</option>
-              </select>
+              <h3 className="text-lg font-bold text-slate-800">Routine Builder</h3>
+              <p className="text-sm text-slate-500">Configure routine blocks below.</p>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Default Curriculum *</label>
-              <input type="text" value={globalCurriculum} onChange={e => setGlobalCurriculum(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 shadow-sm rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white" />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Publish Date (Optional)</label>
+            <div className="w-full md:w-1/3">
+              <label className="block text-sm font-bold text-slate-700 mb-2">Publish Date (Global)</label>
               <input type="date" value={globalPublishDate} onChange={e => setGlobalPublishDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 shadow-sm rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white" />
             </div>
           </div>
 
-          <div className="overflow-x-auto shadow-sm ring-1 ring-black ring-opacity-5 rounded-2xl pb-4">
-            <table className="w-full text-left border-collapse min-w-[1000px] xl:min-w-full">
-              <thead>
-                <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-200 tracking-wide">
-                  <th className="p-4 font-bold text-xs uppercase w-48 border-r border-slate-200">Date & Day</th>
-                  <th className="p-4 font-bold text-xs uppercase w-40 border-r border-slate-200">Time/Shift</th>
-                  <th className="p-4 font-bold text-xs uppercase w-48 border-r border-slate-200">Semester/Phase</th>
-                  <th className="p-4 font-bold text-xs uppercase w-32 border-r border-slate-200">Subject Code</th>
-                  <th className="p-4 font-bold text-xs uppercase min-w-[200px] border-r border-slate-200">Subject Name</th>
-                  <th className="p-4 font-bold text-xs uppercase w-40 border-r border-slate-200">Department</th>
-                  <th className="p-4 font-bold text-xs uppercase w-16 text-center">Row</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white">
-                {renderRoutineTableBody()}
-              </tbody>
-            </table>
+          <div className="space-y-8">
+            {dateBlocks.map((dateBlock, dIndex) => (
+              <div key={dateBlock.id} className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+                {/* Date Block Header - Metadata */}
+                <div className="bg-slate-50 border-b border-slate-200 p-4 sm:p-5 flex flex-col gap-4 relative">
+                  <div className="absolute top-4 right-4">
+                    {dateBlocks.length > 1 && (
+                      <button onClick={() => removeDateBlock(dIndex)} className="text-xs text-red-600 font-semibold hover:text-red-800 flex items-center bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors border border-red-100">
+                         <Trash2 className="w-4 h-4 mr-1.5" /> Remove Block
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pr-32">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Date *</label>
+                      <input type="date" value={dateBlock.examDate} onChange={e => handleUpdateDateBlock(dIndex, 'examDate', e.target.value)} className="w-full p-2.5 border border-indigo-200 shadow-sm rounded-lg text-sm outline-none focus:border-indigo-500 font-bold bg-indigo-50/20" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Day</label>
+                      <input type="text" placeholder="Auto-filled" value={dateBlock.day} readOnly className="w-full p-2.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg text-sm cursor-not-allowed outline-none font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Regulation *</label>
+                      <select value={dateBlock.regulation || '2022'} onChange={e => handleUpdateDateBlock(dIndex, 'regulation', e.target.value)} className="w-full p-2.5 border border-purple-200 shadow-sm rounded-lg text-sm outline-none focus:border-purple-500 font-semibold bg-purple-50/20">
+                         <option value="2022">2022 Probidhan</option>
+                         <option value="2016">2016 Probidhan</option>
+                         <option value="2010">2010 Probidhan</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Curriculum *</label>
+                      <select value={dateBlock.curriculum || 'Diploma In Engineering'} onChange={e => handleUpdateDateBlock(dIndex, 'curriculum', e.target.value)} className="w-full p-2.5 border border-orange-200 shadow-sm rounded-lg text-sm outline-none focus:border-orange-500 font-semibold bg-orange-50/20">
+                        <option value="Diploma In Engineering">Diploma In Engineering</option>
+                        <option value="Diploma In Engineering (Army)">Diploma In Engineering (Army)</option>
+                        <option value="Diploma In Engineering (Naval)">Diploma In Engineering (Naval)</option>
+                        <option value="Diploma In Textile Engineering">Diploma In Textile Engineering</option>
+                        <option value="Diploma In Tourism And Hospitality">Diploma In Tourism And Hospitality</option>
+                        <option value="Diploma In Agriculture">Diploma In Agriculture</option>
+                        <option value="Diploma In Fisheries">Diploma In Fisheries</option>
+                        <option value="Diploma In Forestry">Diploma In Forestry</option>
+                        <option value="Diploma In Livestock">Diploma In Livestock</option>
+                        <option value="Certificate In Marine Trade">Certificate In Marine Trade</option>
+                        <option value="Diploma In Medical Technology">Diploma In Medical Technology</option>
+                        <option value="Advanced Certificate Course">Advanced Certificate Course</option>
+                        <option value="National Skill Standard Basic Certificate Course">Basic Certificate Course</option>
+                        <option value="One Year Certificate Course">One Year Certificate Course</option>
+                        <option value="Diploma In Commerce">Diploma In Commerce</option>
+                        <option value="Certificate In Medical Ultrasound">Medical Ultrasound</option>
+                        <option value="HSC (Business Management)">HSC (Business Management)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Date Block Body - Time & Subjects Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[900px]">
+                    <thead>
+                      <tr className="bg-slate-100/50 text-slate-600 border-b border-slate-200 text-xs uppercase tracking-wide">
+                        <th className="p-3 font-bold w-40 border-r border-slate-200">Time/Shift</th>
+                        <th className="p-3 font-bold w-32 border-r border-slate-200">Subject Code</th>
+                        <th className="p-3 font-bold min-w-[200px] border-r border-slate-200">Subject Name</th>
+                        <th className="p-3 font-bold w-64 border-r border-slate-200">Semester & Departments</th>
+                        <th className="p-3 font-bold w-12 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {dateBlock.timeSlots.map((timeSlot, tsIndex) => {
+                        const totalSubjectsInTimeSlot = timeSlot.subjects.length;
+                        
+                        return timeSlot.subjects.map((sub, subIndex) => {
+                          const isFirstSubInTime = subIndex === 0;
+
+                          return (
+                            <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
+                              {/* Time Slot (Rowspan mapped) */}
+                              {isFirstSubInTime && (
+                                <td rowSpan={totalSubjectsInTimeSlot} className="border-r border-slate-200 p-3 sm:p-4 bg-white/50 w-40 align-top">
+                                  <div className="flex flex-col gap-3 relative h-full">
+                                    <input type="text" placeholder="e.g. 10:00 AM" value={timeSlot.timeShift} onChange={e => handleUpdateTimeSlot(dIndex, tsIndex, 'timeShift', e.target.value)} className="w-full p-2.5 border border-sky-200 bg-sky-50/30 rounded-lg text-sm outline-none focus:border-sky-500 shadow-sm" />
+                                    
+                                    <div className="mt-auto pt-2 border-t border-slate-100 flex flex-col gap-2">
+                                      <button onClick={() => addSubject(dIndex, tsIndex)} className="text-[12px] text-white bg-slate-800 hover:bg-slate-900 font-semibold flex items-center justify-center p-1.5 rounded-md transition-colors shadow-sm mb-1">
+                                        <Plus className="w-3 h-3 mr-1" /> Add Subject
+                                      </button>
+                                      <button onClick={() => addTimeSlot(dIndex)} className="text-[11px] text-sky-600 font-semibold hover:text-sky-800 flex items-center w-full justify-center bg-sky-50 p-1.5 rounded-md hover:bg-sky-100 transition-colors border border-sky-100">
+                                        <Plus className="w-3 h-3 mr-1" /> Add Time
+                                      </button>
+                                      {dateBlock.timeSlots.length > 1 && (
+                                        <button onClick={() => removeTimeSlot(dIndex, tsIndex)} className="text-[11px] text-rose-600 font-semibold hover:text-rose-800 flex items-center w-full justify-center p-1.5 rounded-md hover:bg-rose-50 transition-colors">
+                                          <Trash2 className="w-3 h-3 mr-1" /> Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              )}
+
+                              {/* Subject Code */}
+                              <td className="border-r border-slate-200 p-3 sm:p-4 w-32 align-top">
+                                <input type="text" placeholder="e.g. 66151" value={sub.subjectCode} onChange={e => handleUpdateSubject(dIndex, tsIndex, subIndex, 'subjectCode', e.target.value)} className="w-full p-2.5 border border-slate-300 shadow-sm rounded-lg text-sm font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white" />
+                              </td>
+
+                              {/* Subject Name */}
+                              <td className="border-r border-slate-200 p-3 sm:p-4 min-w-[200px] align-top">
+                                <textarea rows={2} placeholder="Subject Name" value={sub.subjectName} onChange={e => handleUpdateSubject(dIndex, tsIndex, subIndex, 'subjectName', e.target.value)} className="w-full p-2.5 border border-slate-300 shadow-sm rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white resize-none font-medium"></textarea>
+                              </td>
+
+                              {/* Semester & Departments */}
+                              <td className="border-r border-slate-200 p-3 sm:p-4 w-64 align-top bg-emerald-50/5">
+                                <div className="flex flex-col gap-3 h-full">
+                                  {sub.semesters.map((sem, semIndex) => (
+                                     <div key={sem.id} className="border border-emerald-200 bg-white rounded-lg p-2.5 shadow-sm relative group/sem">
+                                       <div className="font-bold text-sm text-emerald-800 flex justify-between items-center mb-2">
+                                         <span>{sem.semesterName}</span>
+                                         <button onClick={() => handleRemoveSemester(dIndex, tsIndex, subIndex, semIndex)} className="text-rose-400 hover:text-rose-600 transition-colors p-1 rounded-md hover:bg-rose-50" title="Remove Semester">
+                                           <X className="w-3.5 h-3.5" />
+                                         </button>
+                                       </div>
+                                       {dateBlock.curriculum && Object.keys(CURRICULUM_DEPARTMENTS).includes(dateBlock.curriculum) ? (
+                                         <div className="flex flex-col gap-2 mt-1">
+                                           <div className="flex flex-wrap gap-1">
+                                             {sem.departments.map(dept => (
+                                                <span key={dept} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-sky-50 text-sky-700 text-[10px] font-semibold rounded border border-sky-200" title={dept}>
+                                                  {dept.replace(/^\d+\s/, '').replace(' Technology', '')} 
+                                                  <button onClick={() => handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, dept)} className="hover:text-red-600"><X className="w-2.5 h-2.5" /></button>
+                                                </span>
+                                             ))}
+                                           </div>
+                                           <select value="" onChange={e => { if(e.target.value) handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, e.target.value); }} className="w-full px-1.5 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 transition-all bg-white font-medium cursor-pointer">
+                                              <option value="" disabled>+ Add Dept</option>
+                                              {(CURRICULUM_DEPARTMENTS[dateBlock.curriculum] || []).filter(d => !sem.departments.includes(d)).map(d => (
+                                                <option key={d} value={d}>{d}</option>
+                                              ))}
+                                           </select>
+                                         </div>
+                                       ) : (
+                                         <textarea
+                                           rows={1}
+                                           placeholder="e.g. Civil, Computer, Food"
+                                           value={sem.departments.join(', ')}
+                                           onChange={e => handleUpdateSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, e.target.value)}
+                                           className="w-full mt-1 px-2 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 transition-all bg-slate-50 resize-none font-medium"
+                                         />
+                                       )}
+                                     </div>
+                                  ))}
+                                  
+                                  <select value="" onChange={e => { if(e.target.value) handleAddSemester(dIndex, tsIndex, subIndex, e.target.value); }} className="w-full mt-auto p-2 border border-emerald-200 border-dashed rounded-lg text-xs font-semibold text-emerald-600 outline-none focus:border-emerald-500 tracking-wide bg-emerald-50/30 cursor-pointer">
+                                     <option value="" disabled>+ Add Semester</option>
+                                     {['1st Semester', '2nd Semester', '3rd Semester', '4th Semester', '5th Semester', '6th Semester', '7th Semester', '8th Semester'].filter(s => !sub.semesters.find(x => x.semesterName === s)).map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                     ))}
+                                  </select>
+                                </div>
+                              </td>
+
+                              {/* Action */}
+                              <td className="p-3 sm:p-4 text-center w-12 align-middle">
+                                <button onClick={() => removeSubject(dIndex, tsIndex, subIndex)} className="text-rose-400 hover:text-rose-600 transition-colors p-1" title="Remove Subject Row">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-slate-200 pt-6 mt-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-slate-200 pt-6 mt-2">
              <button 
                type="button" 
                onClick={addDateBlock}
