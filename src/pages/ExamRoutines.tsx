@@ -164,12 +164,12 @@ export default function ExamRoutines() {
       ) as HTMLElement;
       const origOverflow = tableWrapper ? tableWrapper.style.overflow : "";
 
-      // Force A4 size constraints (794x1123 at 96 DPI)
-      printContent.style.width = "794px";
-      printContent.style.maxWidth = "794px";
-      // We don't force minHeight to 1123px if the content is longer, 
+      // Force A4 size constraints (1123x794 at 96 DPI)
+      printContent.style.width = "1123px";
+      printContent.style.maxWidth = "1123px";
+      // We don't force minHeight to 794px if the content is longer, 
       // but let's keep it to keep layout consistent.
-      printContent.style.minHeight = "1123px";
+      printContent.style.minHeight = "794px";
       printContent.style.display = "flex";
       printContent.style.flexDirection = "column";
       printContent.style.borderRadius = "0px";
@@ -211,20 +211,9 @@ export default function ExamRoutines() {
       const generatedOn = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
       footer.innerHTML = `
-        <div class="flex flex-col gap-1 items-start w-1/3">
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span class="text-indigo-900 font-bold tracking-tight text-lg leading-none">BTEB Result Library</span>
-          </div>
-          <div class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-7">Generated Document</div>
-        </div>
+        <div class="w-1/3"></div>
         
-        <div class="w-1/3 text-center pb-1">
-          <div class="text-[11px] font-medium text-slate-400 mb-1">Generated On</div>
-          <div class="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">
-            ${generatedOn}
-          </div>
-        </div>
+        <div class="w-1/3"></div>
 
         <div class="w-1/3 flex justify-end">
           ${qrCodeImg ? `
@@ -246,7 +235,7 @@ export default function ExamRoutines() {
           pixelRatio: 2,
           backgroundColor: "#ffffff",
           style: {
-            width: "794px", // Force the exact width for rendering
+            width: "1123px", // Force the exact width for rendering
             fontFamily: "sans-serif",
           },
         });
@@ -258,8 +247,8 @@ export default function ExamRoutines() {
           link.click();
         } else if (type === 'pdf') {
           // Create PDF
-          // We know the canvas was rendered at 794px width. We need to measure its actual height.
-          // Since we set pixelRatio: 2, the image itself might be 1588px wide.
+          // We know the canvas was rendered at 1123px width. We need to measure its actual height.
+          // Since we set pixelRatio: 2, the image itself might be 2246px wide.
           
           const img = new Image();
           img.src = dataUrl;
@@ -268,14 +257,14 @@ export default function ExamRoutines() {
           });
           
           // Calculate height in mm keeping aspect ratio
-          // A4 width is 210mm
-          const pdfWidth = 210;
+          // A4 Landscape width is 297mm
+          const pdfWidth = 297;
           const pdfHeight = (img.height * pdfWidth) / img.width;
           
           const pdf = new jsPDF({
-            orientation: pdfHeight > 297 ? "portrait" : "portrait", // mostly portrait
+            orientation: pdfHeight > pdfWidth ? "portrait" : "landscape",
             unit: "mm",
-            format: [pdfWidth, Math.max(pdfHeight, 297)] // A4 or longer if content is longer
+            format: [pdfWidth, Math.max(pdfHeight, 210)] // A4 height is 210
           });
           
           pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);

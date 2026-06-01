@@ -171,7 +171,7 @@ export default function AdminExamRoutines() {
               const newDocRef = doc(collection(db, 'examRoutines'));
               batch.set(newDocRef, {
                 curriculum: item.Curriculum || 'Diploma In Engineering',
-                regulation: item.Regulation || '2016 Probidhan',
+                regulation: item.Regulation || '2016',
                 semester: item.Semester || '1st Semester',
                 department: item.Department || 'Other',
                 departmentCode: item.Department_Code || '',
@@ -344,7 +344,7 @@ export default function AdminExamRoutines() {
             const newDocRef = doc(collection(db, 'examRoutines'));
             batch.set(newDocRef, {
               curriculum: dateBlock.curriculum || 'Diploma In Engineering',
-              regulation: (dateBlock.regulation || '2022').includes('Probidhan') ? dateBlock.regulation : `${dateBlock.regulation} Probidhan`,
+              regulation: dateBlock.regulation || '2022',
               semester: sub.semesters.map(s => s.semesterName).join(', '),
               department: sub.semesters.map(s => s.departments.join(', ') || 'All Departments').join(' | '),
               subjectName: sub.subjectName,
@@ -465,9 +465,9 @@ export default function AdminExamRoutines() {
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Regulation *</label>
                       <select value={dateBlock.regulation || '2022'} onChange={e => handleUpdateDateBlock(dIndex, 'regulation', e.target.value)} className="w-full p-2.5 border border-purple-200 shadow-sm rounded-lg text-sm outline-none focus:border-purple-500 font-semibold bg-purple-50/20">
-                         <option value="2022">2022 Probidhan</option>
-                         <option value="2016">2016 Probidhan</option>
-                         <option value="2010">2010 Probidhan</option>
+                         <option value="2022">2022</option>
+                         <option value="2016">2016</option>
+                         <option value="2010">2010</option>
                       </select>
                     </div>
                     <div>

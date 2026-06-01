@@ -179,7 +179,7 @@ export default function AdminBooklists() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Regulation *</label>
               <select required value={regulation} onChange={e => setRegulation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                  <option value="">Select Regulation</option>
-                 {['2022', '2016', '2010'].map(r => <option key={r} value={r}>{r} Probidhan</option>)}
+                 {['2022', '2016', '2010'].map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             
@@ -289,7 +289,7 @@ export default function AdminBooklists() {
                             >
                               <div className="flex items-center gap-3">
                                 {expandedReg === `${curr}-${reg}` ? <FolderOpen className="w-5 h-5 text-indigo-400" /> : <Folder className="w-5 h-5 text-indigo-400" />}
-                                <span className="font-medium text-gray-700">{reg} Probidhan</span>
+                                <span className="font-medium text-gray-700">{reg}</span>
                               </div>
                             </button>
                             

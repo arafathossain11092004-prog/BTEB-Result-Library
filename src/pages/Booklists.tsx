@@ -271,20 +271,9 @@ export default function Booklists() {
       const generatedOn = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
       footer.innerHTML = `
-        <div class="flex flex-col gap-1 items-start w-1/3">
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span class="text-indigo-900 font-bold tracking-tight text-lg leading-none">BTEB Result Library</span>
-          </div>
-          <div class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-7">Generated Document</div>
-        </div>
+        <div class="w-1/3"></div>
         
-        <div class="w-1/3 text-center pb-1">
-          <div class="text-[11px] font-medium text-slate-400 mb-1">Generated On</div>
-          <div class="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">
-            ${generatedOn}
-          </div>
-        </div>
+        <div class="w-1/3"></div>
 
         <div class="w-1/3 flex justify-end">
           ${qrCodeImg ? `
