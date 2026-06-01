@@ -13,7 +13,7 @@ import {
   Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { toPng } from "html-to-image";
+import { toJpeg } from "html-to-image";
 import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import { useSearchParams } from "react-router-dom";
@@ -256,7 +256,7 @@ export default function Booklists() {
       printContent.appendChild(footer);
 
       try {
-        const dataUrl = await toPng(printContent, {
+        const dataUrl = await toJpeg(printContent, {
           quality: 1.0,
           pixelRatio: 2,
           backgroundColor: "#ffffff",
@@ -268,7 +268,7 @@ export default function Booklists() {
 
         const link = document.createElement("a");
         link.href = dataUrl;
-        link.download = `${activeDepartment}-${activeSemester}-Booklist.png`;
+        link.download = `${activeDepartment}-${activeSemester}-Booklist.jpg`;
         link.click();
       } catch (err) {
         console.error("Error generating screenshot", err);
@@ -514,15 +514,15 @@ export default function Booklists() {
                       </button>
                       <button
                         onClick={handlePrint}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95"
                       >
-                        <Printer className="w-4 h-4" /> Print
+                        <Printer className="w-4 h-4" /> Download PDF
                       </button>
                       <button
                         onClick={handleDownloadPNG}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95"
                       >
-                        <Download className="w-4 h-4" /> Download PNG
+                        <Download className="w-4 h-4" /> Download JPG
                       </button>
                     </div>
                   </div>
@@ -677,14 +677,10 @@ export default function Booklists() {
           aboutContent={
             <>
               <p>
-                When transitioning between semesters, knowing the exact subjects and their respective board codes is vital. 
-                Our library hosts the updated <strong>diploma 2022 regulation book list</strong> and the previous 2016 probidhan data to help 
-                polytechnic students find their academic materials easily.
+                Successfully navigating the transition between academic semesters requires a clear understanding of your mandatory subjects and their unique board codes. To streamline this process, our comprehensive database features the fully verified <strong>diploma 2022 regulation book list</strong> alongside historical 2016 probidhan data, ensuring every polytechnic student can access their precise academic requirements without confusion.
               </p>
               <p>
-                This interactive tool serves as a digital alternative to the official <strong>bteb syllabus pdf</strong>. 
-                Whether you need the <strong>diploma booklist</strong> for Computer technology, Civil engineering, 
-                or any other department out of the hundreds offered in Bangladesh, simply filter and generate your customized booklist instantly.
+                Functioning as a highly responsive digital substitute for the traditional <strong>bteb syllabus pdf</strong>, this dynamic platform allows you to instantly generate a structured <strong>diploma booklist</strong>. Whether you focus on Computer Architecture, Civil Engineering, or any specialized trade within Bangladesh, you can effortlessly filter, view, and organize your exact semester curriculum on demand.
               </p>
             </>
           }
@@ -699,7 +695,7 @@ export default function Booklists() {
             { q: "Can I share a precise booklist with my classmates?", a: "Absolutely. When you select a specific filter combination (e.g. Computer - 4th Semester - 2022), the URL updates automatically. You can copy that URL or click the 'Share' button to send it directly to your friends." },
             { q: "What should I do if a book code seems incorrect?", a: "While we strive for 100% accuracy, BTEB sometimes makes syllabus amendments. Always match the primary codes with your polytechnic institute's official notice board just to be sure." }
           ]}
-          keywordBoostText="Discover your exact diploma 2022 regulation book list right here. Find the bteb syllabus pdf alternatives, search your diploma booklist, and plan your engineering syllabus bd semester perfectly with BTEB Result Library."
+          keywordBoostText="Locate your precise diploma 2022 regulation book list effortlessly. Access highly structured bteb syllabus pdf alternatives, explore your customized diploma booklist, and strategically map out your engineering syllabus bd requirements exclusively at BTEB Result Library."
         />
     </div>
   );

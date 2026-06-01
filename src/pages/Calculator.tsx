@@ -654,14 +654,10 @@ export default function Calculator() {
           aboutContent={
             <>
               <p>
-                Calculating CGPA manually under the BTEB grading system is notoriously difficult due to the complex 
-                percentage conversions known as the pro-rata system. Our <strong>diploma cgpa calculator</strong> automates 
-                this completely, allowing you to instantly determine your exact cumulative grade.
+                Manually computing cumulative grades under the BTEB grading matrix can be highly prone to errors, primarily due to the intricate percentage distributions of the pro-rata system. Our advanced <strong>diploma cgpa calculator</strong> performs this complex mathematical process automatically, enabling students to evaluate their precise cumulative academic standing within seconds.
               </p>
               <p>
-                Whether you fall under the 2010, 2016, or the new 2022 regulation, this <strong>bteb result calculator</strong> applies 
-                the exact <strong>bteb pro-rata calculation</strong> weights per semester. Just use the auto-fill feature or enter your SGPA for each semester 
-                and get a 100% precise final score in seconds.
+                Designed to fully accommodate the 2010, 2016, and the latest 2022 probidhan, this <strong>bteb result calculator</strong> integrates the official <strong>bteb pro-rata calculation</strong> weightages for every individual semester. You can input your SGPAs manually or leverage our automated data retrieval feature to guarantee a flawlessly accurate final calculation without any manual guesswork.
               </p>
             </>
           }
@@ -676,7 +672,7 @@ export default function Calculator() {
             { q: "What is the passing CGPA for diploma engineering?", a: "To successfully pass and receive your diploma certificate, you need to maintain a minimum CGPA of 2.00 out of 4.00, and clear all semester subjects." },
             { q: "Can this tool calculate incomplete semesters?", a: "Yes. It calculates your current average score based only on the semesters you have completed, showing your ongoing CGPA progress accurately." }
           ]}
-          keywordBoostText="Never struggle with manual math again. Use our diploma cgpa calculator bd to track your academic progress. This bteb result calculator simplifies accurate bteb pro-rata calculation for polytechnic students."
+          keywordBoostText="Eliminate the complexity of manual grading equations. Rely on our sophisticated diploma cgpa calculator bd to continuously monitor your educational progress. This advanced bteb result calculator perfectly implements official bteb pro-rata calculation standards for all engineering students."
         />
     </div>
   );

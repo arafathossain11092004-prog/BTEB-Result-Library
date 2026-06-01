@@ -105,29 +105,31 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <div className="text-left z-10 mt-8 lg:mt-0">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-700 text-sm font-semibold mb-8 shadow-sm"
-            >
-              <Zap className="w-4 h-4 fill-amber-400 text-amber-500" /> Ultra-Low Latency Result Engine
-            </motion.div>
+            <div className="flex justify-center lg:justify-start">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-700 text-sm font-semibold mb-8 shadow-sm"
+              >
+                <Zap className="w-4 h-4 fill-amber-400 text-amber-500" /> Ultra-Low Latency Result Engine
+              </motion.div>
+            </div>
             
             <motion.h1 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.1] mb-6 max-w-2xl"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.2] lg:leading-[1.1] mb-6 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left"
             >
-              Check Your Diploma Result <br className="hidden lg:block"/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Instantly.</span>
+              Check Your Diploma Result <br className="hidden sm:block"/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Instantly.</span>
             </motion.h1>
             
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="text-lg md:text-xl text-slate-600 max-w-xl mb-10 leading-relaxed font-medium"
+              className="text-base sm:text-lg md:text-xl text-slate-600 max-w-xl mx-auto lg:mx-0 mb-10 leading-relaxed font-medium text-center lg:text-left"
             >
               Skip the server crashes. The fastest, most reliable portal for Bangladeshi polytechnic students to check their diploma results, calculate CGPA, and analyze academic performance.
             </motion.p>
@@ -136,10 +138,11 @@ export default function Home() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
+              className="flex justify-center lg:justify-start"
             >
               <button 
                 onClick={() => navigate('/individual-results')}
-                className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_-10px_rgba(37,99,235,0.5)]"
+                className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_-10px_rgba(37,99,235,0.5)]"
               >
                 Check Your Result <ArrowRight className="w-5 h-5" />
               </button>
@@ -432,12 +435,12 @@ export default function Home() {
       <article className="w-full py-20 px-4 sm:px-6 bg-white border-t border-slate-100">
         <div className="max-w-4xl mx-auto prose prose-slate prose-lg text-slate-600 relative">
           <div className="absolute top-0 left-0 w-12 h-1 bg-blue-500 rounded-full mb-8"></div>
-          <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-6">Complete Archive for BTEB Result Bangladesh</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-6">Your Ultimate BTEB Result Library in Bangladesh</h2>
           <p className="mb-6">
-            Welcome to the most modern and efficient framework designed for checking your <strong>Diploma Result</strong>. Finding out your <strong>Diploma in Engineering Result</strong> does not need to involve frozen browsers, timed-out connections, or confusing layouts. Our lightweight <strong>Polytechnic Result Checker BD</strong> infrastructure directly retrieves your academic grades from secure databases without excessive graphical overhead.
+            Welcome to the premier digital platform specifically engineered to provide instant access to your <strong>Diploma Result</strong>. The process of searching for a <strong>Diploma in Engineering Result</strong> is now entirely seamless, eliminating the common frustrations of unresponsive servers, extensive loading times, and cluttered interfaces. Operating under the <strong>BTEB Result Library</strong> banner, our streamlined <strong>Polytechnic Result Checker BD</strong> connects directly to secure data repositories, guaranteeing fast and accurate grade retrieval.
           </p>
           <p className="mb-6">
-            Beyond standard results, students can use our robust <strong>CGPA Calculator Bangladesh</strong>, perfectly calibrated for current polytechnic and textile curriculums. From detailed historical archives to group semester analysis, experience the fastest online platform built exclusively for Bangladeshi technical education board students to access their <strong>BTEB Diploma Result</strong>.
+            In addition to rapid result checking, our platform features a highly accurate <strong>CGPA Calculator Bangladesh</strong>, precisely formulated to align with the latest polytechnic and textile engineering syllabus requirements. Whether you need to verify individual performance, analyze group semester outcomes, or explore extensive historical records, our platform stands as the most reliable, high-speed solution exclusively developed for students checking their <strong>BTEB Diploma Result</strong>.
           </p>
         </div>
       </article>

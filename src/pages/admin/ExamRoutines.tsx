@@ -351,13 +351,14 @@ export default function AdminExamRoutines() {
                 <th className="py-3 px-4 font-medium">Department</th>
                 <th className="py-3 px-4 font-medium">Subject</th>
                 <th className="py-3 px-4 font-medium hidden sm:table-cell">Code</th>
+                <th className="py-3 px-4 font-medium hidden sm:table-cell">Publish Date</th>
                 <th className="py-3 px-4 font-medium">Date, Day & Time</th>
                 <th className="py-3 px-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {routines.length === 0 ? (
-                 <tr><td colSpan={8} className="py-8 text-center text-gray-500">No routines found.</td></tr>
+                 <tr><td colSpan={9} className="py-8 text-center text-gray-500">No routines found.</td></tr>
               ) : (
                 routines.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
@@ -370,6 +371,7 @@ export default function AdminExamRoutines() {
                     </td>
                     <td className="py-3 px-4 text-gray-900">{r.subjectName}</td>
                     <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{r.subjectCode}</td>
+                    <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{r.publishDate || 'N/A'}</td>
                     <td className="py-3 px-4 text-gray-600">
                       {r.date} {r.day && `(${r.day})`} <span className="text-gray-400">at</span> {r.time}
                     </td>

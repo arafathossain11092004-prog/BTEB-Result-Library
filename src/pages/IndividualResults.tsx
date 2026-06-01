@@ -272,16 +272,37 @@ export default function IndividualResults() {
           aboutContent={
             <>
               <p>
-                Checking your <strong>diploma result</strong> shouldn't be a hassle. During results publication days, 
-                the official board websites often face heavy traffic, making it difficult for polytechnic students 
-                in Bangladesh to view their grades. Our <strong>BTEB result online</strong> platform solves this by 
-                providing a lightning-fast, cached infrastructure.
+                Successfully retrieving your <strong>diploma result</strong> should be straightforward and immediate. During peak result publication times, official board portals frequently experience crippling traffic overloads, making it incredibly frustrating for polytechnic students across Bangladesh to access their grades. Our dedicated <strong>BTEB result online</strong> platform at BTEB Result Library resolves this persistent issue by utilizing a high-speed, intelligently cached architecture.
               </p>
               <p>
-                Enter your board roll number, select your curriculum and regulation, and get your <strong>polytechnic result BD</strong> 
-                instantly. We cover 2010, 2016, and 2022 probidhan across all semesters. Stay ahead and use our integrated <strong>CGPA calculator Bangladesh</strong> 
-                to analyze your academic performance precisely.
+                Simply input your six-digit board roll, specify your exact curriculum and syllabus regulation, and access your <strong>polytechnic result BD</strong> in milliseconds. Our comprehensive database supports the 2010, 2016, and 2022 probidhan across every academic semester. Once you have your grades, seamlessly transition to our advanced <strong>CGPA calculator Bangladesh</strong> to accurately measure and record your overall academic trajectory.
               </p>
+              <h3 className="text-xl font-bold text-slate-900 mt-8 mb-4">Available Examination Types</h3>
+              <p className="mb-4 text-slate-600">
+                We support results for all BTEB examinations. Select the correct exam type before searching:
+              </p>
+              <div className="not-prose">
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 list-none pl-0 mt-4 text-slate-700 font-medium">
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Engineering</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Engineering (Army)</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Engineering (Naval)</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Textile Engineering</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Tourism And Hospitality</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Agriculture</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Fisheries</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Forestry</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Livestock</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Certificate In Marine Trade</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Medical Technology</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Advanced Certificate Course</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>National Skill Standard Basic Certificate Course</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>One Year Certificate Course</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Diploma In Commerce</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>Certificate In Medical Ultrasound</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>HSC (Business Management)</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>HSC (Vocational)</li>
+                </ul>
+              </div>
             </>
           }
           howItWorksSteps={[
@@ -296,7 +317,7 @@ export default function IndividualResults() {
             { q: "What should I do if the official BTEB server is down?", a: "Our platform uses optimized caching and multiple nodes. If the main server is busy, you can still check your result here smoothly without waiting." },
             { q: "When are diploma results usually published?", a: "BTEB typically publishes semester-final results 4-6 weeks after the board exams are completed. Keep an eye on our Notice section for exact dates." }
           ]}
-          keywordBoostText="Access your diploma result bd instantly. The most reliable platform to check bteb result 2026 for all polytechnic institutes. We provide the fastest polytechnic result bangladesh service alongside a smart cgpa calculator bd for accurate tracking."
+          keywordBoostText="Instantly retrieve your diploma result bd through our high-speed checker. BTEB Result Library is recognized as the most dependable portal to verify your bteb result 2026 for every polytechnic institute. Enjoy the quickest polytechnic result bangladesh tracking system, complemented by a highly accurate cgpa calculator bd for comprehensive academic monitoring."
         />
     </div>
   );

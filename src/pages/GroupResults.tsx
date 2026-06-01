@@ -305,14 +305,10 @@ export default function GroupResults() {
           aboutContent={
             <>
               <p>
-                Checking results one by one is time-consuming, especially for teachers, class representatives, or batchmates. 
-                Our <strong>bteb group result</strong> tool simplifies this process by allowing you to enter a start and end roll number.
-                Instantly generate the <strong>institute wise result pdf</strong> layout for your entire department or batch.
+                Manually searching for individual grades is highly inefficient for educators, class representatives, and students managing batch records. Our dedicated <strong>bteb group result</strong> utility directly addresses this by enabling bulk querying using a specified start and end roll sequence. You can effortlessly compile and structure an <strong>institute wise result pdf</strong> overview for your entire class or department within seconds.
               </p>
               <p>
-                This <strong>Group Result</strong> feature is a powerful utility designed for 
-                quick performance review. Get an aggregated view of grades across all students in a specified class range, 
-                detecting failed subjects and overall passing rates at a single glance.
+                The <strong>Group Result</strong> capability serves as an essential analytical tool for academic performance evaluation. It delivers a comprehensive, aggregated display of semester scores across a specified student block, making it simple to identify subject failure trends, average pass rates, and overall class standing in one unified dashboard.
               </p>
             </>
           }
@@ -327,7 +323,7 @@ export default function GroupResults() {
             { q: "Can I download the institute wise result PDF?", a: "Yes, you can use the browser's print feature (Ctrl+P) on the result page to save the fetched group results as a structured PDF." },
             { q: "What is the maximum number of rolls I can check at once?", a: "To ensure fast server response times and prevent rate-limiting, you can check a maximum of 100 continuous roll numbers at a single time." }
           ]}
-          keywordBoostText="Get your polytechnic group result instantly online. Whether you want an institute wise result pdf perspective or a quick batch overview, our bteb group result tool is built for high speed and accuracy."
+          keywordBoostText="Access your comprehensive polytechnic group result immediately. If you need a structured institute wise result pdf layout or a swift batch performance breakdown, our specialized bteb group result system is engineered for maximum speed, reliability, and precision."
         />
     </div>
   );

@@ -14,9 +14,10 @@ export default function Layout() {
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
 
-  // Close mobile menu when route changes
-  useState(() => {
+  // Close mobile menu when route changes and scroll to top
+  useEffect(() => {
     setIsMobileMenuOpen(false);
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -157,64 +158,64 @@ export default function Layout() {
             </div>
           </div>
         </div>
+
+        {/* Mobile nav Dropdown */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 overflow-hidden shadow-lg z-50"
+            >
+              <div className="px-4 pt-2 pb-4 space-y-1">
+                <Link onClick={() => setIsMobileMenuOpen(false)} to="/individual-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <Search className="w-5 h-5 text-gray-400" /> Individual Results
+                </Link>
+                <Link onClick={() => setIsMobileMenuOpen(false)} to="/group-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <Users className="w-5 h-5 text-gray-400" /> Group Results
+                </Link>
+                <Link onClick={() => setIsMobileMenuOpen(false)} to="/calculator" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <Calculator className="w-5 h-5 text-gray-400" /> CGPA Calculator
+                </Link>
+                <Link onClick={() => setIsMobileMenuOpen(false)} to="/exam-routines" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <CalendarRange className="w-5 h-5 text-gray-400" /> Exam Routines
+                </Link>
+                <Link onClick={() => setIsMobileMenuOpen(false)} to="/booklists" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                  <BookCopy className="w-5 h-5 text-gray-400" /> Booklists
+                </Link>
+                
+                <div className="border-t border-gray-100 my-2 pt-2">
+                  {!user && (
+                     <Link onClick={() => setIsMobileMenuOpen(false)} to="/admin/login" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                       <Lock className="w-5 h-5 text-gray-400" /> Admin Login
+                     </Link>
+                  )}
+                  {isAdmin && (
+                    <Link onClick={() => setIsMobileMenuOpen(false)} to="/admin" className="text-blue-700 bg-blue-50 block px-3 py-2 rounded-md text-base font-bold flex items-center gap-2">
+                      <LayoutDashboard className="w-5 h-5" /> Admin Panel
+                    </Link>
+                  )}
+                  {user && (
+                    <button onClick={async () => { 
+                      try { 
+                        await signOut(auth); 
+                        setIsMobileMenuOpen(false); 
+                        window.location.href = '/admin/login';
+                      } catch(e) {
+                        console.error(e);
+                      }
+                    }} className="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
+                      <LogOut className="w-5 h-5" /> Sign out
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
       
-      {/* Mobile nav Dropdown */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-white border-b border-gray-200 overflow-hidden"
-          >
-            <div className="px-4 pt-2 pb-4 space-y-1">
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/individual-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <Search className="w-5 h-5 text-gray-400" /> Individual Results
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/group-results" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <Users className="w-5 h-5 text-gray-400" /> Group Results
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/calculator" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-gray-400" /> CGPA Calculator
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/exam-routines" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <CalendarRange className="w-5 h-5 text-gray-400" /> Exam Routines
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/booklists" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                <BookCopy className="w-5 h-5 text-gray-400" /> Booklists
-              </Link>
-              
-              <div className="border-t border-gray-100 my-2 pt-2">
-                {!user && (
-                   <Link onClick={() => setIsMobileMenuOpen(false)} to="/admin/login" className="text-gray-700 hover:bg-blue-50 hover:text-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                     <Lock className="w-5 h-5 text-gray-400" /> Admin Login
-                   </Link>
-                )}
-                {isAdmin && (
-                  <Link onClick={() => setIsMobileMenuOpen(false)} to="/admin" className="text-blue-700 bg-blue-50 block px-3 py-2 rounded-md text-base font-bold flex items-center gap-2">
-                    <LayoutDashboard className="w-5 h-5" /> Admin Panel
-                  </Link>
-                )}
-                {user && (
-                  <button onClick={async () => { 
-                    try { 
-                      await signOut(auth); 
-                      setIsMobileMenuOpen(false); 
-                      window.location.href = '/admin/login';
-                    } catch(e) {
-                      console.error(e);
-                    }
-                  }} className="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2">
-                    <LogOut className="w-5 h-5" /> Sign out
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:py-0 print:px-0 print:max-w-none w-full">
         <motion.div
           initial={{ opacity: 0, y: 10 }}

@@ -12,7 +12,7 @@ import {
   Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { toPng } from "html-to-image";
+import { toJpeg } from "html-to-image";
 import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import SeoBlocks from "../components/SeoBlocks";
@@ -197,7 +197,7 @@ export default function ExamRoutines() {
       printContent.appendChild(footer);
 
       try {
-        const dataUrl = await toPng(printContent, {
+        const dataUrl = await toJpeg(printContent, {
           quality: 1.0,
           pixelRatio: 2,
           backgroundColor: "#ffffff",
@@ -209,7 +209,7 @@ export default function ExamRoutines() {
 
         const link = document.createElement("a");
         link.href = dataUrl;
-        link.download = `${activeDepartment}-${activeSemester}-Routine.png`;
+        link.download = `${activeDepartment}-${activeSemester}-Routine.jpg`;
         link.click();
       } catch (err) {
         console.error("Error generating screenshot", err);
@@ -447,15 +447,15 @@ export default function ExamRoutines() {
                     <div className="flex flex-wrap w-full sm:w-auto gap-2">
                       <button
                         onClick={handlePrint}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95"
                       >
-                        <Printer className="w-4 h-4" /> Print
+                        <Printer className="w-4 h-4" /> Download PDF
                       </button>
                       <button
                         onClick={handleDownloadPNG}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95"
                       >
-                        <Download className="w-4 h-4" /> Download PNG
+                        <Download className="w-4 h-4" /> Download JPG
                       </button>
                     </div>
                   </div>
@@ -643,15 +643,10 @@ export default function ExamRoutines() {
           aboutContent={
             <>
               <p>
-                Staying updated with the latest exam schedule is crucial for exam preparation. 
-                Our platform provides the most accessible interface to find the <strong>bteb exam routine 2026</strong>. 
-                Unlike scrolling through confusing official PDFs that contain hundreds of pages, we have digitized the 
-                <strong>board exam routine</strong> so you only see what matters to you.
+                Maintaining awareness of official assessment schedules is fundamentally important for academic success. Our platform features an incredibly streamlined interface to navigate the finalized <strong>bteb exam routine 2026</strong>. Rather than forcing students to interpret massive, multi-page official documents, we convert the entire <strong>board exam routine</strong> into a dynamic, filterable table tailored specifically to your needs.
               </p>
               <p>
-                Select your specific technology (e.g., Computer, Civil) and semester, and we instantly generate a clean, 
-                readable <strong>diploma routine pdf</strong> format. You can print it directly or download a PNG image 
-                to use as your mobile wallpaper during exam season.
+                Simply specify your core engineering technology or trade, along with your current semester, to auto-generate a highly organized and visually pristine <strong>diploma routine pdf</strong>. You can instantly execute a print command or securely save it as an image to use for rapid reference throughout your final assessment period.
               </p>
             </>
           }
@@ -666,7 +661,7 @@ export default function ExamRoutines() {
             { q: "How do I download the diploma routine in PDF format?", a: "After filtering your curriculum, select your department and semester, and click the 'Print' button. You can then select 'Save as PDF' on your browser's print dialog." },
             { q: "What should I do if my exam routine changes?", a: "Stay connected with this page. If the BTEB announces a date change or a postponed exam, we update the routine database immediately." }
           ]}
-          keywordBoostText="Stay ready for finals with our bteb exam routine 2026 directory. Download your custom diploma routine pdf easily. Everything related to board exam routines is organized here for you."
+          keywordBoostText="Prepare for critical assessments utilizing our updated bteb exam routine 2026 directory. Seamlessly curate and download your customized diploma routine pdf. Every crucial detail concerning your board exam routine is definitively cataloged here for optimal accessibility."
         />
     </div>
   );

@@ -4,7 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
 import download from 'downloadjs';
 import { Helmet } from 'react-helmet-async';
@@ -434,8 +434,9 @@ export default function ResultView() {
     }
     
     try {
-      const dataUrl = await toPng(element, {
+      const dataUrl = await toJpeg(element, {
         cacheBust: true,
+        quality: 1.0,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         filter: (node) => {
@@ -446,7 +447,7 @@ export default function ResultView() {
         }
       });
       if (footerElement) footerElement.style.display = '';
-      download(dataUrl, `Result_${roll || instituteCode || 'group'}.png`);
+      download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
     } catch(err) {
       if (footerElement) footerElement.style.display = '';
       console.error("Failed to generate image:", err);
@@ -541,15 +542,15 @@ export default function ResultView() {
             <>
               <button 
                 onClick={handleDownload}
-                className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-900 hover:bg-black transition-colors shadow-md shadow-slate-900/10"
+                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95"
               >
-                <Download className="w-4 h-4 mr-2 hidden sm:block" /> {type === 'group' ? 'Download CSV' : 'Download Image'}
+                <Download className="w-5 h-5 mr-0 sm:mr-2" /> <span className="hidden sm:inline">{type === 'group' ? 'Download CSV' : 'Download JPG'}</span>
               </button>
               <button 
                 onClick={handlePrint}
-                className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
+                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95"
               >
-                <Printer className="w-4 h-4 mr-2 hidden sm:block" /> Print
+                <Printer className="w-5 h-5 mr-0 sm:mr-2" /> <span className="hidden sm:inline">Download PDF</span>
               </button>
             </>
           )}
@@ -868,15 +869,15 @@ export default function ResultView() {
                              <div className="space-y-3">
                                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Result Files ({institutePDFs.length})</h4>
                                 {institutePDFs.map((pdf, pidx) => (
-                                  <a key={pidx} href={pdf} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white border border-gray-200 p-3 rounded-xl hover:border-indigo-400 hover:shadow text-left transition-all group">
-                                     <div className="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-red-500 group-hover:text-white transition-colors">
-                                       <Folder className="w-5 h-5" />
+                                  <a key={pidx} href={pdf} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-gradient-to-r from-red-50 to-rose-50 border border-red-100 p-4 rounded-xl hover:from-red-100 hover:to-rose-100 hover:border-red-200 hover:shadow-md hover:-translate-y-0.5 text-left transition-all group">
+                                     <div className="w-12 h-12 bg-white text-red-500 rounded-lg flex items-center justify-center shrink-0 shadow-sm border border-red-50 group-hover:scale-110 transition-transform">
+                                       <Folder className="w-6 h-6 fill-red-50" />
                                      </div>
                                      <div className="flex-1 overflow-hidden">
-                                       <div className="font-medium text-sm text-gray-800 truncate">{pdf.split('/').pop()}</div>
-                                       <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">Official BTEB Document</div>
+                                       <div className="font-bold text-gray-900 truncate">{pdf.split('/').pop()}</div>
+                                       <div className="text-xs text-red-500 mt-1 uppercase tracking-wider font-semibold">Official PDF Document</div>
                                      </div>
-                                     <div className="text-gray-300 group-hover:text-indigo-600 transition-colors">
+                                     <div className="bg-white border border-gray-100 text-blue-600 p-2.5 rounded-full shadow-sm group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white transition-colors">
                                        <Download className="w-4 h-4" />
                                      </div>
                                   </a>
