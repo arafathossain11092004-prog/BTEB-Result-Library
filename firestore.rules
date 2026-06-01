@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerifiedUser() { return isSignedIn(); }
+    
+    function isBootstrappedAdmin() { return isVerifiedUser() && (request.auth.token.email == 'helloimarafat@gmail.com' || request.auth.token.email == 'btebbd@bteb.gov.bd'); }
+    function isEffectiveAdmin() { 
+      return isBootstrappedAdmin() || 
+             (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))); 
+    }
+
+    function isValidResult(data) {
+      return data.keys().hasAll(['rollNumber', 'instituteName', 'createdAt', 'updatedAt'])
+        && data.keys().size() >= 4 && data.keys().size() <= 15
+        && data.rollNumber is string && data.rollNumber.size() <= 100
+        && data.instituteName is string && data.instituteName.size() <= 200
+        && data.createdAt is number
+        && data.updatedAt is number
+        && (data.get('instituteCode', '') is string)
+        && (data.get('curriculum', '') is string)
+        && (data.get('regulation', '') is string)
+        && (data.get('semester1', '') is string)
+        && (data.get('semester2', '') is string)
+        && (data.get('semester3', '') is string)
+        && (data.get('semester4', '') is string)
+        && (data.get('semester5', '') is string)
+        && (data.get('semester6', '') is string)
+        && (data.get('semester7', '') is string)
+        && (data.get('semester8', '') is string);
+    }
+
+    function isValidExamRoutine(data) {
+      return data.keys().hasAll(['semester', 'subjectName', 'subjectCode', 'date', 'time', 'createdAt', 'updatedAt'])
+        && data.keys().size() >= 7 && data.keys().size() <= 12
+        && data.semester is string && data.semester.size() <= 100
+        && data.subjectName is string && data.subjectName.size() <= 200
+        && data.subjectCode is string && data.subjectCode.size() <= 100
+        && data.date is string && data.date.size() <= 100
+        && data.time is string && data.time.size() <= 100
+        && data.createdAt is number
+        && data.updatedAt is number
+        && (data.get('department', '') is string)
+        && (data.get('departmentCode', '') is string)
+        && (data.get('day', '') is string)
+        && (data.get('curriculum', '') is string)
+        && (data.get('regulation', '') is string);
+    }
+
+    function isValidNotice(data) {
+      return data.keys().hasAll(['title', 'pdfUrl', 'storagePath', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 5
+        && data.title is string && data.title.size() <= 200
+        && data.pdfUrl is string && data.pdfUrl.size() <= 1000
+        && data.storagePath is string && data.storagePath.size() <= 500
+        && data.createdAt is number
+        && data.updatedAt is number;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['updatedAt'])
+        && data.keys().size() >= 1 && data.keys().size() <= 3
+        && data.updatedAt is number
+        && (data.get('bannerUrl', '') is string) && data.get('bannerUrl', '').size() <= 1000
+        && (data.get('bannerLink', '') is string) && data.get('bannerLink', '').size() <= 1000;
+    }
+
+    function isValidBooklist(data) {
+      return data.keys().hasAll(['semester', 'subjectName', 'subjectCode', 'createdAt', 'updatedAt'])
+        && data.keys().size() >= 5 && data.keys().size() <= 10
+        && data.semester is string && data.semester.size() <= 100
+        && data.subjectName is string && data.subjectName.size() <= 200
+        && data.subjectCode is string && data.subjectCode.size() <= 100
+        && data.createdAt is number
+        && data.updatedAt is number
+        && (data.get('department', '') is string)
+        && (data.get('departmentCode', '') is string)
+        && (data.get('curriculum', '') is string)
+        && (data.get('regulation', '') is string);
+    }
+
+    match /results/{resultId} {
+      allow get: if isValidId(resultId);
+      allow list: if true; 
+      
+      allow create: if isEffectiveAdmin()
+                    && isValidId(resultId)
+                    && isValidResult(incoming());
+                    
+      allow update: if isEffectiveAdmin()
+                    && isValidId(resultId)
+                    && isValidResult(incoming());
+                    
+      allow delete: if isEffectiveAdmin() && isValidId(resultId);
+    }
+
+    match /examRoutines/{routineId} {
+      allow get: if isValidId(routineId);
+      allow list: if true; 
+      
+      allow create: if isEffectiveAdmin()
+                    && isValidId(routineId)
+                    && isValidExamRoutine(incoming());
+                    
+      allow update: if isEffectiveAdmin()
+                    && isValidId(routineId)
+                    && isValidExamRoutine(incoming());
+                    
+      allow delete: if isEffectiveAdmin() && isValidId(routineId);
+    }
+
+    match /booklists/{booklistId} {
+      allow get: if isValidId(booklistId);
+      allow list: if true; 
+      
+      allow create: if isEffectiveAdmin()
+                    && isValidId(booklistId)
+                    && isValidBooklist(incoming());
+                    
+      allow update: if isEffectiveAdmin()
+                    && isValidId(booklistId)
+                    && isValidBooklist(incoming());
+                    
+      allow delete: if isEffectiveAdmin() && isValidId(booklistId);
+    }
+
+    match /notices/{noticeId} {
+      allow get: if isValidId(noticeId);
+      allow list: if true; 
+      
+      allow create: if isEffectiveAdmin()
+                    && isValidId(noticeId)
+                    && isValidNotice(incoming());
+                    
+      allow update: if isEffectiveAdmin()
+                    && isValidId(noticeId)
+                    && isValidNotice(incoming());
+                    
+      allow delete: if isEffectiveAdmin() && isValidId(noticeId);
+    }
+
+    match /admins/{adminId} {
+      allow read: if isEffectiveAdmin();
+      allow create: if isBootstrappedAdmin()
+                    && adminId.matches('^.*@.*$')
+                    && incoming().keys().hasAll(['email', 'createdAt'])
+                    && incoming().keys().size() == 2
+                    && incoming().email is string && incoming().email.size() <= 100
+                    && incoming().createdAt is number;
+      allow delete: if isBootstrappedAdmin() && adminId.matches('^.*@.*$');
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true; 
+      
+      allow create: if isEffectiveAdmin()
+                    && isValidId(settingId)
+                    && isValidSettings(incoming());
+                    
+      allow update: if isEffectiveAdmin()
+                    && isValidId(settingId)
+                    && isValidSettings(incoming());
+                    
+      allow delete: if false;
+    }
+  }
+}
