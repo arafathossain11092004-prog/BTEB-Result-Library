@@ -239,16 +239,23 @@ export default function Booklists() {
         styleEl = document.createElement('style');
         styleEl.innerHTML = `
           .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+          .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
           .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
           .sm\\:p-8 { padding: 2rem !important; }
           .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
           .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
           .sm\\:text-lg { font-size: 1.125rem !important; line-height: 1.75 !important; }
+          .sm\\:text-xl { font-size: 1.25rem !important; line-height: 1.75 !important; }
+          .sm\\:text-2xl { font-size: 1.5rem !important; line-height: 2 !important; }
           .sm\\:text-3xl { font-size: 1.875rem !important; line-height: 2.25 !important; }
           .sm\\:min-w-0 { min-width: 0px !important; }
           .sm\\:w-auto { width: auto !important; }
           .sm\\:w-48 { width: 12rem !important; }
           .sm\\:gap-3 { gap: 0.75rem !important; }
+          .sm\\:gap-4 { gap: 1rem !important; }
+          .sm\\:gap-6 { gap: 1.5rem !important; }
+          .sm\\:flex-row { flex-direction: row !important; }
+          .sm\\:items-end { align-items: flex-end !important; }
           .sm\\:mt-0 { margin-top: 0px !important; }
           .sm\\:overflow-visible { overflow: visible !important; }
           .sm\\:align-middle { vertical-align: middle !important; }
@@ -268,8 +275,6 @@ export default function Booklists() {
         console.error(e);
       }
 
-      const generatedOn = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-
       footer.innerHTML = `
         <div class="flex flex-col gap-1 items-start w-1/3">
           <div class="flex items-center gap-2">
@@ -280,7 +285,6 @@ export default function Booklists() {
               BTEB Result Library
             </span>
           </div>
-          <div class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-10">Generated Document</div>
         </div>
         
         <div class="w-1/3 text-center pb-1"></div>
@@ -751,15 +755,20 @@ export default function Booklists() {
           </table>
 
           <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600 relative h-[100px]">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-3">
-              <p className="font-bold text-gray-900 text-lg">BTEB Result Library</p>
-              <p className="text-sm mt-1">{window.location.host}</p>
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center flex items-center justify-center gap-2 mt-3">
+              <div className="w-8 h-8 bg-blue-700 rounded flex items-center justify-center text-white font-bold text-xl">
+                B
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-gray-900 text-lg leading-tight tracking-tight">BTEB Result Library</p>
+                <p className="text-sm font-medium">{window.location.host}</p>
+              </div>
             </div>
             <div className="flex-1"></div>
             {typeof window !== 'undefined' && (
               <div className="flex flex-col items-center ml-auto">
-                <QRCodeSVG value={window.location.href} size={96} />
-                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan for actual result</span>
+                <QRCodeSVG value={window.location.href} size={70} />
+                <span className="text-[10px] mt-1 text-gray-500 font-medium">Scan to Verify</span>
               </div>
             )}
           </div>

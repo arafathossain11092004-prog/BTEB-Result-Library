@@ -452,20 +452,37 @@ export default function ResultView() {
         .lg\\:hidden { display: none !important; }
         .sm\\:hidden { display: none !important; }
         .lg\\:block { display: block !important; }
+        .sm\\:block { display: block !important; }
         .lg\\:flex { display: flex !important; }
         .md\\:flex-row { flex-direction: row !important; }
         .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
         .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+        .sm\\:px-1 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
+        .sm\\:px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
         .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+        .sm\\:px-5 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+        .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+        .sm\\:p-3 { padding: 0.75rem !important; }
+        .sm\\:p-4 { padding: 1rem !important; }
+        .sm\\:p-5 { padding: 1.25rem !important; }
+        .sm\\:p-8 { padding: 2rem !important; }
+        .sm\\:p-10 { padding: 2.5rem !important; }
+        .sm\\:py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
         .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+        .sm\\:py-8 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+        .sm\\:gap-1 { gap: 0.25rem !important; }
         .sm\\:gap-3 { gap: 0.75rem !important; }
         .sm\\:gap-4 { gap: 1rem !important; }
+        .sm\\:w-3 { width: 0.75rem !important; }
+        .sm\\:h-3 { height: 0.75rem !important; }
         .sm\\:w-48 { width: 12rem !important; }
         .sm\\:max-w-\\[200px\\] { max-width: 200px !important; }
         .sm\\:max-w-\\[120px\\] { max-width: 120px !important; }
         .sm\\:inline { display: inline !important; }
         .sm\\:flex-row { flex-direction: row !important; }
         .sm\\:grid { display: grid !important; }
+        .sm\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        .sm\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
         .sm\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
         .sm\\:col-span-4 { grid-column: span 4 / span 4 !important; }
         .sm\\:col-span-8 { grid-column: span 8 / span 8 !important; }
@@ -480,6 +497,14 @@ export default function ResultView() {
         .sm\\:border-r { border-right-width: 1px !important; }
         .sm\\:mx-0 { margin-left: 0px !important; margin-right: 0px !important; }
         .hidden.sm\\:grid { display: grid !important; }
+        .sm\\:mb-0 { margin-bottom: 0px !important; }
+        .sm\\:mb-1 { margin-bottom: 0.25rem !important; }
+        .sm\\:mt-0 { margin-top: 0px !important; }
+        .sm\\:mr-2 { margin-right: 0.5rem !important; }
+        .sm\\:rounded-lg { border-radius: 0.5rem !important; }
+        .sm\\:text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+        .sm\\:text-\\[10px\\] { font-size: 10px !important; }
+        .sm\\:text-\\[11px\\] { font-size: 11px !important; }
       `;
       document.head.appendChild(styleEl);
     }
@@ -1198,18 +1223,14 @@ export default function ResultView() {
         <div id="print-footer" className="mt-16 pt-6 flex justify-between items-end hidden print:flex relative" data-html2canvas-ignore="false">
           <div className="flex flex-col gap-1 items-start w-1/3">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-              <span className="text-indigo-900 font-bold tracking-tight text-lg leading-none">BTEB Result Library</span>
+              <div className="w-8 h-8 bg-blue-700 rounded flex items-center justify-center text-white font-bold text-xl">
+                B
+              </div>
+              <span className="text-blue-800 font-bold tracking-tight text-xl leading-none">BTEB Result Library</span>
             </div>
-            <div className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase ml-7">Generated Document</div>
           </div>
 
-          <div className="w-1/3 text-center pb-1">
-            <div className="text-[11px] font-medium text-slate-400 mb-1">Generated On</div>
-            <div className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">
-              {new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
-            </div>
-          </div>
+          <div className="w-1/3 text-center pb-1"></div>
 
           <div className="w-1/3 flex justify-end">
             {typeof window !== 'undefined' && (
