@@ -221,6 +221,10 @@ export default function Calculator() {
         setCgpaResult(null);
         setEarnedPoints(null);
         setCompletionPercentage(null);
+        
+        setTimeout(() => {
+          document.getElementById('calculator-fields')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
       } else {
         setError("No results found for this Roll Number.");
       }
@@ -284,10 +288,10 @@ export default function Calculator() {
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
           {/* CGPA Calculator Main Card */}
-          <div className="lg:col-span-2 bg-white/90 backdrop-blur-2xl border border-slate-100/50 rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] relative z-10 flex flex-col justify-between">
+          <div className="lg:col-span-2 bg-white/90 backdrop-blur-2xl border border-slate-100/50 rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] relative z-10 flex flex-col justify-between order-2 lg:order-1">
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
             <div className="text-center mb-8 relative z-10">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2" id="calculator-fields">
                 CGPA Calculator
               </h1>
               <p className="text-sm text-gray-500">
@@ -436,7 +440,7 @@ export default function Calculator() {
           </div>
 
           {/* Autofill Card */}
-          <div className="lg:col-span-1 bg-white/90 backdrop-blur-2xl border border-slate-100/50 rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] flex flex-col relative z-10">
+          <div className="lg:col-span-1 bg-white/90 backdrop-blur-2xl border border-slate-100/50 rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] flex flex-col relative z-10 order-1 lg:order-2">
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
 
             <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 relative z-10">

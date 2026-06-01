@@ -433,12 +433,47 @@ export default function ResultView() {
       footerElement.style.setProperty('display', 'flex', 'important');
     }
     
+    // Inject styles to force desktop layout regardless of actual viewport
+    const isMobile = window.innerWidth < 1024;
+    let styleEl: HTMLStyleElement | null = null;
+    let prevWidth = element.style.width;
+    let prevMaxWidth = element.style.maxWidth;
+    
+    if (isMobile) {
+      element.style.width = '1024px';
+      element.style.maxWidth = '1024px';
+      styleEl = document.createElement('style');
+      styleEl.innerHTML = `
+        .lg\\:hidden { display: none !important; }
+        .lg\\:block { display: block !important; }
+        .lg\\:flex { display: flex !important; }
+        .md\\:flex-row { flex-direction: row !important; }
+        .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
+        .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+        .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+        .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+        .sm\\:gap-3 { gap: 0.75rem !important; }
+        .sm\\:gap-4 { gap: 1rem !important; }
+        .sm\\:w-48 { width: 12rem !important; }
+        .sm\\:max-w-\\[200px\\] { max-width: 200px !important; }
+        .sm\\:inline { display: inline !important; }
+      `;
+      document.head.appendChild(styleEl);
+    }
+    
     try {
+      const targetWidth = isMobile ? 1024 : element.scrollWidth;
+      
       const dataUrl = await toJpeg(element, {
         cacheBust: true,
         quality: 1.0,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
+        width: targetWidth,
+        style: isMobile ? {
+          width: '1024px',
+          minWidth: '1024px'
+        } : {},
         filter: (node) => {
           if (node instanceof HTMLElement && node.dataset?.html2canvasIgnore === 'true') {
             return false;
@@ -446,9 +481,24 @@ export default function ResultView() {
           return true;
         }
       });
+      
+      if (isMobile) {
+        element.style.width = prevWidth;
+        element.style.maxWidth = prevMaxWidth;
+        if (styleEl && styleEl.parentNode) {
+          styleEl.parentNode.removeChild(styleEl);
+        }
+      }
       if (footerElement) footerElement.style.display = '';
       download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
     } catch(err) {
+      if (isMobile) {
+        element.style.width = prevWidth;
+        element.style.maxWidth = prevMaxWidth;
+        if (styleEl && styleEl.parentNode) {
+          styleEl.parentNode.removeChild(styleEl);
+        }
+      }
       if (footerElement) footerElement.style.display = '';
       console.error("Failed to generate image:", err);
       alert("Failed to download image. Try printing instead.");
@@ -531,7 +581,7 @@ export default function ResultView() {
         <meta name="description" content={type === 'institute' ? `Check the BTEB examination results, pass rates, and PDFs for institute ${instituteCode}.` : `View the complete diploma academic result for roll number ${roll} from Bangladesh Technical Education Board (BTEB).`} />
         <link rel="canonical" href={`https://btebresultlibrary.vercel.app/result?roll=${roll}&type=${type}&curriculum=${curriculum}&regulation=${regulation}`} />
       </Helmet>
-      <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0">
+      <div className="max-w-5xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0">
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -715,10 +765,11 @@ export default function ResultView() {
                                  return (
                                    <tr key={i} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
                                      <td className="py-3 px-4 print:py-2 print:px-3 border-r border-gray-200 align-top bg-white">
-                                       <div className="font-semibold text-gray-800">{sem.label}</div>
+                                       <div className="font-bold text-slate-800 break-words leading-snug text-sm sm:text-base">{sem.label}</div>
                                        {parsed.date && (
-                                         <div className="text-xs print:text-xs text-gray-500 mt-1 flex items-center">
-                                            <Calendar className="w-3 h-3 print:w-3 print:h-3 mr-1" />
+                                         <div className="text-xs print:text-[10px] text-slate-600 mt-2 flex items-start sm:items-center bg-slate-50 print:bg-transparent px-2.5 py-1.5 print:p-0 rounded-md border border-slate-100 print:border-none w-fit shadow-sm print:shadow-none">
+                                            <Calendar className="w-3.5 h-3.5 print:w-3 print:h-3 mr-1.5 text-blue-500 print:text-black shrink-0" />
+                                            <span className="font-medium whitespace-normal break-words leading-tight">
                                             {(() => {
                                               try {
                                                 const dateStr = parsed.date.split('T')[0];
@@ -739,6 +790,7 @@ export default function ResultView() {
                                                 return parsed.date;
                                               }
                                             })()}
+                                            </span>
                                          </div>
                                        )}
                                      </td>
@@ -753,17 +805,31 @@ export default function ResultView() {
                                             )}
                                           </div>
                                         ) : (
-                                          <div className="text-red-600 font-medium space-y-1.5">
-                                            <div>Referred ({parsed.total} Subject{parsed.total > 1 ? 's' : ''}):</div>
-                                            <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-800 font-normal">
+                                          <div className="text-red-700 bg-red-50/50 print:bg-transparent rounded-xl border border-red-100 print:border-none p-3 sm:p-4 print:p-0">
+                                            <div className="font-bold text-sm mb-3 flex items-center">
+                                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse print:hidden"></div>
+                                              Referred in {parsed.total} Subject{parsed.total > 1 ? 's' : ''}:
+                                            </div>
+                                            <ul className="flex flex-col gap-2.5">
                                               {(Array.isArray(parsed.subjects) ? parsed.subjects : []).map((sub: any, idx: number) => (
                                                 <li key={idx}>
-                                                  {sub.subName || sub.name || 'Subject'} <span className="font-mono text-gray-500 bg-gray-100 px-1 py-0.5 rounded text-xs ml-1 font-semibold">{sub.code || sub.subCode}</span>
-                                                  {' '} ({sub.type === 'T' ? 'Theory' : sub.type === 'P' ? 'Practical' : sub.type})
+                                                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-4 p-2.5 sm:p-3 print:p-1 rounded-lg border border-red-100 print:border-b print:border-x-0 print:border-t-0 print:rounded-none bg-white print:bg-transparent shadow-sm print:shadow-none transition-colors hover:border-red-200">
+                                                    <div className="font-medium text-slate-800 text-sm break-words leading-snug flex-1">
+                                                      {sub.subName || sub.name || 'Subject'}
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0 shrink-0">
+                                                      <span className="font-mono text-slate-600 bg-slate-50 print:bg-transparent print:border-none px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-bold border border-slate-200 whitespace-nowrap">
+                                                        {sub.code || sub.subCode}
+                                                      </span>
+                                                      <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold text-red-600 bg-red-50 print:bg-transparent px-1.5 py-0.5 rounded whitespace-nowrap">
+                                                        {sub.type === 'T' ? 'Theory' : sub.type === 'P' ? 'Practical' : sub.type}
+                                                      </span>
+                                                    </div>
+                                                  </div>
                                                 </li>
                                               ))}
                                               {(!parsed.subjects || parsed.subjects.length === 0) && (
-                                                <li className="text-gray-500 italic">No subject details provided</li>
+                                                <li className="text-red-400 italic text-sm py-2">No subject details provided</li>
                                               )}
                                             </ul>
                                           </div>
@@ -908,7 +974,7 @@ export default function ResultView() {
 
               <div className="w-full pb-4">
                  {/* Desktop Table View */}
-                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full overflow-hidden hidden lg:block">
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full overflow-hidden hidden lg:block print:block">
                    <table className="w-full text-left text-sm bg-white">
                      <thead className="bg-[#f8fafc] border-b border-gray-200 text-gray-500 tracking-wider text-[10px] sm:text-[11px] font-bold">
                        <tr>
@@ -943,7 +1009,7 @@ export default function ResultView() {
                          const sortedSems = Array.from(allSems).sort((a, b) => a - b);
 
                          return (
-                           <tr key={r.id || r.rollNumber} className="hover:bg-blue-50/20 transition-colors">
+                           <tr key={r.id || r.rollNumber} className="hover:bg-blue-50/20 transition-colors print:break-inside-avoid">
                              <td className="py-3 px-2 sm:py-4 sm:px-4 border-r border-gray-50 align-top max-w-[120px] sm:max-w-[200px]">
                                <div className="flex items-center gap-2 sm:gap-3">
                                   <div className="min-w-0 w-full">
@@ -997,7 +1063,7 @@ export default function ResultView() {
                  </div>
 
                  {/* Mobile Grid View */}
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden print:hidden">
                    {results.map((r) => {
                      // Find all possible semester keys across all results again for card mapping
                      const allSems = new Set<number>();

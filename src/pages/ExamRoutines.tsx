@@ -173,6 +173,26 @@ export default function ExamRoutines() {
       printContent.style.borderRadius = "0px";
 
       if (tableWrapper) tableWrapper.style.overflow = "visible";
+      
+      const isMobile = window.innerWidth < 1024;
+      let styleEl: HTMLStyleElement | null = null;
+      if (isMobile) {
+        styleEl = document.createElement('style');
+        styleEl.innerHTML = `
+          .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+          .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+          .sm\\:p-8 { padding: 2rem !important; }
+          .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
+          .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+          .sm\\:text-lg { font-size: 1.125rem !important; line-height: 1.75 !important; }
+          .sm\\:text-3xl { font-size: 1.875rem !important; line-height: 2.25 !important; }
+          .sm\\:min-w-0 { min-width: 0px !important; }
+          .sm\\:w-auto { width: auto !important; }
+          .sm\\:overflow-visible { overflow: visible !important; }
+          .sm\\:align-middle { vertical-align: middle !important; }
+        `;
+        document.head.appendChild(styleEl);
+      }
 
       const footer = document.createElement("div");
       footer.className =
@@ -214,6 +234,9 @@ export default function ExamRoutines() {
       } catch (err) {
         console.error("Error generating screenshot", err);
       } finally {
+        if (styleEl && styleEl.parentNode) {
+          styleEl.parentNode.removeChild(styleEl);
+        }
         printContent.style.width = originalWidth;
         printContent.style.maxWidth = originalMaxWidth;
         printContent.style.minHeight = originalMinHeight;
