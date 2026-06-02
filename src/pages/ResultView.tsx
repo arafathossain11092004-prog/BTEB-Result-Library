@@ -854,11 +854,11 @@ export default function ResultView() {
                                  return (
                                    <div key={i} className="flex flex-col sm:grid sm:grid-cols-12 hover:bg-indigo-50/30 transition-colors print:bg-transparent print:break-inside-avoid group/tr text-center sm:text-left">
                                      <div className="sm:col-span-4 lg:col-span-3 py-4 px-4 sm:px-5 print:py-2 print:px-3 border-b sm:border-b-0 sm:border-r border-slate-100 print:border-gray-200 align-top print:bg-transparent transition-colors flex flex-col items-center sm:items-start justify-center">
-                                       <div className="font-extrabold text-slate-800 break-words leading-snug text-[15px] sm:text-base">{sem.label}</div>
+                                       <div className="font-extrabold text-slate-800 leading-snug text-[15px] sm:text-base whitespace-nowrap">{sem.label}</div>
                                        {parsed.date && (
                                          <div className="text-[11px] print:text-[10px] text-indigo-600 mt-2 flex items-center bg-white print:bg-transparent px-2.5 py-1.5 print:p-0 rounded-md border border-indigo-100 print:border-none w-fit shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] print:shadow-none group-hover/tr:bg-indigo-50/50 transition-colors mx-auto sm:mx-0">
                                             <Calendar className="w-3.5 h-3.5 print:w-3 print:h-3 mr-1.5 text-indigo-500 print:text-slate-600 shrink-0" />
-                                            <span className="font-bold tracking-wide break-words leading-tight">
+                                            <span className="font-bold tracking-wide leading-tight whitespace-nowrap">
                                             {(() => {
                                               try {
                                                 const dateStr = parsed.date.split('T')[0];
@@ -885,7 +885,7 @@ export default function ResultView() {
                                      </div>
                                      <div className="sm:col-span-8 lg:col-span-9 py-4 px-3 sm:px-5 print:py-2 print:px-3 align-top print:bg-transparent transition-colors flex flex-col items-center sm:items-start justify-center">
                                         {isPassed || parsed.gpa ? (
-                                          <div className="font-bold border border-emerald-200 text-emerald-800 bg-emerald-50 print:bg-transparent inline-flex items-center px-4 py-2 rounded-xl shadow-sm print:shadow-none print:border-none">
+                                          <div className="font-bold border border-emerald-200 text-emerald-800 bg-emerald-50 print:bg-transparent inline-flex items-center px-4 py-2 rounded-xl shadow-sm print:shadow-none print:border-none whitespace-nowrap">
                                             <span className="flex items-center gap-2">
                                               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 print:hidden shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                                               Passed
@@ -898,7 +898,7 @@ export default function ResultView() {
                                           </div>
                                         ) : (
                                           <div className="text-rose-700 bg-rose-50/50 print:bg-transparent rounded-xl border border-rose-100 print:border-none p-4 sm:p-5 print:p-0 w-full text-left">
-                                            <div className="font-bold text-sm mb-4 flex items-center justify-center sm:justify-start print:text-black">
+                                            <div className="font-bold text-sm mb-4 flex items-center justify-center sm:justify-start print:text-black whitespace-nowrap">
                                               <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mr-2.5 animate-pulse print:hidden shadow-[0_0_8px_rgba(244,63,94,0.5)]"></div>
                                               Referred in {parsed.total} Subject{parsed.total > 1 ? 's' : ''}:
                                             </div>

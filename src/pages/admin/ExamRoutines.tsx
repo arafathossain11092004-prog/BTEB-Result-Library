@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
-import { Plus, Trash2, Loader2, CalendarRange, X, Save, SaveAll, Folder, FolderOpen, BookCopy } from 'lucide-react';
+import { Plus, Trash2, Loader2, CalendarRange, X, Save, SaveAll, Folder, FolderOpen, BookCopy, Edit } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -122,6 +122,8 @@ export default function AdminExamRoutines() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ subjectName: '', subjectCode: '', date: '', time: '', day: '' });
   
   const [expandedCurr, setExpandedCurr] = useState<string | null>(null);
   const [expandedReg, setExpandedReg] = useState<string | null>(null);
@@ -386,6 +388,29 @@ export default function AdminExamRoutines() {
        } catch (error) {
          try { handleFirestoreError(error, OperationType.DELETE, `examRoutines/${id}`); } catch (e) {}
        }
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'examRoutines', editingItem.id), {
+        subjectName: editForm.subjectName,
+        subjectCode: editForm.subjectCode,
+        date: editForm.date,
+        time: editForm.time,
+        day: editForm.day,
+        updatedAt: Date.now()
+      });
+      setEditingItem(null);
+      await fetchRoutines();
+    } catch (error) {
+      alert("Failed to update. See console for details.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -810,6 +835,9 @@ export default function AdminExamRoutines() {
                                                                     </div>
                                                                   </td>
                                                                   <td className="px-4 py-3 text-right align-top">
+                                                                    <button onClick={() => { setEditingItem(subject); setEditForm({ subjectName: subject.subjectName || '', subjectCode: subject.subjectCode || '', date: subject.date || '', time: subject.time || '', day: subject.day || '' }); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors mr-2" title="Edit">
+                                                                      <Edit className="w-4 h-4" />
+                                                                    </button>
                                                                     <button onClick={() => handleDelete(subject.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
                                                                       <Trash2 className="w-4 h-4" />
                                                                     </button>
@@ -844,6 +872,54 @@ export default function AdminExamRoutines() {
           )}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingItem && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+              <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                <h3 className="font-bold text-gray-800">Edit Routine Entry</h3>
+                <button onClick={() => setEditingItem(null)} className="p-1 hover:bg-gray-100 rounded-md transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+              </div>
+              <form onSubmit={handleUpdate} className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
+                  <input required type="text" value={editForm.subjectName} onChange={e => setEditForm({...editForm, subjectName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject Code</label>
+                    <input required type="text" value={editForm.subjectCode} onChange={e => setEditForm({...editForm, subjectCode: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input required type="text" value={editForm.date} onChange={e => setEditForm({...editForm, date: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                    <input required type="text" value={editForm.time} onChange={e => setEditForm({...editForm, time: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+                    <input type="text" value={editForm.day} onChange={e => setEditForm({...editForm, day: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                  </div>
+                </div>
+                <div className="pt-2 flex justify-end gap-2">
+                  <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+                  <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center shadow-sm disabled:opacity-50">
+                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Update
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
