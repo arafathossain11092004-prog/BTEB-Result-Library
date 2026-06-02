@@ -137,9 +137,11 @@ export default function AdminExamRoutines() {
   const [dateBlocks, setDateBlocks] = useState<RoutineDateBlock[]>([generateEmptyDateBlock()]);
   
   const [saving, setSaving] = useState(false);
+  const [booklists, setBooklists] = useState<any[]>([]);
 
   useEffect(() => {
     fetchRoutines().catch(console.error);
+    fetchBooklists().catch(console.error);
   }, []);
 
   const fetchRoutines = async () => {
@@ -152,6 +154,17 @@ export default function AdminExamRoutines() {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBooklists = async () => {
+    try {
+      const q = query(collection(db, 'booklists'));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setBooklists(data);
+    } catch (error) {
+      console.error("Failed to fetch booklists", error);
     }
   };
 
@@ -177,13 +190,22 @@ export default function AdminExamRoutines() {
             const batch = writeBatch(db);
             for (const item of chunk) {
               const newDocRef = doc(collection(db, 'examRoutines'));
+              
+              let sName = item.Subject_Name || '';
+              if (!sName || sName.trim() === '') {
+                const b = booklists.find(book => String(book.subjectCode).trim() === String(item.Subject_Code).trim());
+                if (b && b.subjectName) {
+                  sName = b.subjectName;
+                }
+              }
+
               batch.set(newDocRef, {
                 curriculum: item.Curriculum || 'Diploma In Engineering',
                 regulation: item.Regulation || '2016',
                 semester: item.Semester || '1st Semester',
                 department: item.Department || 'Other',
                 departmentCode: item.Department_Code || '',
-                subjectName: item.Subject_Name || '',
+                subjectName: sName,
                 subjectCode: item.Subject_Code || '',
                 date: item.Date || '',
                 day: item.Day || '',
@@ -259,10 +281,21 @@ export default function AdminExamRoutines() {
 
   const handleUpdateSubject = (dIndex: number, tsIndex: number, subIndex: number, field: keyof RoutineSubject, value: any) => {
     const newBlocks = structuredClone(dateBlocks);
-    newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex] = { 
-      ...newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex], 
+    
+    const updatedSubject = {
+      ...newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex],
       [field]: value 
     };
+
+    if (field === 'subjectCode' && value) {
+      const codeStr = String(value).trim();
+      const foundBook = booklists.find(b => String(b.subjectCode).trim() === codeStr);
+      if (foundBook && foundBook.subjectName) {
+        updatedSubject.subjectName = foundBook.subjectName;
+      }
+    }
+
+    newBlocks[dIndex].timeSlots[tsIndex].subjects[subIndex] = updatedSubject;
     setDateBlocks(newBlocks);
   };
 
@@ -890,7 +923,15 @@ export default function AdminExamRoutines() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject Code</label>
-                    <input required type="text" value={editForm.subjectCode} onChange={e => setEditForm({...editForm, subjectCode: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                    <input required type="text" value={editForm.subjectCode} onChange={e => {
+                      const codeStr = e.target.value;
+                      const foundBook = booklists.find(b => String(b.subjectCode).trim() === String(codeStr).trim());
+                      setEditForm(prev => ({ 
+                        ...prev, 
+                        subjectCode: codeStr, 
+                        subjectName: foundBook?.subjectName ? foundBook.subjectName : prev.subjectName 
+                      }));
+                    }} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
