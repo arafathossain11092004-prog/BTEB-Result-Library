@@ -235,9 +235,8 @@ export default function Booklists() {
       
       const isMobile = window.innerWidth < 1024;
       let styleEl: HTMLStyleElement | null = null;
-      if (isMobile) {
-        styleEl = document.createElement('style');
-        styleEl.innerHTML = `
+      styleEl = document.createElement('style');
+      styleEl.innerHTML = `
           .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
           .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
           .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
@@ -259,9 +258,8 @@ export default function Booklists() {
           .sm\\:mt-0 { margin-top: 0px !important; }
           .sm\\:overflow-visible { overflow: visible !important; }
           .sm\\:align-middle { vertical-align: middle !important; }
-        `;
-        document.head.appendChild(styleEl);
-      }
+      `;
+      document.head.appendChild(styleEl);
 
       const footer = document.createElement("div");
       footer.className =

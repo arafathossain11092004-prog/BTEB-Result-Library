@@ -430,12 +430,11 @@ export default function ResultView() {
     
     const footerElement = element.querySelector('#print-footer') as HTMLElement;
     if (footerElement) {
-      footerElement.style.display = 'flex';
-      footerElement.style.setProperty('display', 'flex', 'important');
+      footerElement.classList.remove('hidden', 'print:flex');
+      footerElement.classList.add('flex');
     }
     
     // Force A4 layouts
-    const isMobile = window.innerWidth < 1024;
     let styleEl: HTMLStyleElement | null = null;
     let prevWidth = element.style.width;
     let prevMaxWidth = element.style.maxWidth;
@@ -447,17 +446,20 @@ export default function ResultView() {
     element.style.minHeight = '1123px';
     element.style.borderRadius = '0px';
 
-    if (isMobile) {
-      styleEl = document.createElement('style');
-      styleEl.innerHTML = `
-        .lg\\:hidden { display: none !important; }
-        .sm\\:hidden { display: none !important; }
-        .lg\\:block { display: block !important; }
-        .sm\\:block { display: block !important; }
-        .lg\\:flex { display: flex !important; }
-        .md\\:flex-row { flex-direction: row !important; }
-        .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
-        .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+    styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .lg\\:hidden { display: none !important; }
+      .sm\\:hidden { display: none !important; }
+      .lg\\:block { display: block !important; }
+      .sm\\:block { display: block !important; }
+      .lg\\:flex { display: flex !important; }
+      .md\\:flex-row { flex-direction: row !important; }
+      .lg\\:col-span-3 { grid-column: span 3 / span 3 !important; }
+      .lg\\:col-span-9 { grid-column: span 9 / span 9 !important; }
+      .lg\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+      .lg\\:py-10 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+      .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
+      .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
         .sm\\:px-1 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
         .sm\\:px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
         .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
@@ -504,11 +506,10 @@ export default function ResultView() {
         .sm\\:mr-2 { margin-right: 0.5rem !important; }
         .sm\\:rounded-lg { border-radius: 0.5rem !important; }
         .sm\\:text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
-        .sm\\:text-\\[10px\\] { font-size: 10px !important; }
-        .sm\\:text-\\[11px\\] { font-size: 11px !important; }
-      `;
-      document.head.appendChild(styleEl);
-    }
+      .sm\\:text-\\[10px\\] { font-size: 10px !important; }
+      .sm\\:text-\\[11px\\] { font-size: 11px !important; }
+    `;
+    document.head.appendChild(styleEl);
     
     try {
       const dataUrl = await toJpeg(element, {
@@ -537,18 +538,21 @@ export default function ResultView() {
       if (styleEl && styleEl.parentNode) {
         styleEl.parentNode.removeChild(styleEl);
       }
-      if (footerElement) footerElement.style.display = '';
+      if (footerElement) {
+        footerElement.classList.remove('flex');
+        footerElement.classList.add('hidden', 'print:flex');
+      }
 
       if (exportType === 'jpg') {
         download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
       } else if (exportType === 'pdf') {
+        const pdfWidth = 210; // A4 width in mm
+        const pdfHeight = (element.offsetHeight * pdfWidth) / 794;
         const pdf = new jsPDF({
           orientation: "portrait",
           unit: "mm",
-          format: "a4"
+          format: [pdfWidth, pdfHeight]
         });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (element.offsetHeight * pdfWidth) / 794;
         pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Result_${roll || instituteCode || 'group'}.pdf`);
       }
@@ -561,7 +565,10 @@ export default function ResultView() {
       if (styleEl && styleEl.parentNode) {
         styleEl.parentNode.removeChild(styleEl);
       }
-      if (footerElement) footerElement.style.display = '';
+      if (footerElement) {
+        footerElement.classList.remove('flex');
+        footerElement.classList.add('hidden', 'print:flex');
+      }
       console.error("Failed to generate image:", err);
       alert("Failed to download image. Try printing instead.");
     }
@@ -643,7 +650,7 @@ export default function ResultView() {
         <meta name="description" content={type === 'institute' ? `Check the BTEB examination results, pass rates, and PDFs for institute ${instituteCode}.` : `View the complete diploma academic result for roll number ${roll} from Bangladesh Technical Education Board (BTEB).`} />
         <link rel="canonical" href={`https://btebresultlibrary.vercel.app/result?roll=${roll}&type=${type}&curriculum=${curriculum}&regulation=${regulation}`} />
       </Helmet>
-      <div className="max-w-6xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0">
+      <div className="max-w-3xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0">
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1046,7 +1053,7 @@ export default function ResultView() {
         ) : (
            <div className="space-y-8">
               {/* Modern Group Result Header */}
-              <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-800 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6 max-w-4xl mx-auto">
+              <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-800 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6 max-w-3xl mx-auto">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
                 <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
@@ -1267,7 +1274,7 @@ export default function ResultView() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
-          className="mt-12 w-full max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-lg border border-gray-100 print:hidden"
+          className="mt-12 w-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-lg border border-gray-100 print:hidden"
         >
           {bannerConfig.bannerLink ? (
              <a href={bannerConfig.bannerLink} target="_blank" rel="noopener noreferrer" className="block w-full">
