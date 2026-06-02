@@ -187,25 +187,29 @@ export default function ExamRoutines() {
       let styleEl: HTMLStyleElement | null = null;
       styleEl = document.createElement('style');
       styleEl.innerHTML = `
-          .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-          .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
-          .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-          .sm\\:p-8 { padding: 2rem !important; }
-          .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
-          .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
-          .sm\\:text-lg { font-size: 1.125rem !important; line-height: 1.75 !important; }
-          .sm\\:text-xl { font-size: 1.25rem !important; line-height: 1.75 !important; }
-          .sm\\:text-2xl { font-size: 1.5rem !important; line-height: 2 !important; }
-          .sm\\:text-3xl { font-size: 1.875rem !important; line-height: 2.25 !important; }
-          .sm\\:min-w-0 { min-width: 0px !important; }
-          .sm\\:w-auto { width: auto !important; }
-          .sm\\:gap-4 { gap: 1rem !important; }
-          .sm\\:gap-6 { gap: 1.5rem !important; }
-          .sm\\:flex-row { flex-direction: row !important; }
-          .sm\\:items-end { align-items: flex-end !important; }
-          .sm\\:overflow-visible { overflow: visible !important; }
-          .sm\\:align-middle { vertical-align: middle !important; }
-      `;
+      .lg\\:col-span-4 { grid-column: span 4 / span 4 !important; }
+      .lg\\:col-span-8 { grid-column: span 8 / span 8 !important; }
+      .lg\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+      .md\\:p-8 { padding: 2rem !important; }
+      .md\\:text-5xl { font-size: 3rem !important; line-height: 1 !important; }
+      .sm\\:block { display: block !important; }
+      .sm\\:flex-none { flex: none !important; }
+      .sm\\:flex-row { flex-direction: row !important; }
+      .sm\\:gap-6 { gap: 1.5rem !important; }
+      .sm\\:items-center { align-items: center !important; }
+      .sm\\:items-end { align-items: flex-end !important; }
+      .sm\\:min-w-0 { min-width: 0px !important; }
+      .sm\\:overflow-visible { overflow: visible !important; }
+      .sm\\:p-8 { padding: 2rem !important; }
+      .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+      .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+      .sm\\:text-2xl { font-size: 1.5rem !important; line-height: 2 !important; }
+      .sm\\:text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+      .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
+      .sm\\:text-lg { font-size: 1.125rem !important; line-height: 1.75 !important; }
+      .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+      .sm\\:w-auto { width: auto !important; }
+    `;
       document.head.appendChild(styleEl);
 
       const footer = document.createElement("div");

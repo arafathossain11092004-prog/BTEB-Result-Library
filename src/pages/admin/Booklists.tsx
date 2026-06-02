@@ -235,6 +235,44 @@ export default function AdminBooklists() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (confirm('Are you absolutely sure you want to delete ALL booklists? This action cannot be undone.')) {
+      try {
+        setLoading(true);
+        const batchSize = 100;
+        let lastVisible = null;
+        let hasMore = true;
+        let totalDeleted = 0;
+
+        while (hasMore) {
+          const q = query(collection(db, 'booklists'), limit(batchSize));
+          const snapshot = await getDocs(q);
+          
+          if (snapshot.empty) {
+            hasMore = false;
+            break;
+          }
+          
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((doc) => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+          totalDeleted += snapshot.docs.length;
+        }
+
+        alert(`Successfully deleted ${totalDeleted} booklists.`);
+        await fetchBooklists();
+      } catch (error) {
+        console.error("Error deleting all:", error);
+        alert("Failed to delete all. See console for details.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const grouped = booklists.reduce((acc, curr) => {
     const curriculum = curr.curriculum || 'Unknown';
     const regulation = curr.regulation || 'Unknown';
@@ -257,18 +295,29 @@ export default function AdminBooklists() {
           <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Booklists</h1>
           <p className="text-sm text-gray-500">Add or remove booklists by semester.</p>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(!showForm);
-            if (!showForm && formBlocks.length === 0) {
-              handleAddBlock();
-            }
-          }}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          {showForm ? 'Hide Form' : 'Add Subjects'}
-        </button>
+        <div className="flex gap-3">
+          {booklists.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete All
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setShowForm(!showForm);
+              if (!showForm && formBlocks.length === 0) {
+                handleAddBlock();
+              }
+            }}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {showForm ? 'Hide Form' : 'Add Subjects'}
+          </button>
+        </div>
       </div>
 
       {showForm && (

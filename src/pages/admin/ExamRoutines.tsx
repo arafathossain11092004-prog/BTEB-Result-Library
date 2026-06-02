@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
-import { Plus, Trash2, Loader2, CalendarRange, X, Save, SaveAll } from 'lucide-react';
+import { Plus, Trash2, Loader2, CalendarRange, X, Save, SaveAll, Folder, FolderOpen, BookCopy } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { motion, AnimatePresence } from 'motion/react';
 
 const CURRICULUM_DEPARTMENTS: Record<string, string[]> = {
   "Diploma In Engineering": [
@@ -122,6 +123,11 @@ export default function AdminExamRoutines() {
   const [showForm, setShowForm] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   
+  const [expandedCurr, setExpandedCurr] = useState<string | null>(null);
+  const [expandedReg, setExpandedReg] = useState<string | null>(null);
+  const [expandedSem, setExpandedSem] = useState<string | null>(null);
+  const [expandedDept, setExpandedDept] = useState<string | null>(null);
+
   // Global Meta State
   const [globalPublishDate, setGlobalPublishDate] = useState('');
   
@@ -383,6 +389,58 @@ export default function AdminExamRoutines() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (confirm('Are you absolutely sure you want to delete ALL exam routines? This action cannot be undone.')) {
+      try {
+        setLoading(true);
+        const batchSize = 100;
+        let hasMore = true;
+        let totalDeleted = 0;
+
+        while (hasMore) {
+          const q = query(collection(db, 'examRoutines'), limit(batchSize));
+          const snapshot = await getDocs(q);
+          
+          if (snapshot.empty) {
+            hasMore = false;
+            break;
+          }
+          
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((doc) => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+          totalDeleted += snapshot.docs.length;
+        }
+
+        alert(`Successfully deleted ${totalDeleted} exam routines.`);
+        await fetchRoutines();
+      } catch (error) {
+        console.error("Error deleting all:", error);
+        alert("Failed to delete all. See console for details.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const grouped = routines.reduce((acc, curr) => {
+    const curriculum = curr.curriculum || 'Unknown';
+    const regulation = curr.regulation || 'Unknown';
+    const semester = curr.semester || 'Unknown';
+    const dept = curr.department || 'Unknown';
+
+    if (!acc[curriculum]) acc[curriculum] = {};
+    if (!acc[curriculum][regulation]) acc[curriculum][regulation] = {};
+    if (!acc[curriculum][regulation][semester]) acc[curriculum][regulation][semester] = {};
+    if (!acc[curriculum][regulation][semester][dept]) acc[curriculum][regulation][semester][dept] = { subjects: [] };
+    
+    acc[curriculum][regulation][semester][dept].subjects.push(curr);
+    return acc;
+  }, {} as any);
+
   return (
     <div className="max-w-[1400px] mx-auto space-y-6 lg:px-0 px-4">
       <Helmet>
@@ -411,6 +469,15 @@ export default function AdminExamRoutines() {
               {isParsing ? 'Parsing PDF...' : 'Import from PDF'}
             </button>
           </div>
+          {routines.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              className="inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete All
+            </button>
+          )}
           <button
             onClick={() => {
               setShowForm(!showForm);
@@ -646,59 +713,135 @@ export default function AdminExamRoutines() {
       {loading ? (
          <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /></div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#f8fafc] border-b-2 border-slate-200 text-slate-600 text-left">
-                <tr>
-                  <th className="py-4 px-5 font-bold uppercase tracking-wider text-xs">Curriculum & Regulation</th>
-                  <th className="py-4 px-5 font-bold uppercase tracking-wider text-xs hidden md:table-cell">Semester & Dept</th>
-                  <th className="py-4 px-5 font-bold uppercase tracking-wider text-xs">Subject</th>
-                  <th className="py-4 px-5 font-bold uppercase tracking-wider text-xs">Date & Time</th>
-                  <th className="py-4 px-5 font-bold uppercase tracking-wider text-xs text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {routines.length === 0 ? (
-                   <tr><td colSpan={5} className="py-12 text-center text-slate-500 text-base">No routines found in the database.</td></tr>
-                ) : (
-                  routines.map(r => (
-                    <tr key={r.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="py-4 px-5 align-top">
-                        <div className="text-slate-900 font-bold max-w-[200px] truncate">{r.curriculum || 'N/A'}</div>
-                        <div className="text-indigo-600 font-semibold text-[11px] mt-1 bg-indigo-50 px-2 py-0.5 rounded inline-block border border-indigo-100">{r.regulation || 'N/A'}</div>
-                      </td>
-                      <td className="py-4 px-5 align-top hidden md:table-cell">
-                        <div className="text-slate-900 font-bold">{r.semester}</div>
-                        <div className="text-slate-600 mt-1 max-w-[150px] truncate" title={r.department}>{r.department || 'N/A'}</div>
-                      </td>
-                      <td className="py-4 px-5 align-top">
-                        <div className="text-slate-900 font-bold whitespace-normal max-w-[250px]">{r.subjectName}</div>
-                        <div className="flex gap-2 mt-1.5 flex-wrap">
-                          <code className="text-slate-600 font-mono text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Code: {r.subjectCode}</code>
-                          <span className="md:hidden text-indigo-600 font-semibold text-[11px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{r.semester} | {r.department}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-5 align-top">
-                        <div className="text-slate-900 font-bold bg-white border border-slate-200 shadow-sm px-2.5 py-1 rounded-lg inline-flex items-center">
-                          <CalendarRange className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                          {r.date}
-                        </div>
-                        <div className="text-slate-500 font-medium text-xs mt-2 pl-1">
-                          {r.day && `${r.day} • `}{r.time}
-                        </div>
-                      </td>
-                      <td className="py-4 px-5 text-right align-top">
-                        <button onClick={() => handleDelete(r.id)} className="p-2 text-rose-500 bg-white border border-rose-100 hover:bg-rose-50 rounded-lg transition-all shadow-sm opacity-50 xl:opacity-0 group-hover:opacity-100" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {Object.keys(grouped).length === 0 ? (
+            <div className="p-8 text-center text-gray-500">No exam routines found.</div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {Object.keys(grouped).map(curr => (
+                <li key={curr}>
+                  <button
+                    onClick={() => setExpandedCurr(expandedCurr === curr ? null : curr)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {expandedCurr === curr ? <FolderOpen className="w-6 h-6 text-blue-500" /> : <Folder className="w-6 h-6 text-blue-500" />}
+                      <span className="font-semibold text-gray-800">{curr}</span>
+                    </div>
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedCurr === curr && (
+                      <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="bg-gray-50/50 border-t border-gray-100 overflow-hidden">
+                        {Object.keys(grouped[curr]).map(reg => (
+                          <li key={reg} className="pl-6 border-b border-gray-100 last:border-b-0">
+                            <button
+                              onClick={() => setExpandedReg(expandedReg === `${curr}-${reg}` ? null : `${curr}-${reg}`)}
+                              className="w-full flex items-center p-4 hover:bg-blue-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                {expandedReg === `${curr}-${reg}` ? <FolderOpen className="w-5 h-5 text-indigo-400" /> : <Folder className="w-5 h-5 text-indigo-400" />}
+                                <span className="font-medium text-gray-700">{reg} Regulation</span>
+                              </div>
+                            </button>
+                            
+                            <AnimatePresence>
+                              {expandedReg === `${curr}-${reg}` && (
+                                <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                  {Object.keys(grouped[curr][reg]).map(sem => (
+                                    <li key={sem} className="pl-6 border-t border-gray-100">
+                                      <button
+                                        onClick={() => setExpandedSem(expandedSem === `${curr}-${reg}-${sem}` ? null : `${curr}-${reg}-${sem}`)}
+                                        className="w-full flex items-center p-4 hover:bg-orange-50 transition-colors"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          {expandedSem === `${curr}-${reg}-${sem}` ? <FolderOpen className="w-4 h-4 text-orange-400" /> : <Folder className="w-4 h-4 text-orange-400" />}
+                                          <span className="text-sm font-medium text-gray-700">{sem}</span>
+                                        </div>
+                                      </button>
+
+                                      <AnimatePresence>
+                                        {expandedSem === `${curr}-${reg}-${sem}` && (
+                                          <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                            {Object.keys(grouped[curr][reg][sem]).map(dept => (
+                                              <li key={dept} className="pl-6 border-t border-gray-100">
+                                                <button
+                                                  onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${sem}-${dept}` ? null : `${curr}-${reg}-${sem}-${dept}`)}
+                                                  className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+                                                >
+                                                  <div className="flex items-center gap-3">
+                                                    {expandedDept === `${curr}-${reg}-${sem}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
+                                                    <span className="text-sm font-medium text-gray-700">{dept}</span>
+                                                  </div>
+                                                </button>
+
+                                                <AnimatePresence>
+                                                  {expandedDept === `${curr}-${reg}-${sem}-${dept}` && (
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="pl-6 pr-4 pb-4 overflow-hidden">
+                                                      <div className="bg-white border text-left border-gray-200 rounded-xl overflow-hidden mt-2 p-4">
+                                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                                                          <h3 className="font-bold text-gray-800">{dept} - {sem}</h3>
+                                                        </div>
+                                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                                          <table className="w-full text-sm text-left">
+                                                            <thead className="bg-gray-50 text-gray-700 uppercase text-[11px] tracking-wider">
+                                                              <tr>
+                                                                <th className="px-4 py-3 border-b font-semibold">Subject</th>
+                                                                <th className="px-4 py-3 border-b font-semibold">Date & Time</th>
+                                                                <th className="px-4 py-3 border-b font-semibold text-right">Actions</th>
+                                                              </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-gray-100">
+                                                              {grouped[curr][reg][sem][dept].subjects.map((subject: any) => (
+                                                                <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
+                                                                  <td className="px-4 py-3 align-top">
+                                                                    <div className="text-slate-900 font-bold whitespace-normal">{subject.subjectName}</div>
+                                                                    <div className="flex gap-2 mt-1.5 flex-wrap">
+                                                                      <code className="text-slate-600 font-mono text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Code: {subject.subjectCode}</code>
+                                                                    </div>
+                                                                  </td>
+                                                                  <td className="px-4 py-3 align-top">
+                                                                    <div className="text-slate-900 font-bold bg-white border border-slate-200 shadow-sm px-2.5 py-1 rounded-lg inline-flex items-center text-xs">
+                                                                      <CalendarRange className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                                                                      {subject.date}
+                                                                    </div>
+                                                                    <div className="text-slate-500 font-medium text-xs mt-2 pl-1">
+                                                                      {subject.day && `${subject.day} • `}{subject.time}
+                                                                    </div>
+                                                                  </td>
+                                                                  <td className="px-4 py-3 text-right align-top">
+                                                                    <button onClick={() => handleDelete(subject.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                                                                      <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                  </td>
+                                                                </tr>
+                                                              ))}
+                                                            </tbody>
+                                                          </table>
+                                                        </div>
+                                                      </div>
+                                                    </motion.div>
+                                                  )}
+                                                </AnimatePresence>
+                                              </li>
+                                            ))}
+                                          </motion.ul>
+                                        )}
+                                      </AnimatePresence>
+                                    </li>
+                                  ))}
+                                </motion.ul>
+                              )}
+                            </AnimatePresence>
+                          </li>
+                        ))}
+                      </motion.ul>
+                    )}
+                  </AnimatePresence>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

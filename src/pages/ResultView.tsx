@@ -448,66 +448,62 @@ export default function ResultView() {
 
     styleEl = document.createElement('style');
     styleEl.innerHTML = `
-      .lg\\:hidden { display: none !important; }
-      .sm\\:hidden { display: none !important; }
       .lg\\:block { display: block !important; }
-      .sm\\:block { display: block !important; }
-      .lg\\:flex { display: flex !important; }
-      .md\\:flex-row { flex-direction: row !important; }
       .lg\\:col-span-3 { grid-column: span 3 / span 3 !important; }
       .lg\\:col-span-9 { grid-column: span 9 / span 9 !important; }
+      .lg\\:hidden { display: none !important; }
       .lg\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
       .lg\\:py-10 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
-      .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
-      .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
-        .sm\\:px-1 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
-        .sm\\:px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-        .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
-        .sm\\:px-5 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
-        .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-        .sm\\:p-3 { padding: 0.75rem !important; }
-        .sm\\:p-4 { padding: 1rem !important; }
-        .sm\\:p-5 { padding: 1.25rem !important; }
-        .sm\\:p-8 { padding: 2rem !important; }
-        .sm\\:p-10 { padding: 2.5rem !important; }
-        .sm\\:py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
-        .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-        .sm\\:py-8 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-        .sm\\:gap-1 { gap: 0.25rem !important; }
-        .sm\\:gap-3 { gap: 0.75rem !important; }
-        .sm\\:gap-4 { gap: 1rem !important; }
-        .sm\\:w-3 { width: 0.75rem !important; }
-        .sm\\:h-3 { height: 0.75rem !important; }
-        .sm\\:w-48 { width: 12rem !important; }
-        .sm\\:max-w-\\[200px\\] { max-width: 200px !important; }
-        .sm\\:max-w-\\[120px\\] { max-width: 120px !important; }
-        .sm\\:inline { display: inline !important; }
-        .sm\\:flex-row { flex-direction: row !important; }
-        .sm\\:grid { display: grid !important; }
-        .sm\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        .sm\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-        .sm\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
-        .sm\\:col-span-4 { grid-column: span 4 / span 4 !important; }
-        .sm\\:col-span-8 { grid-column: span 8 / span 8 !important; }
-        .lg\\:col-span-3 { grid-column: span 3 / span 3 !important; }
-        .lg\\:col-span-9 { grid-column: span 9 / span 9 !important; }
-        .sm\\:items-center { align-items: center !important; }
-        .sm\\:items-start { align-items: flex-start !important; }
-        .sm\\:justify-start { justify-content: flex-start !important; }
-        .sm\\:justify-between { justify-content: space-between !important; }
-        .sm\\:text-left { text-align: left !important; }
-        .sm\\:border-b-0 { border-bottom-width: 0px !important; }
-        .sm\\:border-r { border-right-width: 1px !important; }
-        .sm\\:mx-0 { margin-left: 0px !important; margin-right: 0px !important; }
-        .hidden.sm\\:grid { display: grid !important; }
-        .sm\\:mb-0 { margin-bottom: 0px !important; }
-        .sm\\:mb-1 { margin-bottom: 0.25rem !important; }
-        .sm\\:mt-0 { margin-top: 0px !important; }
-        .sm\\:mr-2 { margin-right: 0.5rem !important; }
-        .sm\\:rounded-lg { border-radius: 0.5rem !important; }
-        .sm\\:text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+      .sm\\:block { display: block !important; }
+      .sm\\:border-b-0 { border-bottom-width: 0px !important; }
+      .sm\\:border-r { border-right-width: 1px !important; }
+      .sm\\:col-span-4 { grid-column: span 4 / span 4 !important; }
+      .sm\\:col-span-8 { grid-column: span 8 / span 8 !important; }
+      .sm\\:flex-row { flex-direction: row !important; }
+      .sm\\:gap-1 { gap: 0.25rem !important; }
+      .sm\\:gap-3 { gap: 0.75rem !important; }
+      .sm\\:gap-4 { gap: 1rem !important; }
+      .sm\\:grid { display: grid !important; }
+      .sm\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+      .sm\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .sm\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+      .sm\\:h-3 { height: 0.75rem !important; }
+      .sm\\:inline { display: inline !important; }
+      .sm\\:items-center { align-items: center !important; }
+      .sm\\:items-start { align-items: flex-start !important; }
+      .sm\\:justify-between { justify-content: space-between !important; }
+      .sm\\:justify-start { justify-content: flex-start !important; }
+      .sm\\:leading-normal { line-height: 1.5 !important; }
+      .sm\\:max-w-\\[200px\\] { max-width: 200px !important; }
+      .sm\\:mb-0 { margin-bottom: 0px !important; }
+      .sm\\:mb-1 { margin-bottom: 0.25rem !important; }
+      .sm\\:mr-2 { margin-right: 0.5rem !important; }
+      .sm\\:mt-0 { margin-top: 0px !important; }
+      .sm\\:mx-0 { margin-left: 0px !important; margin-right: 0px !important; }
+      .sm\\:p-10 { padding: 2.5rem !important; }
+      .sm\\:p-3 { padding: 0.75rem !important; }
+      .sm\\:p-4 { padding: 1rem !important; }
+      .sm\\:p-5 { padding: 1.25rem !important; }
+      .sm\\:p-8 { padding: 2rem !important; }
+      .sm\\:px-1 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
+      .sm\\:px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+      .sm\\:px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+      .sm\\:px-5 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+      .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+      .sm\\:py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+      .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+      .sm\\:py-8 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+      .sm\\:rounded-lg { border-radius: 0.5rem !important; }
+      .sm\\:text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
       .sm\\:text-\\[10px\\] { font-size: 10px !important; }
       .sm\\:text-\\[11px\\] { font-size: 11px !important; }
+      .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
+      .sm\\:text-left { text-align: left !important; }
+      .sm\\:text-slate-700 { color: #334155 !important; }
+      .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+      .sm\\:text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+      .sm\\:w-3 { width: 0.75rem !important; }
+      .sm\\:w-48 { width: 12rem !important; }
     `;
     document.head.appendChild(styleEl);
     
@@ -530,6 +526,8 @@ export default function ResultView() {
         }
       });
       
+      const targetHeight = element.offsetHeight;
+      
       element.style.width = prevWidth;
       element.style.maxWidth = prevMaxWidth;
       element.style.minHeight = prevMinHeight;
@@ -547,7 +545,7 @@ export default function ResultView() {
         download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
       } else if (exportType === 'pdf') {
         const pdfWidth = 210; // A4 width in mm
-        const pdfHeight = (element.offsetHeight * pdfWidth) / 794;
+        const pdfHeight = (targetHeight * pdfWidth) / 794;
         const pdf = new jsPDF({
           orientation: "portrait",
           unit: "mm",
