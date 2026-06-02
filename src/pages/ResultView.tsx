@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { Download, ArrowLeft, Loader2, Printer, BookOpen, Calendar, Building, Calculator, Heart, Copy, Share2, GraduationCap, CheckCircle2, XCircle, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toJpeg } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { QRCodeSVG } from 'qrcode.react';
 import download from 'downloadjs';
 import { Helmet } from 'react-helmet-async';
@@ -362,8 +363,8 @@ export default function ResultView() {
     setExpandedNodes(prev => prev.includes(nodeId) ? prev.filter(id => id !== nodeId) : [...prev, nodeId]);
   };
 
-  const handleDownload = async () => {
-    if (type === 'group') {
+  const generateImageAndDownload = async (exportType: 'jpg' | 'pdf') => {
+    if (exportType === 'jpg' && type === 'group') {
       try {
         let csvContent = "data:text/csv;charset=utf-8,";
         let headers = ["Roll Number", "Curriculum", "Regulation", "Institute"];
@@ -537,7 +538,20 @@ export default function ResultView() {
         styleEl.parentNode.removeChild(styleEl);
       }
       if (footerElement) footerElement.style.display = '';
-      download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
+
+      if (exportType === 'jpg') {
+        download(dataUrl, `Result_${roll || instituteCode || 'group'}.jpg`);
+      } else if (exportType === 'pdf') {
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4"
+        });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (element.offsetHeight * pdfWidth) / 794;
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Result_${roll || instituteCode || 'group'}.pdf`);
+      }
     } catch(err) {
       element.style.width = prevWidth;
       element.style.maxWidth = prevMaxWidth;
@@ -639,13 +653,13 @@ export default function ResultView() {
           {type !== 'institute' && (
             <>
               <button 
-                onClick={handleDownload}
+                onClick={() => generateImageAndDownload('jpg')}
                 className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95"
               >
                 <Download className="w-5 h-5 mr-0 sm:mr-2" /> <span className="hidden sm:inline">{type === 'group' ? 'Download CSV' : 'Download JPG'}</span>
               </button>
               <button 
-                onClick={handlePrint}
+                onClick={() => generateImageAndDownload('pdf')}
                 className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95"
               >
                 <Printer className="w-5 h-5 mr-0 sm:mr-2" /> <span className="hidden sm:inline">Download PDF</span>
@@ -684,7 +698,7 @@ export default function ResultView() {
         {type === 'individual' ? (
            <div className="space-y-12 print:space-y-6">
              {results.filter((_, i) => i === selectedResultIndex).map((resultItem, mapIndex) => (
-               <div key={resultItem.id} className="max-w-5xl w-full mx-auto space-y-6 print:space-y-4">
+               <div key={resultItem.id} className="max-w-3xl w-full mx-auto space-y-6 print:space-y-4">
                   {/* Modern Result Header */}
                   <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-emerald-900 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
