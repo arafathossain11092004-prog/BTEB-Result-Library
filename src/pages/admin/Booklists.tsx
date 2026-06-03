@@ -105,11 +105,79 @@ export default function AdminBooklists() {
   
   const [saving, setSaving] = useState(false);
 
+  const [isParsing, setIsParsing] = useState(false);
+
   useEffect(() => {
     fetchBooklists().catch(console.error);
   }, []);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    
+    try {
+      const { parsePdfToBooklists, parseDocxToBooklists } = await import('../../lib/pdfParser');
+      let booklistsParsed: any[] = [];
+      
+      if (file.name.endsWith('.pdf')) {
+        booklistsParsed = await parsePdfToBooklists(file);
+      } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+        booklistsParsed = await parseDocxToBooklists(file);
+      } else {
+        alert("Unsupported file format. Please upload PDF or DOCX.");
+        return;
+      }
+
+      if (booklistsParsed && booklistsParsed.length > 0) {
+        try {
+          const chunks = [];
+          for (let i = 0; i < booklistsParsed.length; i += 400) {
+            chunks.push(booklistsParsed.slice(i, i + 400));
+          }
+          
+          let count = 0;
+          for (const chunk of chunks) {
+            const batch = writeBatch(db);
+            for (const item of chunk) {
+              const newDocRef = doc(collection(db, 'booklists'));
+              batch.set(newDocRef, {
+                curriculum: item.Curriculum || 'Diploma In Engineering',
+                regulation: item.Regulation || '2016',
+                semester: item.Semester || '1st Semester',
+                department: item.Department || 'Other',
+                departmentCode: item.Department_Code || '',
+                subjectName: item.Subject_Name || '',
+                subjectCode: item.Subject_Code || '',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              });
+              count++;
+            }
+            await batch.commit();
+          }
+          alert(`Successfully imported ${count} books from document.`);
+          await fetchBooklists();
+        } catch (error) {
+          console.error("Error batch writing imported booklists:", error);
+          alert("Failed to save imported booklists.");
+        }
+      } else {
+        alert("No booklists found in the document.");
+      }
+    } catch (error) {
+      console.error("Error parsing document:", error);
+      alert("Failed to parse document. See console for details.");
+    } finally {
+      setIsParsing(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
   const fetchBooklists = async () => {
+
     setLoading(true);
     try {
       // Fetch without orderBy to prevent index requirement issues
@@ -312,16 +380,32 @@ export default function AdminBooklists() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 lg:px-0 px-4">
-      <div className="flex justify-between items-center border-b border-gray-200 pb-6 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 pb-6 mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold font-heading text-gray-900">Manage Booklists</h1>
-          <p className="text-sm text-gray-500">Add or remove booklists by semester.</p>
+          <p className="text-sm text-gray-500 mt-1">Add or remove booklists by semester.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+          <div className="relative">
+            <input
+              type="file"
+              accept=".pdf,.docx,.doc"
+              onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+              title="Upload Booklist PDF or DOCX"
+            />
+            <button
+              type="button"
+              className={`inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium transition-all shadow-sm ${isParsing ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isParsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BookCopy className="w-4 h-4 mr-2 text-slate-500" />}
+              {isParsing ? 'Parsing Doc...' : 'Import from Doc/PDF'}
+            </button>
+          </div>
           {booklists.length > 0 && (
             <button
               onClick={handleDeleteAll}
-              className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete All
