@@ -10,7 +10,7 @@ const CURRICULUM_DEPARTMENTS: Record<string, string[]> = {
     "62 Automobile Technology",
     "63 Chemical Technology",
     "64 Civil Technology",
-    "66 Civil (Wood) Technology",
+    "65 Civil (Wood) Technology",
     "67 Electrical Technology",
     "68 Electronics Technology",
     "69 Food Technology",

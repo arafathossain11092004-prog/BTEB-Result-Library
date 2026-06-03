@@ -86,6 +86,21 @@ export async function parsePdfToRoutines(file: File) {
         if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "Architecture"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
         else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "Automobile"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
         else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "Chemical"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
+        else if (
+          subjectName.includes("Civil (Wood)") || 
+          subjectName.includes("Civil(Wood)") || 
+          subjectName.includes("সিভিল (উড)") || 
+          subjectName.includes("সিভিল(উড)") ||
+          subjectName.includes("Civil Wood") || 
+          subjectName.includes("সিভিল উড") || 
+          subjectName.includes("Wood Technology") || 
+          subjectName.includes("উড টেকনোলজি") ||
+          subjectName.includes("Wood") ||
+          subjectName.includes("উড")
+        ) { 
+          tech = "Civil (Wood)"; 
+          subjectName = subjectName.replace(/Civil\s*\(?\s*Wood\s*\)?|সিভিল\s*\(?\s*উড\s*\)?|Wood Technology|উড টেকনোলজি|Wood|উড|সিভিল|Civil/gi, '').trim(); 
+        }
         else if (subjectName.includes("রিরভল") || subjectName.includes("সিভিল") || subjectName.includes("Civil")) { tech = "Civil"; subjectName = subjectName.replace(/রিরভল|সিভিল|Civil/g, '').trim(); }
         else if (subjectName.includes("করিউটাি") || subjectName.includes("কম্পিউটার") || subjectName.includes("Computer")) { tech = "Computer"; subjectName = subjectName.replace(/করিউটাি|কম্পিউটার|Computer/g, '').trim(); }
         else if (subjectName.includes("ইদলকরট্রকুাল") || subjectName.includes("ইলেকট্রিক্যাল") || subjectName.includes("Electrical")) { tech = "Electrical"; subjectName = subjectName.replace(/ইদলকরট্রকুাল|ইলেকট্রিক্যাল|Electrical/g, '').trim(); }
@@ -277,7 +292,42 @@ function getJaccardSimilarity(inputWords: string[], candidateWords: string[]): n
 }
 
 function normalizeDepartment(rawDept: string): { name: string; code: string } {
-  const cleanRaw = rawDept.trim().toLowerCase();
+  let cleanRaw = rawDept.trim().toLowerCase();
+  
+  // Translate common Bengali words to English to facilitate matching
+  if (cleanRaw.includes("সিভিল") || cleanRaw.includes("রিরভল")) {
+    cleanRaw += " civil";
+  }
+  if (cleanRaw.includes("উড")) {
+    cleanRaw += " wood";
+  }
+  if (cleanRaw.includes("কম্পিউটার") || cleanRaw.includes("করিউটাি")) {
+    cleanRaw += " computer";
+  }
+  if (cleanRaw.includes("আর্কিটেকচার") || cleanRaw.includes("আরকডদটکیাি")) {
+    cleanRaw += " architecture";
+  }
+  if (cleanRaw.includes("অটোমোবাইল") || cleanRaw.includes("অদটাদমাবাইল")) {
+    cleanRaw += " automobile";
+  }
+  if (cleanRaw.includes("কেমিক্যাল") || cleanRaw.includes("বকরমকুাল")) {
+    cleanRaw += " chemical";
+  }
+  if (cleanRaw.includes("ইলেকট্রিক্যাল") || cleanRaw.includes("ইদলকরট্রকুাল")) {
+    cleanRaw += " electrical";
+  }
+  if (cleanRaw.includes("ইলেকট্রনিক্স") || cleanRaw.includes("ইদলকট্ররিক্স")) {
+    cleanRaw += " electronics";
+  }
+  if (cleanRaw.includes("মেকানিক্যাল") || cleanRaw.includes("বমকারিকুাল")) {
+    cleanRaw += " mechanical";
+  }
+  if (cleanRaw.includes("পাওয়ার") || cleanRaw.includes("পাওয়াি")) {
+    cleanRaw += " power";
+  }
+  if (cleanRaw.includes("টেকনোলজি") || cleanRaw.includes("প্রযুক্তি")) {
+    cleanRaw += " technology";
+  }
   
   // Try matching by exact/subset code first
   const numMatch = cleanRaw.match(/\d+/);
