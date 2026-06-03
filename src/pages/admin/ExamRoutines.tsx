@@ -255,31 +255,54 @@ export default function AdminExamRoutines() {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setIsParsing(true);
     
     try {
       const { parsePdfToRoutines } = await import('../../lib/pdfParser');
-      const parsedRoutines = await parsePdfToRoutines(file);
+      const allParsedRoutines: any[] = [];
 
-      if (parsedRoutines && parsedRoutines.length > 0) {
-        // Collect unique departments from parsed routines to check for duplicates
-        const uniqueDepts = Array.from(new Set(parsedRoutines.map(r => r.Department).filter(Boolean))) as string[];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const parsedRoutines = await parsePdfToRoutines(file);
+        if (parsedRoutines && parsedRoutines.length > 0) {
+          allParsedRoutines.push(...parsedRoutines);
+        }
+      }
+
+      if (allParsedRoutines.length > 0) {
+        // Collect unique combinations from parsed routines to check for duplicates
+        const combinations: Array<{ department: string; regulation: string; curriculum: string }> = [];
+        for (const item of allParsedRoutines) {
+          const dept = item.Department || 'Other';
+          const reg = item.Regulation || '2016';
+          const curr = item.Curriculum || 'Diploma In Engineering';
+          if (!combinations.find(c => c.department === dept && c.regulation === reg && c.curriculum === curr)) {
+            combinations.push({ department: dept, regulation: reg, curriculum: curr });
+          }
+        }
+
         const existingDepts: string[] = [];
         
-        for (const dept of uniqueDepts) {
-          const qCheck = query(collection(db, 'examRoutines'), where('department', '==', dept), limit(1));
+        for (const comb of combinations) {
+          const qCheck = query(
+            collection(db, 'examRoutines'), 
+            where('department', '==', comb.department),
+            where('regulation', '==', comb.regulation),
+            where('curriculum', '==', comb.curriculum),
+            limit(1)
+          );
           const snapCheck = await getDocs(qCheck);
           if (!snapCheck.empty) {
-            existingDepts.push(dept);
+            existingDepts.push(`${comb.department} [${comb.regulation} Regulation]`);
           }
         }
 
         if (existingDepts.length > 0) {
           const proceed = window.confirm(
-            `সতর্কতা: ${existingDepts.join(', ')} ডিপার্টমেন্টের পরীক্ষার রুটিন ইতিমধ্যেই ডাটাবেজে রয়েছে। আপনি কি নিশ্চিত যে আপনি এটি আবার ইম্পোর্ট করতে চান? এতে ডুপ্লিকেট তথ্য তৈরি হতে পারে।`
+            `সতর্কতা: ${existingDepts.join(', ')} পরীক্ষার রুটিন ইতিমধ্যেই ডাটাবেজে রয়েছে। আপনি কি নিশ্চিত যে আপনি এটি আবার ইম্পোর্ট করতে চান? এতে ডুপ্লিকেট তথ্য তৈরি হতে পারে।`
           );
           if (!proceed) {
             setIsParsing(false);
@@ -290,8 +313,8 @@ export default function AdminExamRoutines() {
 
         try {
           const chunks = [];
-          for (let i = 0; i < parsedRoutines.length; i += 400) {
-            chunks.push(parsedRoutines.slice(i, i + 400));
+          for (let i = 0; i < allParsedRoutines.length; i += 400) {
+            chunks.push(allParsedRoutines.slice(i, i + 400));
           }
           
           let count = 0;
@@ -329,7 +352,7 @@ export default function AdminExamRoutines() {
             await batch.commit();
           }
           
-          alert(`Successfully parsed and saved ${count} exam routines from the PDF!`);
+          alert(`Successfully parsed and saved ${count} exam routines from the files!`);
           setShowForm(false);
           fetchRoutines().catch(console.error);
         } catch (e) {
@@ -337,7 +360,7 @@ export default function AdminExamRoutines() {
           alert("Error saving parsed routines to Firebase.");
         }
       } else {
-        alert('No valid routines found in this PDF.');
+        alert('No valid routines found in the uploaded files.');
       }
     } catch (error: any) {
       console.error(error);
@@ -661,17 +684,18 @@ export default function AdminExamRoutines() {
           <div className="relative">
             <input
               type="file"
+              multiple
               accept="application/pdf"
               onChange={handleFileUpload}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
-              title="Upload Routine PDF"
+              title="Upload Routine PDF(s)"
             />
             <button
               type="button"
               className={`inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold transition-all shadow-sm ${isParsing ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {isParsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarRange className="w-4 h-4 mr-2 text-slate-500" />}
-              {isParsing ? 'Parsing PDF...' : 'Import from PDF'}
+              {isParsing ? 'Parsing PDF(s)...' : 'Import from PDF(s)'}
             </button>
           </div>
           {routines.length > 0 && (

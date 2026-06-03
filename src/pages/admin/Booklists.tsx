@@ -299,52 +299,77 @@ export default function AdminBooklists() {
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setIsParsing(true);
     
     try {
       const { parsePdfToBooklists, parseDocxToBooklists } = await import('../../lib/pdfParser');
-      let booklistsParsed: any[] = [];
+      const allBooklistsParsed: any[] = [];
       
-      if (file.name.endsWith('.pdf')) {
-        booklistsParsed = await parsePdfToBooklists(file);
-      } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-        booklistsParsed = await parseDocxToBooklists(file);
-      } else {
-        alert("Unsupported file format. Please upload PDF or DOCX.");
-        return;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        let documentParsed: any[] = [];
+        if (file.name.endsWith('.pdf')) {
+          documentParsed = await parsePdfToBooklists(file);
+        } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+          documentParsed = await parseDocxToBooklists(file);
+        } else {
+          alert(`Unsupported file format for ${file.name}. Please upload PDF or DOCX.`);
+          setIsParsing(false);
+          if (e.target) e.target.value = '';
+          return;
+        }
+
+        if (documentParsed && documentParsed.length > 0) {
+          allBooklistsParsed.push(...documentParsed);
+        }
       }
 
-      if (booklistsParsed && booklistsParsed.length > 0) {
-        // Collect unique departments from parsed booklists to check for duplicates
-        const uniqueDepts = Array.from(new Set(booklistsParsed.map(b => b.Department).filter(Boolean))) as string[];
+      if (allBooklistsParsed && allBooklistsParsed.length > 0) {
+        // Collect unique combinations from parsed booklists to check for duplicates
+        const combinations: Array<{ department: string; regulation: string; curriculum: string }> = [];
+        for (const item of allBooklistsParsed) {
+          const dept = item.Department || 'Other';
+          const reg = item.Regulation || '2016';
+          const curr = item.Curriculum || 'Diploma In Engineering';
+          if (!combinations.find(c => c.department === dept && c.regulation === reg && c.curriculum === curr)) {
+            combinations.push({ department: dept, regulation: reg, curriculum: curr });
+          }
+        }
+
         const existingDepts: string[] = [];
         
-        for (const dept of uniqueDepts) {
-          const qCheck = query(collection(db, 'booklists'), where('department', '==', dept), limit(1));
+        for (const comb of combinations) {
+          const qCheck = query(
+            collection(db, 'booklists'), 
+            where('department', '==', comb.department),
+            where('regulation', '==', comb.regulation),
+            where('curriculum', '==', comb.curriculum),
+            limit(1)
+          );
           const snapCheck = await getDocs(qCheck);
           if (!snapCheck.empty) {
-            existingDepts.push(dept);
+            existingDepts.push(`${comb.department} [${comb.regulation} Regulation]`);
           }
         }
 
         if (existingDepts.length > 0) {
           const proceed = window.confirm(
-            `সতর্কতা: ${existingDepts.join(', ')} ডিপার্টমেন্টের বুক লিস্ট ইতিমধ্যেই ডাটাবেজে রয়েছে। আপনি কি নিশ্চিত যে আপনি এটি আবার ইম্পোর্ট করতে চান? এতে ডুপ্লিকেট তথ্য তৈরি হতে পারে।`
+            `সতর্কতা: ${existingDepts.join(', ')} বুক লিস্ট ইতিমধ্যেই ডাটাবেজে রয়েছে। আপনি কি নিশ্চিত যে আপনি এটি আবার ইম্পোর্ট করতে চান? এতে ডুপ্লিকেট তথ্য তৈরি হতে পারে।`
           );
           if (!proceed) {
             setIsParsing(false);
-            e.target.value = '';
+            if (e.target) e.target.value = '';
             return;
           }
         }
 
         try {
           const chunks = [];
-          for (let i = 0; i < booklistsParsed.length; i += 400) {
-            chunks.push(booklistsParsed.slice(i, i + 400));
+          for (let i = 0; i < allBooklistsParsed.length; i += 400) {
+            chunks.push(allBooklistsParsed.slice(i, i + 400));
           }
           
           let count = 0;
@@ -368,7 +393,7 @@ export default function AdminBooklists() {
             }
             await batch.commit();
           }
-          alert(`Successfully imported ${count} books from document.`);
+          alert(`Successfully imported ${count} books from document(s).`);
           await fetchBooklists();
         } catch (error) {
           console.error("Error batch writing imported booklists:", error);
@@ -383,7 +408,7 @@ export default function AdminBooklists() {
     } finally {
       setIsParsing(false);
       // Reset input
-      e.target.value = '';
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -657,17 +682,18 @@ export default function AdminBooklists() {
           <div className="relative">
             <input
               type="file"
+              multiple
               accept=".pdf,.docx,.doc"
               onChange={handleFileUpload}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
-              title="Upload Booklist PDF or DOCX"
+              title="Upload Booklist PDF(s) or DOCX(s)"
             />
             <button
               type="button"
               className={`inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium transition-all shadow-sm ${isParsing ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {isParsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BookCopy className="w-4 h-4 mr-2 text-slate-500" />}
-              {isParsing ? 'Parsing Doc...' : 'Import from Doc/PDF'}
+              {isParsing ? 'Parsing Doc(s)...' : 'Import from Doc(s)/PDF(s)'}
             </button>
           </div>
           {booklists.length > 0 && (
