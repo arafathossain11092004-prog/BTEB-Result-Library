@@ -377,11 +377,16 @@ export default function AdminBooklists() {
             const batch = writeBatch(db);
             for (const item of chunk) {
               const newDocRef = doc(collection(db, 'booklists'));
+              const rawDept = item.Department || 'Other';
+              const finalCurr = item.Curriculum || 'Diploma In Engineering';
+              const finalDept = normalizeDeptGroupKey(rawDept, finalCurr, item.Regulation || '');
+              const finalSemester = normalizeSemesterString(item.Semester || '1st');
+
               batch.set(newDocRef, {
-                curriculum: item.Curriculum || 'Diploma In Engineering',
+                curriculum: finalCurr,
                 regulation: item.Regulation || '2016',
-                semester: item.Semester || '1st Semester',
-                department: item.Department || 'Other',
+                semester: finalSemester,
+                department: finalDept,
                 departmentCode: item.Department_Code || '',
                 subjectName: item.Subject_Name || '',
                 subjectCode: item.Subject_Code || '',
@@ -417,7 +422,7 @@ export default function AdminBooklists() {
     setLoading(true);
     try {
       // Fetch with a large enough limit to get all booklists
-      const q = query(collection(db, 'booklists'), limit(3000));
+      const q = query(collection(db, 'booklists'), limit(5000));
       const snapshot = await getDocs(q);
       setBooklists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
@@ -496,15 +501,17 @@ export default function AdminBooklists() {
     try {
       const batch = writeBatch(db);
       formBlocks.forEach(block => {
-        const finalDept = block.department === 'Other' ? block.customDepartment : block.department;
+        const rawDept = block.department === 'Other' ? block.customDepartment : block.department;
         const finalCurr = block.curriculum === 'Other' ? block.customCurriculum : block.curriculum;
+        const finalDept = normalizeDeptGroupKey(rawDept, finalCurr, block.regulation);
+        const finalSemester = normalizeSemesterString(block.semester);
         
         block.subjects.forEach(subject => {
            const newDocRef = doc(collection(db, 'booklists'));
            batch.set(newDocRef, {
              curriculum: finalCurr,
              regulation: block.regulation,
-             semester: block.semester,
+             semester: finalSemester,
              department: finalDept,
              departmentCode: block.departmentCode,
              ...subject,
