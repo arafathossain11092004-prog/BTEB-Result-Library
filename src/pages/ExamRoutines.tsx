@@ -126,6 +126,20 @@ export default function ExamRoutines() {
     activeDepartment,
   ]);
 
+  const displayExamName = useMemo(() => {
+    const withExamName = filteredSubjects.length > 0
+      ? filteredSubjects.filter((r) => r.examName)
+      : routines.filter((r) => r.examName);
+
+    if (withExamName.length === 0) return null;
+    
+    return withExamName.sort((a, b) => {
+      const dateA = a.publishDate ? new Date(a.publishDate).getTime() : 0;
+      const dateB = b.publishDate ? new Date(b.publishDate).getTime() : 0;
+      return dateB - dateA;
+    })[0].examName;
+  }, [routines, filteredSubjects]);
+
   // Auto-select if only one option available
   useEffect(() => {
     if (curriculums.length === 1 && !activeCurriculum)
@@ -347,21 +361,38 @@ export default function ExamRoutines() {
           {/* Sidebar Filters */}
           <div className="lg:col-span-4 space-y-6">
             
-            {/* Publish Date Badge */}
-            {displayPublishDate && (
-              <div className="bg-emerald-50 border border-emerald-200/60 rounded-3xl p-5 flex items-center justify-between shadow-sm relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />
-                <div className="relative z-10 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-                    <Calendar className="w-5 h-5" />
+            {/* Exam Details Card */}
+            {(displayPublishDate || displayExamName) && (
+              <div className="bg-gradient-to-br from-indigo-50/60 to-blue-50/40 border border-indigo-100 rounded-3xl p-5 shadow-sm relative overflow-hidden space-y-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none" />
+                
+                {displayExamName && (
+                  <div className="relative z-10 flex gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-indigo-800 uppercase tracking-widest mb-0.5">Exam Name</h3>
+                      <p className="text-slate-700 font-bold text-sm leading-tight">
+                        {displayExamName}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-widest mb-0.5">Publish Date</h3>
-                    <p className="text-emerald-700 font-medium text-sm">
-                      {new Date(displayPublishDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </p>
+                )}
+
+                {displayPublishDate && (
+                  <div className="relative z-10 flex gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-widest mb-0.5">Publish Date</h3>
+                      <p className="text-emerald-700 font-medium text-sm">
+                        {new Date(displayPublishDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -584,8 +615,8 @@ export default function ExamRoutines() {
                       <div className="relative z-10 flex flex-col gap-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-1">
-                              Exam Routine
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1 leading-tight">
+                              {displayExamName || "Exam Routine"}
                             </h1>
                             <p className="text-blue-100/80 font-medium text-sm tracking-wide">
                               BTEB Result Library
@@ -698,7 +729,7 @@ export default function ExamRoutines() {
         >
           <div className="text-center mb-10 pb-6 border-b-2 border-gray-800">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Exam Routine
+              {displayExamName || "Exam Routine"}
             </h1>
             <h2 className="text-xl font-bold text-gray-800 mb-2">
               {activeCurriculum}

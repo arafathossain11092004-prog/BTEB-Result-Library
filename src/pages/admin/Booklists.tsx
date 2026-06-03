@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, query, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Plus, Trash2, Loader2, BookCopy, X, Folder, FolderOpen, Save, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -187,34 +187,35 @@ const getDepartmentsByRegulation = (regulation: string = ""): string[] => {
   }
 };
 
+const getCoreWords = (str: string): string[] => {
+  return str
+    .toLowerCase()
+    .replace(/[()&,:\-\[\]"']/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w && !['technology', 'dept', 'department', 'in', 'engineering', 'and', 'diploma', 'of', 'class', 'course'].includes(w));
+};
+
+const getJaccardSimilarity = (inputWords: string[], candidateWords: string[]): number => {
+  if (inputWords.length === 0 || candidateWords.length === 0) return 0;
+  let matches = 0;
+  for (const w of candidateWords) {
+    if (inputWords.includes(w)) {
+      matches++;
+    }
+  }
+  if (matches === 0) return 0;
+  const unionSize = new Set([...inputWords, ...candidateWords]).size;
+  return matches / unionSize;
+};
+
 const normalizeDeptGroupKey = (deptStr: string, curriculum: string, regulation: string = ""): string => {
   const cleanRaw = String(deptStr).trim().toLowerCase();
   if (cleanRaw === 'all department' || cleanRaw === 'other') return deptStr;
 
   const depts = getDepartmentsByRegulation(regulation);
 
-  // Approach 1: Try to match by name or name substring
-  for (const d of depts) {
-    const match = d.match(/^(\d+)\s+(.+)$/);
-    if (match) {
-      const deptName = match[2].toLowerCase();
-      if (cleanRaw === deptName || cleanRaw.includes(deptName) || deptName.includes(cleanRaw)) {
-        return d;
-      }
-      
-      const nameWithoutTech = deptName.replace(/\s*technology/g, '').trim();
-      const rawWithoutTech = cleanRaw.replace(/\s*technology/g, '').trim();
-      if (rawWithoutTech === nameWithoutTech || rawWithoutTech.includes(nameWithoutTech) || nameWithoutTech.includes(rawWithoutTech)) {
-        return d;
-      }
-    } else {
-      if (cleanRaw === d.toLowerCase() || d.toLowerCase().includes(cleanRaw) || cleanRaw.includes(d.toLowerCase())) {
-        return d;
-      }
-    }
-  }
-
-  // Approach 2: Match by 2-digit or 3-digit code
+  // Approach 1: Match by exact/subset code first
   const numMatch = cleanRaw.match(/\d+/);
   if (numMatch) {
     const inputNum = numMatch[0]; // e.g., "66" or "666" or "700"
@@ -241,6 +242,35 @@ const normalizeDeptGroupKey = (deptStr: string, curriculum: string, regulation: 
         }
       }
     }
+  }
+
+  // Approach 2: Match by core-words similarity
+  const inputWords = getCoreWords(cleanRaw);
+  let bestDept = deptStr;
+  let highestScore = 0;
+
+  for (const d of depts) {
+    const match = d.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      const deptName = match[2];
+      const candidateWords = getCoreWords(deptName);
+      const score = getJaccardSimilarity(inputWords, candidateWords);
+      if (score > highestScore) {
+        highestScore = score;
+        bestDept = d;
+      }
+    } else {
+      const candidateWords = getCoreWords(d);
+      const score = getJaccardSimilarity(inputWords, candidateWords);
+      if (score > highestScore) {
+        highestScore = score;
+        bestDept = d;
+      }
+    }
+  }
+
+  if (highestScore > 0.2) {
+    return bestDept;
   }
 
   return deptStr;
@@ -521,6 +551,39 @@ export default function AdminBooklists() {
     }
   };
 
+  const handleDeleteDepartment = async (curriculum: string, regulation: string, department: string) => {
+    if (confirm(`Are you absolutely sure you want to delete ALL booklists under ${curriculum} (${regulation}) for ${department}?`)) {
+      try {
+        setLoading(true);
+        const q = query(
+          collection(db, 'booklists'),
+          where('curriculum', '==', curriculum),
+          where('regulation', '==', regulation),
+          where('department', '==', department)
+        );
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+          alert("No booklists found for this department.");
+          return;
+        }
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        alert(`Successfully deleted ${snapshot.docs.length} books for ${department}.`);
+        await fetchBooklists();
+      } catch (error) {
+        console.error("Error deleting department booklists:", error);
+        alert("Failed to delete. See console for details.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const grouped = booklists.reduce((acc, curr) => {
     const curriculum = curr.curriculum || 'Unknown';
     const regulation = curr.regulation || 'Unknown';
@@ -769,15 +832,25 @@ export default function AdminBooklists() {
                                 <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
                                   {Object.keys(grouped[curr][reg]).map(dept => (
                                     <li key={dept} className="pl-6 border-t border-gray-100">
-                                      <button
-                                        onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${dept}` ? null : `${curr}-${reg}-${dept}`)}
-                                        className="w-full flex items-center justify-between p-4 hover:bg-green-50/50 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          {expandedDept === `${curr}-${reg}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
+                                      <div className="flex items-center justify-between hover:bg-green-50/50 transition-colors">
+                                        <button
+                                          onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${dept}` ? null : `${curr}-${reg}-${dept}`)}
+                                          className="flex-1 flex items-center gap-3 p-4 text-left outline-none"
+                                        >
+                                          {expandedDept === `${curr}-${reg}-${dept}` ? <FolderOpen className="min-w-[16px] w-4 h-4 text-green-500" /> : <Folder className="min-w-[16px] w-4 h-4 text-green-500" />}
                                           <span className="text-sm font-medium text-gray-700">{dept}</span>
-                                        </div>
-                                      </button>
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteDepartment(curr, reg, dept);
+                                          }}
+                                          className="p-2 mr-4 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
+                                          title="Delete Department Booklist"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
 
                                       <AnimatePresence>
                                         {expandedDept === `${curr}-${reg}-${dept}` && (

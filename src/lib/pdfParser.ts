@@ -254,30 +254,32 @@ function normalizeSemester(semStr: string): string {
   return semStr.replace(/\s*semester/i, '').trim();
 }
 
+function getCoreWords(str: string): string[] {
+  return str
+    .toLowerCase()
+    .replace(/[()&,:\-\[\]"']/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w && !['technology', 'dept', 'department', 'in', 'engineering', 'and', 'diploma', 'of', 'class', 'course'].includes(w));
+}
+
+function getJaccardSimilarity(inputWords: string[], candidateWords: string[]): number {
+  if (inputWords.length === 0 || candidateWords.length === 0) return 0;
+  let matches = 0;
+  for (const w of candidateWords) {
+    if (inputWords.includes(w)) {
+      matches++;
+    }
+  }
+  if (matches === 0) return 0;
+  const unionSize = new Set([...inputWords, ...candidateWords]).size;
+  return matches / unionSize;
+}
+
 function normalizeDepartment(rawDept: string): { name: string; code: string } {
   const cleanRaw = rawDept.trim().toLowerCase();
   
-  // Try matching by name first
-  for (const dept of KNOWN_ENGINEERING_DEPTS) {
-    const match = dept.match(/^(\d+)\s+(.+)$/);
-    if (match) {
-      const code = match[1];
-      const deptName = match[2];
-      const cleanDeptName = deptName.toLowerCase();
-      
-      if (cleanRaw === cleanDeptName || cleanRaw.includes(cleanDeptName) || cleanDeptName.includes(cleanRaw)) {
-        return { name: dept, code };
-      }
-      
-      const nameWithoutTech = cleanDeptName.replace(/\s*technology/g, '').trim();
-      const rawWithoutTech = cleanRaw.replace(/\s*technology/g, '').trim();
-      if (rawWithoutTech === nameWithoutTech || rawWithoutTech.includes(nameWithoutTech) || nameWithoutTech.includes(rawWithoutTech)) {
-        return { name: dept, code };
-      }
-    }
-  }
-
-  // Try matching by code (2-digit or 3-digit)
+  // Try matching by exact/subset code first
   const numMatch = cleanRaw.match(/\d+/);
   if (numMatch) {
     const inputNum = numMatch[0];
@@ -285,7 +287,6 @@ function normalizeDepartment(rawDept: string): { name: string; code: string } {
       const match = dept.match(/^(\d+)\s+(.+)$/);
       if (match) {
         const code2 = match[1];
-        
         let code3 = "";
         if (code2.length === 2) {
           const firstDigit = code2[0];
@@ -302,6 +303,33 @@ function normalizeDepartment(rawDept: string): { name: string; code: string } {
         }
       }
     }
+  }
+
+  // Matching by core-words similarity
+  const inputWords = getCoreWords(cleanRaw);
+  let bestDept = "";
+  let bestCode = "";
+  let highestScore = 0;
+
+  for (const dept of KNOWN_ENGINEERING_DEPTS) {
+    const match = dept.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      const code = match[1];
+      const deptName = match[2];
+      const candidateWords = getCoreWords(deptName);
+      
+      const score = getJaccardSimilarity(inputWords, candidateWords);
+      if (score > highestScore) {
+        highestScore = score;
+        bestDept = dept;
+        bestCode = code;
+      }
+    }
+  }
+
+  // Threshold: at least some word must match
+  if (highestScore > 0.2) {
+    return { name: bestDept, code: bestCode };
   }
   
   const codeMatch = rawDept.match(/^(\d+)[\s\-]+(.+)$/);

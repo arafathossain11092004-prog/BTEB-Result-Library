@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Plus, Trash2, Loader2, CalendarRange, X, Save, SaveAll, Folder, FolderOpen, BookCopy, Edit } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
@@ -208,15 +208,16 @@ export default function AdminExamRoutines() {
   const [showForm, setShowForm] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ subjectName: '', subjectCode: '', date: '', time: '', day: '' });
+  const [editForm, setEditForm] = useState({ subjectName: '', subjectCode: '', date: '', time: '', day: '', publishDate: '', examName: '' });
   
   const [expandedCurr, setExpandedCurr] = useState<string | null>(null);
   const [expandedReg, setExpandedReg] = useState<string | null>(null);
   const [expandedSem, setExpandedSem] = useState<string | null>(null);
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
-
+  
   // Global Meta State
   const [globalPublishDate, setGlobalPublishDate] = useState('');
+  const [globalExamName, setGlobalExamName] = useState('');
   
   // Hierarchical State
   const [dateBlocks, setDateBlocks] = useState<RoutineDateBlock[]>([generateEmptyDateBlock()]);
@@ -295,6 +296,8 @@ export default function AdminExamRoutines() {
                 date: item.Date || '',
                 day: item.Day || '',
                 time: item.Time || '',
+                publishDate: globalPublishDate || '',
+                examName: globalExamName || '',
                 createdAt: Date.now(),
                 updatedAt: Date.now()
               });
@@ -479,6 +482,7 @@ export default function AdminExamRoutines() {
               day: dateBlock.day,
               time: timeSlot.timeShift,
               publishDate: globalPublishDate,
+              examName: globalExamName,
               createdAt: Date.now(),
               updatedAt: Date.now()
             });
@@ -521,6 +525,8 @@ export default function AdminExamRoutines() {
         date: editForm.date,
         time: editForm.time,
         day: editForm.day,
+        publishDate: editForm.publishDate,
+        examName: editForm.examName,
         updatedAt: Date.now()
       });
       setEditingItem(null);
@@ -563,6 +569,39 @@ export default function AdminExamRoutines() {
       } catch (error) {
         console.error("Error deleting all:", error);
         alert("Failed to delete all. See console for details.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDeleteDepartment = async (curriculum: string, regulation: string, department: string) => {
+    if (confirm(`Are you absolutely sure you want to delete ALL exam routines under ${curriculum} (${regulation}) for ${department}?`)) {
+      try {
+        setLoading(true);
+        const q = query(
+          collection(db, 'examRoutines'),
+          where('curriculum', '==', curriculum),
+          where('regulation', '==', regulation),
+          where('department', '==', department)
+        );
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+          alert("No exam routines found for this department.");
+          return;
+        }
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        alert(`Successfully deleted ${snapshot.docs.length} exam routines for ${department}.`);
+        await fetchRoutines();
+      } catch (error) {
+        console.error("Error deleting department exam routines:", error);
+        alert("Failed to delete. See console for details.");
       } finally {
         setLoading(false);
       }
@@ -640,13 +679,19 @@ export default function AdminExamRoutines() {
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-3xl border border-gray-200 shadow-sm mb-6 flex flex-col gap-6 pb-32">
           
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50 border border-indigo-100 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm">
-            <div>
+            <div className="flex-1">
               <h3 className="text-lg font-bold text-slate-800">Routine Builder</h3>
               <p className="text-sm text-slate-500">Configure routine blocks below.</p>
             </div>
-            <div className="w-full md:w-1/3">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Publish Date (Global)</label>
-              <input type="date" value={globalPublishDate} onChange={e => setGlobalPublishDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 shadow-sm rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white" />
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-2/3">
+              <div className="flex-1">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Publish Date (Global)</label>
+                <input type="date" value={globalPublishDate} onChange={e => setGlobalPublishDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 shadow-sm rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Exam Name (Global)</label>
+                <input type="text" placeholder="e.g. Semester Final Exam 2026" value={globalExamName} onChange={e => setGlobalExamName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 shadow-sm rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white" />
+              </div>
             </div>
           </div>
 
@@ -883,15 +928,25 @@ export default function AdminExamRoutines() {
                                 <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
                                   {Object.keys(grouped[curr][reg]).map(dept => (
                                     <li key={dept} className="pl-6 border-t border-gray-100">
-                                      <button
-                                        onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${dept}` ? null : `${curr}-${reg}-${dept}`)}
-                                        className="w-full flex items-center justify-between p-4 hover:bg-green-50/50 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          {expandedDept === `${curr}-${reg}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
+                                      <div className="flex items-center justify-between hover:bg-green-50/50 transition-colors">
+                                        <button
+                                          onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${dept}` ? null : `${curr}-${reg}-${dept}`)}
+                                          className="flex-1 flex items-center gap-3 p-4 text-left outline-none"
+                                        >
+                                          {expandedDept === `${curr}-${reg}-${dept}` ? <FolderOpen className="min-w-[16px] w-4 h-4 text-green-500" /> : <Folder className="min-w-[16px] w-4 h-4 text-green-500" />}
                                           <span className="text-sm font-medium text-gray-700">{dept}</span>
-                                        </div>
-                                      </button>
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteDepartment(curr, reg, dept);
+                                          }}
+                                          className="p-2 mr-4 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
+                                          title="Delete Department Routine"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
 
                                       <AnimatePresence>
                                         {expandedDept === `${curr}-${reg}-${dept}` && (
@@ -943,7 +998,7 @@ export default function AdminExamRoutines() {
                                                                     </div>
                                                                   </td>
                                                                   <td className="px-4 py-3 text-right align-top">
-                                                                    <button onClick={() => { setEditingItem(subject); setEditForm({ subjectName: subject.subjectName || '', subjectCode: subject.subjectCode || '', date: subject.date || '', time: subject.time || '', day: subject.day || '' }); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors mr-2" title="Edit">
+                                                                    <button onClick={() => { setEditingItem(subject); setEditForm({ subjectName: subject.subjectName || '', subjectCode: subject.subjectCode || '', date: subject.date || '', time: subject.time || '', day: subject.day || '', publishDate: subject.publishDate || '', examName: subject.examName || '' }); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors mr-2" title="Edit">
                                                                       <Edit className="w-4 h-4" />
                                                                     </button>
                                                                     <button onClick={() => handleDelete(subject.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
@@ -1021,6 +1076,16 @@ export default function AdminExamRoutines() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
                     <input type="text" value={editForm.day} onChange={e => setEditForm({...editForm, day: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Publish Date</label>
+                    <input type="text" placeholder="YYYY-MM-DD" value={editForm.publishDate || ''} onChange={e => setEditForm({...editForm, publishDate: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Exam Name</label>
+                    <input type="text" value={editForm.examName || ''} onChange={e => setEditForm({...editForm, examName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
                   </div>
                 </div>
                 <div className="pt-2 flex justify-end gap-2">
