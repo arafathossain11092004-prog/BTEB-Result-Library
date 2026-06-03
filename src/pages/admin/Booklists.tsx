@@ -89,6 +89,44 @@ interface FormBlock {
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+const normalizeSemesterString = (sem: string): string => {
+  const s = String(sem).toLowerCase();
+  if (s.includes('1st') || s.includes('১ম') || s.includes('first')) return '1st';
+  if (s.includes('2nd') || s.includes('২য়') || s.includes('second')) return '2nd';
+  if (s.includes('3rd') || s.includes('৩য়') || s.includes('third')) return '3rd';
+  if (s.includes('4th') || s.includes('৪র্থ') || s.includes('fourth')) return '4th';
+  if (s.includes('5th') || s.includes('৫ম') || s.includes('fifth')) return '5th';
+  if (s.includes('6th') || s.includes('৬ষ্ঠ') || s.includes('sixth')) return '6th';
+  if (s.includes('7th') || s.includes('৭ম') || s.includes('seventh')) return '7th';
+  if (s.includes('8th') || s.includes('৮ম') || s.includes('eighth')) return '8th';
+  return sem.replace(/\s*semester/i, '').trim();
+};
+
+const normalizeDeptGroupKey = (deptStr: string, curriculum: string): string => {
+  const cleanRaw = String(deptStr).trim().toLowerCase();
+  const depts = CURRICULUM_DEPARTMENTS[curriculum] || [];
+  for (const d of depts) {
+    const match = d.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      const deptName = match[2].toLowerCase();
+      if (cleanRaw === deptName || cleanRaw.includes(deptName) || deptName.includes(cleanRaw)) {
+        return d;
+      }
+      
+      const nameWithoutTech = deptName.replace(/\s*technology/g, '').trim();
+      const rawWithoutTech = cleanRaw.replace(/\s*technology/g, '').trim();
+      if (rawWithoutTech === nameWithoutTech || rawWithoutTech.includes(nameWithoutTech) || nameWithoutTech.includes(rawWithoutTech)) {
+        return d;
+      }
+    } else {
+      if (cleanRaw === d.toLowerCase() || d.toLowerCase().includes(cleanRaw) || cleanRaw.includes(d.toLowerCase())) {
+        return d;
+      }
+    }
+  }
+  return deptStr;
+};
+
 export default function AdminBooklists() {
   const [booklists, setBooklists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,6 +188,7 @@ export default function AdminBooklists() {
                 departmentCode: item.Department_Code || '',
                 subjectName: item.Subject_Name || '',
                 subjectCode: item.Subject_Code || '',
+                orderIndex: count,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
               });
@@ -180,8 +219,8 @@ export default function AdminBooklists() {
 
     setLoading(true);
     try {
-      // Fetch without orderBy to prevent index requirement issues
-      const q = query(collection(db, 'booklists'), limit(100));
+      // Fetch with a large enough limit to get all booklists
+      const q = query(collection(db, 'booklists'), limit(3000));
       const snapshot = await getDocs(q);
       setBooklists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
@@ -366,17 +405,41 @@ export default function AdminBooklists() {
   const grouped = booklists.reduce((acc, curr) => {
     const curriculum = curr.curriculum || 'Unknown';
     const regulation = curr.regulation || 'Unknown';
-    const semester = curr.semester || 'Unknown';
-    const dept = curr.department || 'Unknown';
+    const rawDept = curr.department || 'Unknown';
+    const dept = normalizeDeptGroupKey(rawDept, curriculum);
+    const semester = normalizeSemesterString(curr.semester || '1st');
+
+    let deptCode = curr.departmentCode || '';
+    if (!deptCode && dept) {
+      const matchCode = dept.match(/^(\d+)/);
+      if (matchCode) {
+        deptCode = matchCode[1];
+      }
+    }
 
     if (!acc[curriculum]) acc[curriculum] = {};
     if (!acc[curriculum][regulation]) acc[curriculum][regulation] = {};
-    if (!acc[curriculum][regulation][semester]) acc[curriculum][regulation][semester] = {};
-    if (!acc[curriculum][regulation][semester][dept]) acc[curriculum][regulation][semester][dept] = { code: curr.departmentCode || '', subjects: [] };
+    if (!acc[curriculum][regulation][dept]) acc[curriculum][regulation][dept] = {};
+    if (!acc[curriculum][regulation][dept][semester]) acc[curriculum][regulation][dept][semester] = { code: deptCode, subjects: [] };
     
-    acc[curriculum][regulation][semester][dept].subjects.push(curr);
+    acc[curriculum][regulation][dept][semester].subjects.push(curr);
     return acc;
-  }, {});
+  }, {} as any);
+
+  // Sort subjects by orderIndex within each leaf group
+  Object.keys(grouped).forEach(currKey => {
+    Object.keys(grouped[currKey]).forEach(regKey => {
+      Object.keys(grouped[currKey][regKey]).forEach(deptKey => {
+        Object.keys(grouped[currKey][regKey][deptKey]).forEach(semKey => {
+          grouped[currKey][regKey][deptKey][semKey].subjects.sort((a: any, b: any) => {
+            const aIdx = typeof a.orderIndex === 'number' ? a.orderIndex : (a.createdAt || 0);
+            const bIdx = typeof b.orderIndex === 'number' ? b.orderIndex : (b.createdAt || 0);
+            return aIdx - bIdx;
+          });
+        });
+      });
+    });
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 lg:px-0 px-4">
@@ -585,40 +648,40 @@ export default function AdminBooklists() {
                             <AnimatePresence>
                               {expandedReg === `${curr}-${reg}` && (
                                 <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                  {Object.keys(grouped[curr][reg]).map(sem => (
-                                    <li key={sem} className="pl-6 border-t border-gray-100">
+                                  {Object.keys(grouped[curr][reg]).map(dept => (
+                                    <li key={dept} className="pl-6 border-t border-gray-100">
                                       <button
-                                        onClick={() => setExpandedSem(expandedSem === `${curr}-${reg}-${sem}` ? null : `${curr}-${reg}-${sem}`)}
-                                        className="w-full flex items-center p-4 hover:bg-orange-50 transition-colors"
+                                        onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${dept}` ? null : `${curr}-${reg}-${dept}`)}
+                                        className="w-full flex items-center justify-between p-4 hover:bg-green-50/50 transition-colors"
                                       >
                                         <div className="flex items-center gap-3">
-                                          {expandedSem === `${curr}-${reg}-${sem}` ? <FolderOpen className="w-4 h-4 text-orange-400" /> : <Folder className="w-4 h-4 text-orange-400" />}
-                                          <span className="text-sm font-medium text-gray-700">{sem} Semester</span>
+                                          {expandedDept === `${curr}-${reg}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
+                                          <span className="text-sm font-medium text-gray-700">{dept}</span>
                                         </div>
                                       </button>
 
                                       <AnimatePresence>
-                                        {expandedSem === `${curr}-${reg}-${sem}` && (
+                                        {expandedDept === `${curr}-${reg}-${dept}` && (
                                           <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                            {Object.keys(grouped[curr][reg][sem]).map(dept => (
-                                              <li key={dept} className="pl-6 border-t border-gray-100">
+                                            {Object.keys(grouped[curr][reg][dept]).map(sem => (
+                                              <li key={sem} className="pl-6 border-t border-gray-150">
                                                 <button
-                                                  onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${sem}-${dept}` ? null : `${curr}-${reg}-${sem}-${dept}`)}
-                                                  className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+                                                  onClick={() => setExpandedSem(expandedSem === `${curr}-${reg}-${dept}-${sem}` ? null : `${curr}-${reg}-${dept}-${sem}`)}
+                                                  className="w-full flex items-center justify-between p-4 hover:bg-orange-50/50 transition-colors"
                                                 >
                                                   <div className="flex items-center gap-3">
-                                                    {expandedDept === `${curr}-${reg}-${sem}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
-                                                    <span className="text-sm font-medium text-gray-700">{dept}</span>
+                                                    {expandedSem === `${curr}-${reg}-${dept}-${sem}` ? <FolderOpen className="w-4 h-4 text-orange-400" /> : <Folder className="w-4 h-4 text-orange-400" />}
+                                                    <span className="text-sm font-medium text-gray-700">{sem} Semester</span>
                                                   </div>
-                                                  {grouped[curr][reg][sem][dept].code && (
+                                                  {grouped[curr][reg][dept][sem].code && (
                                                     <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
-                                                      Code: {grouped[curr][reg][sem][dept].code}
+                                                      Code: {grouped[curr][reg][dept][sem].code}
                                                     </span>
                                                   )}
                                                 </button>
 
                                                 <AnimatePresence>
-                                                  {expandedDept === `${curr}-${reg}-${sem}-${dept}` && (
+                                                  {expandedSem === `${curr}-${reg}-${dept}-${sem}` && (
                                                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="pl-6 pr-4 pb-4 overflow-hidden">
                                                       <div className="bg-white border text-left border-gray-200 rounded-xl overflow-hidden mt-2 p-4">
                                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
@@ -634,7 +697,7 @@ export default function AdminBooklists() {
                                                               </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-gray-100">
-                                                              {grouped[curr][reg][sem][dept].subjects.map((subject: any) => (
+                                                              {grouped[curr][reg][dept][sem].subjects.map((subject: any) => (
                                                                 <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
                                                                   <td className="px-4 py-3 font-medium text-gray-800">
                                                                     <div className="flex gap-2 items-center">

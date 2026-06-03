@@ -165,12 +165,85 @@ export async function parseDocxToBooklists(file: File) {
   return processBooklistLines(lines);
 }
 
+const KNOWN_ENGINEERING_DEPTS = [
+  "61 Architecture Technology",
+  "62 Automobile Technology",
+  "63 Chemical Technology",
+  "64 Civil Technology",
+  "66 Civil (Wood) Technology",
+  "67 Electrical Technology",
+  "68 Electronics Technology",
+  "69 Food Technology",
+  "70 Mechanical Technology",
+  "71 Power Technology",
+  "72 Refrigeration and Air Conditioning (RAC) Technology",
+  "76 Ceramic Technology",
+  "77 Glass Technology",
+  "78 Surveying Technology",
+  "79 Marine Technology",
+  "80 Shipbuilding Technology",
+  "82 Aircraft Maintenance Technology (Aerospace)",
+  "83 Aircraft Maintenance Technology (Avionics)",
+  "85 Computer Science and Technology",
+  "86 Electromedical Technology",
+  "88 Construction Technology",
+  "90 Environmental Technology",
+  "92 Mechatronic Technology",
+  "94 Telecommunication Technology",
+  "95 Printing Technology",
+  "96 Graphic Design Technology"
+];
+
+function normalizeSemester(semStr: string): string {
+  const s = String(semStr).toLowerCase();
+  if (s.includes('1st') || s.includes('১ম') || s.includes('first')) return '1st';
+  if (s.includes('2nd') || s.includes('২য়') || s.includes('second')) return '2nd';
+  if (s.includes('3rd') || s.includes('৩য়') || s.includes('third')) return '3rd';
+  if (s.includes('4th') || s.includes('৪র্থ') || s.includes('fourth')) return '4th';
+  if (s.includes('5th') || s.includes('৫ম') || s.includes('fifth')) return '5th';
+  if (s.includes('6th') || s.includes('৬ষ্ঠ') || s.includes('sixth')) return '6th';
+  if (s.includes('7th') || s.includes('৭ম') || s.includes('seventh')) return '7th';
+  if (s.includes('8th') || s.includes('৮ম') || s.includes('eighth')) return '8th';
+  return semStr.replace(/\s*semester/i, '').trim();
+}
+
+function normalizeDepartment(rawDept: string): { name: string; code: string } {
+  const cleanRaw = rawDept.trim().toLowerCase();
+  
+  for (const dept of KNOWN_ENGINEERING_DEPTS) {
+    const match = dept.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      const code = match[1];
+      const deptName = match[2];
+      const cleanDeptName = deptName.toLowerCase();
+      
+      if (cleanRaw === cleanDeptName || cleanRaw.includes(cleanDeptName) || cleanDeptName.includes(cleanRaw)) {
+        return { name: dept, code };
+      }
+      
+      const nameWithoutTech = cleanDeptName.replace(/\s*technology/g, '').trim();
+      const rawWithoutTech = cleanRaw.replace(/\s*technology/g, '').trim();
+      if (rawWithoutTech === nameWithoutTech || rawWithoutTech.includes(nameWithoutTech) || nameWithoutTech.includes(rawWithoutTech)) {
+        return { name: dept, code };
+      }
+    }
+  }
+  
+  const codeMatch = rawDept.match(/^(\d+)[\s\-]+(.+)$/);
+  if (codeMatch) {
+    return { name: rawDept, code: codeMatch[1] };
+  }
+  
+  return { name: rawDept, code: "" };
+}
+
 function processBooklistLines(lines: string[]) {
   const booklists = [];
   let currentCurriculum = "Diploma In Engineering";
   let currentRegulation = "2022";
   let currentDept = "Other";
-  let currentSemester = "1st Semester";
+  let currentDeptCode = "";
+  let currentSemester = "1st";
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();
@@ -184,11 +257,14 @@ function processBooklistLines(lines: string[]) {
     } else if (line.toLowerCase().startsWith("regulation:")) {
       currentRegulation = line.substring(11).trim();
     } else if (line.toLowerCase().startsWith("department:")) {
-      currentDept = line.substring(11).trim();
+      const parsedDept = line.substring(11).trim();
+      const { name, code } = normalizeDepartment(parsedDept);
+      currentDept = name;
+      currentDeptCode = code;
     } 
     else if (/(?:1st|2nd|3rd|4th|5th|6th|7th|8th|১ম|২য়|৩য়|৪র্থ|৫ম|৬ষ্ঠ|৭ম|৮ম|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth)\s*(?:Semester|পর্ব)/i.test(line)) {
        if (line.length < 50) {
-         currentSemester = line;
+         currentSemester = normalizeSemester(line);
        }
     }
     else if (/^(\d{4,5}|[০-৯]{4,5})/.test(line)) {
@@ -199,7 +275,7 @@ function processBooklistLines(lines: string[]) {
             Regulation: currentRegulation,
             Semester: currentSemester,
             Department: currentDept,
-            Department_Code: "",
+            Department_Code: currentDeptCode,
             Subject_Code: translateBengaliNum(match[1]),
             Subject_Name: match[2].trim()
          });
@@ -213,7 +289,7 @@ function processBooklistLines(lines: string[]) {
                Regulation: currentRegulation,
                Semester: currentSemester,
                Department: currentDept,
-               Department_Code: "",
+               Department_Code: currentDeptCode,
                Subject_Code: translateBengaliNum(code),
                Subject_Name: lines[i+1].trim()
             });

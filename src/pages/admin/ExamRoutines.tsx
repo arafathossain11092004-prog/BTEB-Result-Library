@@ -492,10 +492,10 @@ export default function AdminExamRoutines() {
 
     if (!acc[curriculum]) acc[curriculum] = {};
     if (!acc[curriculum][regulation]) acc[curriculum][regulation] = {};
-    if (!acc[curriculum][regulation][semester]) acc[curriculum][regulation][semester] = {};
-    if (!acc[curriculum][regulation][semester][dept]) acc[curriculum][regulation][semester][dept] = { subjects: [] };
+    if (!acc[curriculum][regulation][dept]) acc[curriculum][regulation][dept] = {};
+    if (!acc[curriculum][regulation][dept][semester]) acc[curriculum][regulation][dept][semester] = { subjects: [] };
     
-    acc[curriculum][regulation][semester][dept].subjects.push(curr);
+    acc[curriculum][regulation][dept][semester].subjects.push(curr);
     return acc;
   }, {} as any);
 
@@ -806,35 +806,35 @@ export default function AdminExamRoutines() {
                             <AnimatePresence>
                               {expandedReg === `${curr}-${reg}` && (
                                 <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                  {Object.keys(grouped[curr][reg]).map(sem => (
-                                    <li key={sem} className="pl-6 border-t border-gray-100">
+                                  {Object.keys(grouped[curr][reg]).map(dept => (
+                                    <li key={dept} className="pl-6 border-t border-gray-100">
                                       <button
-                                        onClick={() => setExpandedSem(expandedSem === `${curr}-${reg}-${sem}` ? null : `${curr}-${reg}-${sem}`)}
-                                        className="w-full flex items-center p-4 hover:bg-orange-50 transition-colors"
+                                        onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${dept}` ? null : `${curr}-${reg}-${dept}`)}
+                                        className="w-full flex items-center justify-between p-4 hover:bg-green-50/50 transition-colors"
                                       >
                                         <div className="flex items-center gap-3">
-                                          {expandedSem === `${curr}-${reg}-${sem}` ? <FolderOpen className="w-4 h-4 text-orange-400" /> : <Folder className="w-4 h-4 text-orange-400" />}
-                                          <span className="text-sm font-medium text-gray-700">{sem}</span>
+                                          {expandedDept === `${curr}-${reg}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
+                                          <span className="text-sm font-medium text-gray-700">{dept}</span>
                                         </div>
                                       </button>
 
                                       <AnimatePresence>
-                                        {expandedSem === `${curr}-${reg}-${sem}` && (
+                                        {expandedDept === `${curr}-${reg}-${dept}` && (
                                           <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                            {Object.keys(grouped[curr][reg][sem]).map(dept => (
-                                              <li key={dept} className="pl-6 border-t border-gray-100">
+                                            {Object.keys(grouped[curr][reg][dept]).map(sem => (
+                                              <li key={sem} className="pl-6 border-t border-gray-150">
                                                 <button
-                                                  onClick={() => setExpandedDept(expandedDept === `${curr}-${reg}-${sem}-${dept}` ? null : `${curr}-${reg}-${sem}-${dept}`)}
-                                                  className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+                                                  onClick={() => setExpandedSem(expandedSem === `${curr}-${reg}-${dept}-${sem}` ? null : `${curr}-${reg}-${dept}-${sem}`)}
+                                                  className="w-full flex items-center p-4 hover:bg-orange-50/55 transition-colors"
                                                 >
                                                   <div className="flex items-center gap-3">
-                                                    {expandedDept === `${curr}-${reg}-${sem}-${dept}` ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
-                                                    <span className="text-sm font-medium text-gray-700">{dept}</span>
+                                                    {expandedSem === `${curr}-${reg}-${dept}-${sem}` ? <FolderOpen className="w-4 h-4 text-orange-400" /> : <Folder className="w-4 h-4 text-orange-400" />}
+                                                    <span className="text-sm font-medium text-gray-700">{sem}</span>
                                                   </div>
                                                 </button>
 
                                                 <AnimatePresence>
-                                                  {expandedDept === `${curr}-${reg}-${sem}-${dept}` && (
+                                                  {expandedSem === `${curr}-${reg}-${dept}-${sem}` && (
                                                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="pl-6 pr-4 pb-4 overflow-hidden">
                                                       <div className="bg-white border text-left border-gray-200 rounded-xl overflow-hidden mt-2 p-4">
                                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
@@ -850,7 +850,7 @@ export default function AdminExamRoutines() {
                                                               </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-gray-100">
-                                                              {grouped[curr][reg][sem][dept].subjects.map((subject: any) => (
+                                                              {grouped[curr][reg][dept][sem].subjects.map((subject: any) => (
                                                                 <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
                                                                   <td className="px-4 py-3 align-top">
                                                                     <div className="text-slate-900 font-bold whitespace-normal">{subject.subjectName}</div>
