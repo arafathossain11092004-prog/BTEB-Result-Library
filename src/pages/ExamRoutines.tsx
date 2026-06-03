@@ -72,7 +72,7 @@ export default function ExamRoutines() {
       .reverse();
   }, [routines, activeCurriculum]);
 
-  const semesters = useMemo(() => {
+  const departments = useMemo(() => {
     if (!activeCurriculum || !activeRegulation) return [];
     return Array.from(
       new Set(
@@ -82,13 +82,13 @@ export default function ExamRoutines() {
               (r.curriculum || "Unknown") === activeCurriculum &&
               (r.regulation || "Unknown") === activeRegulation,
           )
-          .map((r) => r.semester || "Unknown"),
+          .map((r) => r.department || "Unknown"),
       ),
     ).sort();
   }, [routines, activeCurriculum, activeRegulation]);
 
-  const departments = useMemo(() => {
-    if (!activeCurriculum || !activeRegulation || !activeSemester) return [];
+  const semesters = useMemo(() => {
+    if (!activeCurriculum || !activeRegulation || !activeDepartment) return [];
     return Array.from(
       new Set(
         routines
@@ -96,12 +96,12 @@ export default function ExamRoutines() {
             (r) =>
               (r.curriculum || "Unknown") === activeCurriculum &&
               (r.regulation || "Unknown") === activeRegulation &&
-              (r.semester || "Unknown") === activeSemester,
+              (r.department || "Unknown") === activeDepartment,
           )
-          .map((r) => r.department || "Unknown"),
+          .map((r) => r.semester || "Unknown"),
       ),
     ).sort();
-  }, [routines, activeCurriculum, activeRegulation, activeSemester]);
+  }, [routines, activeCurriculum, activeRegulation, activeDepartment]);
 
   const filteredSubjects = useMemo(() => {
     if (
@@ -140,18 +140,18 @@ export default function ExamRoutines() {
   }, [regulations, activeRegulation, activeCurriculum]);
 
   useEffect(() => {
-    if (semesters.length === 1 && !activeSemester)
-      setActiveSemester(semesters[0]);
-    else if (activeRegulation && !semesters.includes(activeSemester || ""))
-      setActiveSemester(null);
-  }, [semesters, activeSemester, activeRegulation]);
-
-  useEffect(() => {
     if (departments.length === 1 && !activeDepartment)
       setActiveDepartment(departments[0]);
-    else if (activeSemester && !departments.includes(activeDepartment || ""))
+    else if (activeRegulation && !departments.includes(activeDepartment || ""))
       setActiveDepartment(null);
-  }, [departments, activeDepartment, activeSemester]);
+  }, [departments, activeDepartment, activeRegulation]);
+
+  useEffect(() => {
+    if (semesters.length === 1 && !activeSemester)
+      setActiveSemester(semesters[0]);
+    else if (activeDepartment && !semesters.includes(activeSemester || ""))
+      setActiveSemester(null);
+  }, [semesters, activeSemester, activeDepartment]);
 
   const handleDownloadPNG = () => generateImageAndDownload('jpg');
   const handlePrint = () => generateImageAndDownload('pdf');
@@ -339,7 +339,7 @@ export default function ExamRoutines() {
           </h1>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">
             Find your exam schedules easily. Select your curriculum, regulation,
-            semester, and department to get started.
+            department, and semester to get started.
           </p>
         </div>
 
@@ -437,43 +437,9 @@ export default function ExamRoutines() {
               )}
             </AnimatePresence>
 
-            {/* Semester */}
-            <AnimatePresence>
-              {activeRegulation && semesters.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100/50 p-6 relative z-10"
-                >
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-lg">
-                      <Layers className="w-5 h-5 text-emerald-500" />
-                      <h2>Semester</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {semesters.map((sem) => (
-                        <button
-                          key={sem}
-                          onClick={() => setActiveSemester(sem)}
-                          className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${
-                            activeSemester === sem
-                              ? "bg-emerald-500 text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)]"
-                              : "bg-slate-50/50 text-slate-600 hover:bg-white hover:border-emerald-200 border border-slate-200"
-                          }`}
-                        >
-                          {sem}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Department */}
             <AnimatePresence>
-              {activeSemester && departments.length > 0 && (
+              {activeRegulation && departments.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -515,12 +481,46 @@ export default function ExamRoutines() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Semester */}
+            <AnimatePresence>
+              {activeDepartment && semesters.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100/50 p-6 relative z-10"
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-lg">
+                      <Layers className="w-5 h-5 text-emerald-500" />
+                      <h2>Semester</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {semesters.map((sem) => (
+                        <button
+                          key={sem}
+                          onClick={() => setActiveSemester(sem)}
+                          className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${
+                            activeSemester === sem
+                              ? "bg-emerald-500 text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)]"
+                              : "bg-slate-50/50 text-slate-600 hover:bg-white hover:border-emerald-200 border border-slate-200"
+                          }`}
+                        >
+                          {sem}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Main Content Area */}
           <div className="lg:col-span-8">
             <AnimatePresence mode="wait">
-              {!activeDepartment ? (
+              {!activeSemester ? (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0 }}
@@ -535,7 +535,7 @@ export default function ExamRoutines() {
                     Configure Your Exam Routine
                   </h3>
                   <p className="text-slate-500 max-w-sm text-lg">
-                    Select curriculum, regulation, semester, and department from
+                    Select curriculum, regulation, department, and semester from
                     the sidebar to view your schedule.
                   </p>
                 </motion.div>

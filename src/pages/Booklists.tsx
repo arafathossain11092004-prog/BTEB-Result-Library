@@ -27,8 +27,8 @@ export default function Booklists() {
 
   const activeCurriculum = searchParams.get("curriculum") || null;
   const activeRegulation = searchParams.get("regulation") || null;
-  const activeSemester = searchParams.get("semester") || null;
   const activeDepartment = searchParams.get("department") || null;
+  const activeSemester = searchParams.get("semester") || null;
 
   const setActiveFilter = (key: string, value: string | null) => {
     const newParams = new URLSearchParams(searchParams);
@@ -40,13 +40,13 @@ export default function Booklists() {
     // If a higher-level filter changes, clear the lower ones
     if (key === "curriculum") {
       newParams.delete("regulation");
-      newParams.delete("semester");
       newParams.delete("department");
+      newParams.delete("semester");
     } else if (key === "regulation") {
+      newParams.delete("department");
       newParams.delete("semester");
-      newParams.delete("department");
-    } else if (key === "semester") {
-      newParams.delete("department");
+    } else if (key === "department") {
+      newParams.delete("semester");
     }
     setSearchParams(newParams);
   };
@@ -89,7 +89,7 @@ export default function Booklists() {
       .reverse();
   }, [booklists, activeCurriculum]);
 
-  const semesters = useMemo(() => {
+  const departments = useMemo(() => {
     if (!activeCurriculum || !activeRegulation) return [];
     return Array.from(
       new Set(
@@ -99,13 +99,13 @@ export default function Booklists() {
               (b.curriculum || "Unknown") === activeCurriculum &&
               (b.regulation || "Unknown") === activeRegulation,
           )
-          .map((b) => b.semester || "Unknown"),
+          .map((b) => b.department || "Unknown"),
       ),
     ).sort();
   }, [booklists, activeCurriculum, activeRegulation]);
 
-  const departments = useMemo(() => {
-    if (!activeCurriculum || !activeRegulation || !activeSemester) return [];
+  const semesters = useMemo(() => {
+    if (!activeCurriculum || !activeRegulation || !activeDepartment) return [];
     return Array.from(
       new Set(
         booklists
@@ -113,12 +113,12 @@ export default function Booklists() {
             (b) =>
               (b.curriculum || "Unknown") === activeCurriculum &&
               (b.regulation || "Unknown") === activeRegulation &&
-              (b.semester || "Unknown") === activeSemester,
+              (b.department || "Unknown") === activeDepartment,
           )
-          .map((b) => b.department || "Unknown"),
+          .map((b) => b.semester || "Unknown"),
       ),
     ).sort();
-  }, [booklists, activeCurriculum, activeRegulation, activeSemester]);
+  }, [booklists, activeCurriculum, activeRegulation, activeDepartment]);
 
   const filteredSubjects = useMemo(() => {
     if (
@@ -128,13 +128,18 @@ export default function Booklists() {
       !activeDepartment
     )
       return [];
-    return booklists.filter(
+    const filtered = booklists.filter(
       (b) =>
         (b.curriculum || "Unknown") === activeCurriculum &&
         (b.regulation || "Unknown") === activeRegulation &&
         (b.semester || "Unknown") === activeSemester &&
         ((b.department || "Unknown") === activeDepartment || (b.department === "All Department"))
     );
+    return filtered.sort((a, b) => {
+      const aIdx = typeof a.orderIndex === 'number' ? a.orderIndex : (a.createdAt || 0);
+      const bIdx = typeof b.orderIndex === 'number' ? b.orderIndex : (b.createdAt || 0);
+      return aIdx - bIdx;
+    });
   }, [
     booklists,
     activeCurriculum,
@@ -164,24 +169,10 @@ export default function Booklists() {
   }, [regulations, activeRegulation, activeCurriculum, searchParams]);
 
   useEffect(() => {
-    if (semesters.length === 1 && !activeSemester)
-      setActiveFilter("semester", semesters[0]);
-    else if (
-      activeRegulation &&
-      semesters.length > 0 &&
-      !semesters.includes(activeSemester || "")
-    ) {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("semester");
-      setSearchParams(newParams);
-    }
-  }, [semesters, activeSemester, activeRegulation, searchParams]);
-
-  useEffect(() => {
     if (departments.length === 1 && !activeDepartment)
       setActiveFilter("department", departments[0]);
     else if (
-      activeSemester &&
+      activeRegulation &&
       departments.length > 0 &&
       !departments.includes(activeDepartment || "")
     ) {
@@ -189,7 +180,21 @@ export default function Booklists() {
       newParams.delete("department");
       setSearchParams(newParams);
     }
-  }, [departments, activeDepartment, activeSemester, searchParams]);
+  }, [departments, activeDepartment, activeRegulation, searchParams]);
+
+  useEffect(() => {
+    if (semesters.length === 1 && !activeSemester)
+      setActiveFilter("semester", semesters[0]);
+    else if (
+      activeDepartment &&
+      semesters.length > 0 &&
+      !semesters.includes(activeSemester || "")
+    ) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("semester");
+      setSearchParams(newParams);
+    }
+  }, [semesters, activeSemester, activeDepartment, searchParams]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -381,7 +386,7 @@ export default function Booklists() {
           </h1>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">
             Find your required subjects and book codes easily. Select your
-            curriculum, regulation, semester, and department to get started.
+            curriculum, regulation, department, and semester to get started.
           </p>
         </div>
 
@@ -462,43 +467,9 @@ export default function Booklists() {
               )}
             </AnimatePresence>
 
-            {/* Semester */}
-            <AnimatePresence>
-              {activeRegulation && semesters.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100/50 p-6 relative z-10"
-                >
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-lg">
-                      <Layers className="w-5 h-5 text-emerald-500" />
-                      <h2>Semester</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {semesters.map((sem) => (
-                        <button
-                          key={sem}
-                          onClick={() => setActiveFilter("semester", sem)}
-                          className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${
-                            activeSemester === sem
-                              ? "bg-emerald-500 text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)]"
-                              : "bg-slate-50/50 text-slate-600 hover:bg-white hover:border-emerald-200 border border-slate-200"
-                          }`}
-                        >
-                          {sem}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Department */}
             <AnimatePresence>
-              {activeSemester && departments.length > 0 && (
+              {activeRegulation && departments.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -542,12 +513,46 @@ export default function Booklists() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Semester */}
+            <AnimatePresence>
+              {activeDepartment && semesters.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100/50 p-6 relative z-10"
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/50 to-white/10 pointer-events-none" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-lg">
+                      <Layers className="w-5 h-5 text-emerald-500" />
+                      <h2>Semester</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {semesters.map((sem) => (
+                        <button
+                          key={sem}
+                          onClick={() => setActiveFilter("semester", sem)}
+                          className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${
+                            activeSemester === sem
+                              ? "bg-emerald-500 text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)]"
+                              : "bg-slate-50/50 text-slate-600 hover:bg-white hover:border-emerald-200 border border-slate-200"
+                          }`}
+                        >
+                          {sem}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Main Content Area */}
           <div className="lg:col-span-8">
             <AnimatePresence mode="wait">
-              {!activeDepartment ? (
+              {!activeSemester ? (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0 }}
@@ -562,7 +567,7 @@ export default function Booklists() {
                     Configure Your Booklist
                   </h3>
                   <p className="text-slate-500 max-w-sm text-lg">
-                    Select curriculum, regulation, semester, and department from
+                    Select curriculum, regulation, department, and semester from
                     the sidebar to view subjects and book codes.
                   </p>
                 </motion.div>
