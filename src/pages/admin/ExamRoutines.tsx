@@ -76,6 +76,91 @@ const CURRICULUM_DEPARTMENTS: Record<string, string[]> = {
   ]
 };
 
+const getDepartmentsByRegulation = (regulation: string = ""): string[] => {
+  const regStr = String(regulation).toLowerCase();
+  const is2016 = regStr.includes("2016");
+  if (is2016) {
+    return [
+      "682 Aircraft Maintenance (Aerospace) Technology",
+      "683 Aircraft Maintenance (Avionics) Technology",
+      "661 Architecture Technology",
+      "687 Architecture & Interior Design Technology",
+      "662 Automobile Technology",
+      "676 Ceramic Technology",
+      "663 Chemical Technology",
+      "664 Civil Technology",
+      "665 Civil (Wood) Technology",
+      "685 Computer Science & Technology",
+      "666 Computer Technology",
+      "688 Construction Technology",
+      "684 Data Telecommunication & Network Technology",
+      "667 Electrical Technology",
+      "686 Electromedical Technology",
+      "668 Electronics Technology",
+      "690 Environmental Technology",
+      "669 Food Technology",
+      "98 Footwear Technology",
+      "677 Glass Technology",
+      "696 Graphic Design Technology",
+      "691 Instrumentation & Process Control Technology",
+      "679 Marine Technology",
+      "670 Mechanical Technology",
+      "692 Mechatronics Technology",
+      "693 Mining & Mine Survey Technology",
+      "671 Power Technology",
+      "695 Printing Technology",
+      "672 Refrigeration & Air Conditioning (RAC) Technology",
+      "680 Shipbuilding Technology",
+      "678 Surveying Technology",
+      "694 Telecommunication Technology",
+      "99 Tourism & Hospitality"
+    ];
+  } else {
+    // Default to 2022
+    return [
+      "82 Aircraft Maintenance Technology (Aerospace)",
+      "83 Aircraft Maintenance Technology (Avionics)",
+      "14 Apparel Manufacturing Technology",
+      "61 Architecture Technology",
+      "62 Automobile Technology",
+      "76 Ceramic Technology",
+      "63 Chemical Technology",
+      "64 Civil Technology",
+      "65 Civil (Wood) Technology",
+      "85 Computer Science & Technology",
+      "88 Construction Technology",
+      "23 Diploma in Agriculture",
+      "74 Diploma in Fisheries",
+      "20 Diploma in Forestry",
+      "72 Diploma in Livestock",
+      "67 Electrical Technology",
+      "86 Electromedical Technology",
+      "68 Electronics Technology",
+      "90 Environmental Technology",
+      "12 Fabric Manufacturing Technology",
+      "16 Fashion Design Technology",
+      "69 Food Technology",
+      "98 Footwear Technology",
+      "77 Glass Technology",
+      "96 Graphic Design Technology",
+      "15 Jute Product Manufacturing",
+      "679 Marine Technology",
+      "70 Mechanical Technology",
+      "92 Mechatronics Technology",
+      "17 Merchandising & Marketing",
+      "71 Power Technology",
+      "95 Printing Technology",
+      "72 RAC Technology",
+      "80 Shipbuilding Engineering",
+      "78 Surveying Technology",
+      "94 Telecommunication Technology",
+      "18 Textile Machine Design & Maintenance",
+      "13 Wet Processing Technology",
+      "11 Yarn Manufacturing Technology"
+    ];
+  }
+};
+
 interface RoutineSemester {
   id: string;
   semesterName: string;
@@ -685,37 +770,27 @@ export default function AdminExamRoutines() {
                                            <X className="w-3.5 h-3.5" />
                                          </button>
                                        </div>
-                                       {dateBlock.curriculum && Object.keys(CURRICULUM_DEPARTMENTS).includes(dateBlock.curriculum) ? (
-                                         <div className="flex flex-col gap-2 mt-1">
-                                           <div className="flex flex-wrap gap-1">
-                                             {sem.departments.map(dept => (
-                                                <span key={dept} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-sky-50 text-sky-700 text-[10px] font-semibold rounded border border-sky-200" title={dept}>
-                                                  {dept.replace(/^\d+\s/, '').replace(' Technology', '')} 
-                                                  <button onClick={() => handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, dept)} className="hover:text-red-600"><X className="w-2.5 h-2.5" /></button>
-                                                </span>
-                                             ))}
-                                           </div>
-                                           <select value="" onChange={e => { if(e.target.value) handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, e.target.value); }} className="w-full px-1.5 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 transition-all bg-white font-medium cursor-pointer">
-                                              <option value="" disabled>+ Add Dept</option>
-                                              {!sem.departments.includes("All Department") && (
-                                                <option value="All Department">All Department</option>
-                                              )}
-                                              {(CURRICULUM_DEPARTMENTS[dateBlock.curriculum] || []).filter(d => !sem.departments.includes(d)).map(d => {
-                                                const match = d.match(/^(\d+)\s+(.+)$/);
-                                                const display = match ? `${match[2]} (${match[1]})` : d;
-                                                return <option key={d} value={d}>{display}</option>;
-                                              })}
-                                           </select>
+                                       <div className="flex flex-col gap-2 mt-1">
+                                         <div className="flex flex-wrap gap-1">
+                                           {sem.departments.map(dept => (
+                                              <span key={dept} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-sky-50 text-sky-700 text-[10px] font-semibold rounded border border-sky-200" title={dept}>
+                                                {dept.replace(/^\d+\s/, '').replace(' Technology', '')} 
+                                                <button onClick={() => handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, dept)} className="hover:text-red-600"><X className="w-2.5 h-2.5" /></button>
+                                              </span>
+                                           ))}
                                          </div>
-                                       ) : (
-                                         <textarea
-                                           rows={1}
-                                           placeholder="e.g. Civil, Computer, Food"
-                                           value={sem.departments.join(', ')}
-                                           onChange={e => handleUpdateSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, e.target.value)}
-                                           className="w-full mt-1 px-2 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 transition-all bg-slate-50 resize-none font-medium"
-                                         />
-                                       )}
+                                         <select value="" onChange={e => { if(e.target.value) handleToggleSemesterDepartment(dIndex, tsIndex, subIndex, semIndex, e.target.value); }} className="w-full px-1.5 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 transition-all bg-white font-medium cursor-pointer">
+                                            <option value="" disabled>+ Add Dept</option>
+                                            {!sem.departments.includes("All Department") && (
+                                              <option value="All Department">All Department</option>
+                                            )}
+                                            {getDepartmentsByRegulation(dateBlock.regulation || '2022').filter(d => !sem.departments.includes(d)).map(d => {
+                                              const match = d.match(/^(\d+)\s+(.+)$/);
+                                              const display = match ? `${match[2]} (${match[1]})` : d;
+                                              return <option key={d} value={d}>{display}</option>;
+                                            })}
+                                         </select>
+                                       </div>
                                      </div>
                                   ))}
                                   

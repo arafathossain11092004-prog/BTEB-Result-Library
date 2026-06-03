@@ -102,9 +102,98 @@ const normalizeSemesterString = (sem: string): string => {
   return sem.replace(/\s*semester/i, '').trim();
 };
 
-const normalizeDeptGroupKey = (deptStr: string, curriculum: string): string => {
+const getDepartmentsByRegulation = (regulation: string = ""): string[] => {
+  const regStr = String(regulation).toLowerCase();
+  const is2016 = regStr.includes("2016");
+  if (is2016) {
+    return [
+      "682 Aircraft Maintenance (Aerospace) Technology",
+      "683 Aircraft Maintenance (Avionics) Technology",
+      "661 Architecture Technology",
+      "687 Architecture & Interior Design Technology",
+      "662 Automobile Technology",
+      "676 Ceramic Technology",
+      "663 Chemical Technology",
+      "664 Civil Technology",
+      "665 Civil (Wood) Technology",
+      "685 Computer Science & Technology",
+      "666 Computer Technology",
+      "688 Construction Technology",
+      "684 Data Telecommunication & Network Technology",
+      "667 Electrical Technology",
+      "686 Electromedical Technology",
+      "668 Electronics Technology",
+      "690 Environmental Technology",
+      "669 Food Technology",
+      "98 Footwear Technology",
+      "677 Glass Technology",
+      "696 Graphic Design Technology",
+      "691 Instrumentation & Process Control Technology",
+      "679 Marine Technology",
+      "670 Mechanical Technology",
+      "692 Mechatronics Technology",
+      "693 Mining & Mine Survey Technology",
+      "671 Power Technology",
+      "695 Printing Technology",
+      "672 Refrigeration & Air Conditioning (RAC) Technology",
+      "680 Shipbuilding Technology",
+      "678 Surveying Technology",
+      "694 Telecommunication Technology",
+      "99 Tourism & Hospitality"
+    ];
+  } else {
+    // Default to 2022
+    return [
+      "82 Aircraft Maintenance Technology (Aerospace)",
+      "83 Aircraft Maintenance Technology (Avionics)",
+      "14 Apparel Manufacturing Technology",
+      "61 Architecture Technology",
+      "62 Automobile Technology",
+      "76 Ceramic Technology",
+      "63 Chemical Technology",
+      "64 Civil Technology",
+      "65 Civil (Wood) Technology",
+      "85 Computer Science & Technology",
+      "88 Construction Technology",
+      "23 Diploma in Agriculture",
+      "74 Diploma in Fisheries",
+      "20 Diploma in Forestry",
+      "72 Diploma in Livestock",
+      "67 Electrical Technology",
+      "86 Electromedical Technology",
+      "68 Electronics Technology",
+      "90 Environmental Technology",
+      "12 Fabric Manufacturing Technology",
+      "16 Fashion Design Technology",
+      "69 Food Technology",
+      "98 Footwear Technology",
+      "77 Glass Technology",
+      "96 Graphic Design Technology",
+      "15 Jute Product Manufacturing",
+      "679 Marine Technology",
+      "70 Mechanical Technology",
+      "92 Mechatronics Technology",
+      "17 Merchandising & Marketing",
+      "71 Power Technology",
+      "95 Printing Technology",
+      "72 RAC Technology",
+      "80 Shipbuilding Engineering",
+      "78 Surveying Technology",
+      "94 Telecommunication Technology",
+      "18 Textile Machine Design & Maintenance",
+      "13 Wet Processing Technology",
+      "11 Yarn Manufacturing Technology"
+    ];
+  }
+};
+
+const normalizeDeptGroupKey = (deptStr: string, curriculum: string, regulation: string = ""): string => {
   const cleanRaw = String(deptStr).trim().toLowerCase();
-  const depts = CURRICULUM_DEPARTMENTS[curriculum] || [];
+  if (cleanRaw === 'all department' || cleanRaw === 'other') return deptStr;
+
+  const depts = getDepartmentsByRegulation(regulation);
+
+  // Approach 1: Try to match by name or name substring
   for (const d of depts) {
     const match = d.match(/^(\d+)\s+(.+)$/);
     if (match) {
@@ -124,6 +213,36 @@ const normalizeDeptGroupKey = (deptStr: string, curriculum: string): string => {
       }
     }
   }
+
+  // Approach 2: Match by 2-digit or 3-digit code
+  const numMatch = cleanRaw.match(/\d+/);
+  if (numMatch) {
+    const inputNum = numMatch[0]; // e.g., "66" or "666" or "700"
+    
+    for (const d of depts) {
+      const match = d.match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        const code2 = match[1]; // e.g., "66" or "70"
+        
+        // Generate the 3-digit code equivalent
+        let code3 = "";
+        if (code2.length === 2) {
+          const firstDigit = code2[0];
+          const secondDigit = code2[1];
+          if (secondDigit === '0') {
+            code3 = code2 + "0"; // e.g., "70" -> "700"
+          } else {
+            code3 = code2 + secondDigit; // e.g., "66" -> "666", "64" -> "644"
+          }
+        }
+        
+        if (inputNum === code2 || inputNum === code3) {
+          return d;
+        }
+      }
+    }
+  }
+
   return deptStr;
 };
 
@@ -406,7 +525,7 @@ export default function AdminBooklists() {
     const curriculum = curr.curriculum || 'Unknown';
     const regulation = curr.regulation || 'Unknown';
     const rawDept = curr.department || 'Unknown';
-    const dept = normalizeDeptGroupKey(rawDept, curriculum);
+    const dept = normalizeDeptGroupKey(rawDept, curriculum, regulation);
     const semester = normalizeSemesterString(curr.semester || '1st');
 
     let deptCode = curr.departmentCode || '';
@@ -539,7 +658,7 @@ export default function AdminBooklists() {
                   <select required value={block.department} onChange={e => handleBlockChange(block.id, 'department', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                      <option value="">Select Department</option>
                      <option value="All Department">All Department</option>
-                     {(CURRICULUM_DEPARTMENTS[block.curriculum] || []).map(d => {
+                     {getDepartmentsByRegulation(block.regulation).map(d => {
                        const match = d.match(/^(\d+)\s+(.+)$/);
                        const display = match ? `${match[2]} (${match[1]})` : d;
                        return <option key={d} value={d}>{display}</option>;

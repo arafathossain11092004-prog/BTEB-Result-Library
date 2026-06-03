@@ -166,32 +166,79 @@ export async function parseDocxToBooklists(file: File) {
 }
 
 const KNOWN_ENGINEERING_DEPTS = [
-  "61 Architecture Technology",
-  "62 Automobile Technology",
-  "63 Chemical Technology",
-  "64 Civil Technology",
-  "66 Civil (Wood) Technology",
-  "67 Electrical Technology",
-  "68 Electronics Technology",
-  "69 Food Technology",
-  "70 Mechanical Technology",
-  "71 Power Technology",
-  "72 Refrigeration and Air Conditioning (RAC) Technology",
-  "76 Ceramic Technology",
-  "77 Glass Technology",
-  "78 Surveying Technology",
-  "79 Marine Technology",
-  "80 Shipbuilding Technology",
+  // Regulation 2022
   "82 Aircraft Maintenance Technology (Aerospace)",
   "83 Aircraft Maintenance Technology (Avionics)",
-  "85 Computer Science and Technology",
-  "86 Electromedical Technology",
+  "14 Apparel Manufacturing Technology",
+  "61 Architecture Technology",
+  "62 Automobile Technology",
+  "76 Ceramic Technology",
+  "63 Chemical Technology",
+  "64 Civil Technology",
+  "65 Civil (Wood) Technology",
+  "85 Computer Science & Technology",
   "88 Construction Technology",
+  "23 Diploma in Agriculture",
+  "74 Diploma in Fisheries",
+  "20 Diploma in Forestry",
+  "72 Diploma in Livestock",
+  "67 Electrical Technology",
+  "86 Electromedical Technology",
+  "68 Electronics Technology",
   "90 Environmental Technology",
-  "92 Mechatronic Technology",
-  "94 Telecommunication Technology",
+  "12 Fabric Manufacturing Technology",
+  "16 Fashion Design Technology",
+  "69 Food Technology",
+  "98 Footwear Technology",
+  "77 Glass Technology",
+  "96 Graphic Design Technology",
+  "15 Jute Product Manufacturing",
+  "679 Marine Technology",
+  "70 Mechanical Technology",
+  "92 Mechatronics Technology",
+  "17 Merchandising & Marketing",
+  "71 Power Technology",
   "95 Printing Technology",
-  "96 Graphic Design Technology"
+  "72 RAC Technology",
+  "80 Shipbuilding Engineering",
+  "78 Surveying Technology",
+  "94 Telecommunication Technology",
+  "18 Textile Machine Design & Maintenance",
+  "13 Wet Processing Technology",
+  "11 Yarn Manufacturing Technology",
+
+  // Regulation 2016
+  "682 Aircraft Maintenance (Aerospace) Technology",
+  "683 Aircraft Maintenance (Avionics) Technology",
+  "661 Architecture Technology",
+  "687 Architecture & Interior Design Technology",
+  "662 Automobile Technology",
+  "676 Ceramic Technology",
+  "663 Chemical Technology",
+  "664 Civil Technology",
+  "665 Civil (Wood) Technology",
+  "685 Computer Science & Technology",
+  "666 Computer Technology",
+  "688 Construction Technology",
+  "684 Data Telecommunication & Network Technology",
+  "667 Electrical Technology",
+  "686 Electromedical Technology",
+  "668 Electronics Technology",
+  "690 Environmental Technology",
+  "669 Food Technology",
+  "677 Glass Technology",
+  "696 Graphic Design Technology",
+  "691 Instrumentation & Process Control Technology",
+  "670 Mechanical Technology",
+  "692 Mechatronics Technology",
+  "693 Mining & Mine Survey Technology",
+  "671 Power Technology",
+  "695 Printing Technology",
+  "672 Refrigeration & Air Conditioning (RAC) Technology",
+  "680 Shipbuilding Technology",
+  "678 Surveying Technology",
+  "694 Telecommunication Technology",
+  "99 Tourism & Hospitality"
 ];
 
 function normalizeSemester(semStr: string): string {
@@ -210,6 +257,7 @@ function normalizeSemester(semStr: string): string {
 function normalizeDepartment(rawDept: string): { name: string; code: string } {
   const cleanRaw = rawDept.trim().toLowerCase();
   
+  // Try matching by name first
   for (const dept of KNOWN_ENGINEERING_DEPTS) {
     const match = dept.match(/^(\d+)\s+(.+)$/);
     if (match) {
@@ -225,6 +273,33 @@ function normalizeDepartment(rawDept: string): { name: string; code: string } {
       const rawWithoutTech = cleanRaw.replace(/\s*technology/g, '').trim();
       if (rawWithoutTech === nameWithoutTech || rawWithoutTech.includes(nameWithoutTech) || nameWithoutTech.includes(rawWithoutTech)) {
         return { name: dept, code };
+      }
+    }
+  }
+
+  // Try matching by code (2-digit or 3-digit)
+  const numMatch = cleanRaw.match(/\d+/);
+  if (numMatch) {
+    const inputNum = numMatch[0];
+    for (const dept of KNOWN_ENGINEERING_DEPTS) {
+      const match = dept.match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        const code2 = match[1];
+        
+        let code3 = "";
+        if (code2.length === 2) {
+          const firstDigit = code2[0];
+          const secondDigit = code2[1];
+          if (secondDigit === '0') {
+            code3 = code2 + "0"; // e.g., "70" -> "700"
+          } else {
+            code3 = code2 + secondDigit; // e.g., "66" -> "666"
+          }
+        }
+        
+        if (inputNum === code2 || inputNum === code3) {
+          return { name: dept, code: code2 };
+        }
       }
     }
   }
