@@ -318,6 +318,29 @@ export default function AdminBooklists() {
       }
 
       if (booklistsParsed && booklistsParsed.length > 0) {
+        // Collect unique departments from parsed booklists to check for duplicates
+        const uniqueDepts = Array.from(new Set(booklistsParsed.map(b => b.Department).filter(Boolean))) as string[];
+        const existingDepts: string[] = [];
+        
+        for (const dept of uniqueDepts) {
+          const qCheck = query(collection(db, 'booklists'), where('department', '==', dept), limit(1));
+          const snapCheck = await getDocs(qCheck);
+          if (!snapCheck.empty) {
+            existingDepts.push(dept);
+          }
+        }
+
+        if (existingDepts.length > 0) {
+          const proceed = window.confirm(
+            `সতর্কতা: ${existingDepts.join(', ')} ডিপার্টমেন্টের বুক লিস্ট ইতিমধ্যেই ডাটাবেজে রয়েছে। আপনি কি নিশ্চিত যে আপনি এটি আবার ইম্পোর্ট করতে চান? এতে ডুপ্লিকেট তথ্য তৈরি হতে পারে।`
+          );
+          if (!proceed) {
+            setIsParsing(false);
+            e.target.value = '';
+            return;
+          }
+        }
+
         try {
           const chunks = [];
           for (let i = 0; i < booklistsParsed.length; i += 400) {

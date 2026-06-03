@@ -262,13 +262,36 @@ export default function AdminExamRoutines() {
     
     try {
       const { parsePdfToRoutines } = await import('../../lib/pdfParser');
-      const routines = await parsePdfToRoutines(file);
+      const parsedRoutines = await parsePdfToRoutines(file);
 
-      if (routines && routines.length > 0) {
+      if (parsedRoutines && parsedRoutines.length > 0) {
+        // Collect unique departments from parsed routines to check for duplicates
+        const uniqueDepts = Array.from(new Set(parsedRoutines.map(r => r.Department).filter(Boolean))) as string[];
+        const existingDepts: string[] = [];
+        
+        for (const dept of uniqueDepts) {
+          const qCheck = query(collection(db, 'examRoutines'), where('department', '==', dept), limit(1));
+          const snapCheck = await getDocs(qCheck);
+          if (!snapCheck.empty) {
+            existingDepts.push(dept);
+          }
+        }
+
+        if (existingDepts.length > 0) {
+          const proceed = window.confirm(
+            `সতর্কতা: ${existingDepts.join(', ')} ডিপার্টমেন্টের পরীক্ষার রুটিন ইতিমধ্যেই ডাটাবেজে রয়েছে। আপনি কি নিশ্চিত যে আপনি এটি আবার ইম্পোর্ট করতে চান? এতে ডুপ্লিকেট তথ্য তৈরি হতে পারে।`
+          );
+          if (!proceed) {
+            setIsParsing(false);
+            if (e.target) e.target.value = '';
+            return;
+          }
+        }
+
         try {
           const chunks = [];
-          for (let i = 0; i < routines.length; i += 400) {
-            chunks.push(routines.slice(i, i + 400));
+          for (let i = 0; i < parsedRoutines.length; i += 400) {
+            chunks.push(parsedRoutines.slice(i, i + 400));
           }
           
           let count = 0;
