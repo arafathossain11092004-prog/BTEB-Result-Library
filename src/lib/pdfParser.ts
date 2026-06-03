@@ -119,180 +119,107 @@ export async function parsePdfToRoutines(file: File) {
 export async function parsePdfToBooklists(file: File) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let fullText = "";
+  
+  let lines: string[] = [];
+  
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    fullText += textContent.items.map((s: any) => s.str).join(" ") + " ";
-  }
-  
-  fullText = fullText.replace(/\n/g, " ");
-
-  const booklists: any[] = [];
-  const tokens = fullText.split(/\s+/).filter((t: string) => t.length > 0);
-  
-  let currentSemester = "1st Semester";
-  let currentRegulation = "2016 Probidhan";
-  let currentDept = "Other";
-  
-  const subjectCodeRegex = /^(\d{4,5}|[০-৯]{4,5})$/;
-  
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
+    let items = textContent.items as any[];
     
-    if (token.includes("পব") || token.includes("পর্ব") || token.includes("Semester")) {
-       let context = token + " " + (tokens[i+1]||"") + " " + (tokens[i+2]||"") + " " + (tokens[i-1]||"");
-       if (context.includes("২০১৬") || context.includes("2016")) currentRegulation = "2016 Probidhan";
-       if (context.includes("২০১০") || context.includes("2010")) currentRegulation = "2010 Probidhan";
-       if (context.includes("২০২২") || context.includes("2022")) currentRegulation = "2022 Probidhan";
-       if (context.includes("১ম") || context.includes("1st")) currentSemester = "1st Semester";
-       if (context.includes("২য়") || context.includes("2nd")) currentSemester = "2nd Semester";
-       if (context.includes("৩য়") || context.includes("3rd")) currentSemester = "3rd Semester";
-       if (context.includes("৪র্") || context.includes("4th")) currentSemester = "4th Semester";
-       if (context.includes("৫ম") || context.includes("5th")) currentSemester = "5th Semester";
-       if (context.includes("৬ষ্ঠ") || context.includes("6th")) currentSemester = "6th Semester";
-       if (context.includes("৭ম") || context.includes("7th")) currentSemester = "7th Semester";
-       if (context.includes("৮ম") || context.includes("8th")) currentSemester = "8th Semester";
-    }
+    items.sort((a, b) => {
+       if (Math.abs(a.transform[5] - b.transform[5]) > 5) {
+          return b.transform[5] - a.transform[5]; // Y descending
+       }
+       return a.transform[4] - b.transform[4]; // X ascending
+    });
 
-    if (token.includes("টকিদনাজর") || token.includes("টেকনোলজি") || token.includes("Technology")) {
-       let context = (tokens[i-2]||"") + " " + (tokens[i-1]||"") + " " + token;
-       if (context.includes("আরকডদটকিাি") || context.includes("আর্কিটেকচার") || context.includes("Architecture")) { currentDept = "Architecture"; }
-       else if (context.includes("অদটাদমাবাইল") || context.includes("অটোমোবাইল") || context.includes("Automobile")) { currentDept = "Automobile"; }
-       else if (context.includes("বকরমকুাল") || context.includes("কেমিক্যাল") || context.includes("Chemical")) { currentDept = "Chemical"; }
-       else if (context.includes("রিরভল") || context.includes("সিভিল") || context.includes("Civil")) { currentDept = "Civil"; }
-       else if (context.includes("করিউটাি") || context.includes("কম্পিউটার") || context.includes("Computer")) { currentDept = "Computer"; }
-       else if (context.includes("ইদলকরট্রকুাল") || context.includes("ইলেকট্রিক্যাল") || context.includes("Electrical")) { currentDept = "Electrical"; }
-       else if (context.includes("ইদলকট্ররিক্স") || context.includes("ইলেকট্রনিক্স") || context.includes("Electronics")) { currentDept = "Electronics"; }
-       else if (context.includes("বমকারিকুাল") || context.includes("মেকানিক্যাল") || context.includes("Mechanical")) { currentDept = "Mechanical"; }
-       else if (context.includes("পাওয়াি") || context.includes("পাওয়ার") || context.includes("Power")) { currentDept = "Power"; }
+    let currentLineY = -1;
+    let currentLineStr = "";
+    for (const item of items) {
+       if (item.str.trim() === "") {
+          currentLineStr += item.str;
+          continue;
+       }
+       if (currentLineY === -1) currentLineY = item.transform[5];
+       if (Math.abs(currentLineY - item.transform[5]) > 5) {
+          lines.push(currentLineStr.trim());
+          currentLineStr = "";
+          currentLineY = item.transform[5];
+       }
+       currentLineStr += item.str + " ";
     }
-    
-    if (subjectCodeRegex.test(token)) {
-      if (token.length >= 4 && token.length <= 5) {
-        const code = translateBengaliNum(token);
-        let rest = [];
-        for (let j = i + 1; j < tokens.length; j++) {
-            if (/^(?:\d+|[০-৯]+)[\.।]$/.test(tokens[j])) break; 
-            if (/^(\d{4,5}|[০-৯]{4,5})$/.test(tokens[j])) break; 
-            if (tokens[j] === "িাং") break;
-            rest.push(tokens[j]);
-        }
-        let subjectName = rest.join(' ').trim();
-        
-        let tech = currentDept;
-        if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "Architecture"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
-        else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "Automobile"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
-        else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "Chemical"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
-        else if (subjectName.includes("রিরভল") || subjectName.includes("সিভিল") || subjectName.includes("Civil")) { tech = "Civil"; subjectName = subjectName.replace(/রিরভল|সিভিল|Civil/g, '').trim(); }
-        else if (subjectName.includes("করিউটাি") || subjectName.includes("কম্পিউটার") || subjectName.includes("Computer")) { tech = "Computer"; subjectName = subjectName.replace(/করিউটাি|কম্পিউটার|Computer/g, '').trim(); }
-        else if (subjectName.includes("ইদলকরট্রকুাল") || subjectName.includes("ইলেকট্রিক্যাল") || subjectName.includes("Electrical")) { tech = "Electrical"; subjectName = subjectName.replace(/ইদলকরট্রকুাল|ইলেকট্রিক্যাল|Electrical/g, '').trim(); }
-        else if (subjectName.includes("ইদলকট্ররিক্স") || subjectName.includes("ইলেকট্রনিক্স") || subjectName.includes("Electronics")) { tech = "Electronics"; subjectName = subjectName.replace(/ইদলকট্ররিক্স|ইলেকট্রনিক্স|Electronics/g, '').trim(); }
-        else if (subjectName.includes("বমকারিকুাল") || subjectName.includes("মেকানিক্যাল") || subjectName.includes("Mechanical")) { tech = "Mechanical"; subjectName = subjectName.replace(/বমকারিকুাল|মেকানিক্যাল|Mechanical/g, '').trim(); }
-        else if (subjectName.includes("পাওয়াি") || subjectName.includes("পাওয়ার") || subjectName.includes("Power")) { tech = "Power"; subjectName = subjectName.replace(/পাওয়াি|পাওয়ার|Power/g, '').trim(); }
-        
-        if (subjectName.endsWith(',')) subjectName = subjectName.slice(0, -1);
-        if (subjectName.trim() === '') subjectName = `Subject ${code}`;
-        
-        booklists.push({
-          Curriculum: "Diploma In Engineering",
-          Regulation: currentRegulation,
-          Semester: currentSemester,
-          Department: tech,
-          Department_Code: "",
-          Subject_Name: subjectName.trim(),
-          Subject_Code: code,
-        });
-      }
-    }
+    if (currentLineStr.trim().length > 0) lines.push(currentLineStr.trim());
   }
-  return booklists;
+
+  return processBooklistLines(lines);
 }
 
 export async function parseDocxToBooklists(file: File) {
   const mammoth = await import("mammoth");
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-  let fullText = result.value || "";
   
-  fullText = fullText.replace(/\n/g, " ");
+  const lines = (result.value || "").split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  return processBooklistLines(lines);
+}
 
-  const booklists: any[] = [];
-  const tokens = fullText.split(/\s+/).filter((t: string) => t.length > 0);
-  
-  let currentSemester = "1st Semester";
-  let currentRegulation = "2016 Probidhan";
+function processBooklistLines(lines: string[]) {
+  const booklists = [];
+  let currentCurriculum = "Diploma In Engineering";
+  let currentRegulation = "2022";
   let currentDept = "Other";
-  
-  const subjectCodeRegex = /^(\d{4,5}|[০-৯]{4,5})$/;
-  
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    
-    if (token.includes("পব") || token.includes("পর্ব") || token.includes("Semester")) {
-       let context = token + " " + (tokens[i+1]||"") + " " + (tokens[i+2]||"") + " " + (tokens[i-1]||"");
-       if (context.includes("২০১৬") || context.includes("2016")) currentRegulation = "2016 Probidhan";
-       if (context.includes("২০১০") || context.includes("2010")) currentRegulation = "2010 Probidhan";
-       if (context.includes("২০২২") || context.includes("2022")) currentRegulation = "2022 Probidhan";
-       if (context.includes("১ম") || context.includes("1st")) currentSemester = "1st Semester";
-       if (context.includes("২য়") || context.includes("2nd")) currentSemester = "2nd Semester";
-       if (context.includes("৩য়") || context.includes("3rd")) currentSemester = "3rd Semester";
-       if (context.includes("৪র্") || context.includes("4th")) currentSemester = "4th Semester";
-       if (context.includes("৫ম") || context.includes("5th")) currentSemester = "5th Semester";
-       if (context.includes("৬ষ্ঠ") || context.includes("6th")) currentSemester = "6th Semester";
-       if (context.includes("৭ম") || context.includes("7th")) currentSemester = "7th Semester";
-       if (context.includes("৮ম") || context.includes("8th")) currentSemester = "8th Semester";
-    }
+  let currentSemester = "1st Semester";
 
-    if (token.includes("টকিদনাজর") || token.includes("টেকনোলজি") || token.includes("Technology")) {
-       let context = (tokens[i-2]||"") + " " + (tokens[i-1]||"") + " " + token;
-       if (context.includes("আরকডদটকিাি") || context.includes("আর্কিটেকচার") || context.includes("Architecture")) { currentDept = "Architecture"; }
-       else if (context.includes("অদটাদমাবাইল") || context.includes("অটোমোবাইল") || context.includes("Automobile")) { currentDept = "Automobile"; }
-       else if (context.includes("বকরমকুাল") || context.includes("কেমিক্যাল") || context.includes("Chemical")) { currentDept = "Chemical"; }
-       else if (context.includes("রিরভল") || context.includes("সিভিল") || context.includes("Civil")) { currentDept = "Civil"; }
-       else if (context.includes("করিউটাি") || context.includes("কম্পিউটার") || context.includes("Computer")) { currentDept = "Computer"; }
-       else if (context.includes("ইদলকরট্রকুাল") || context.includes("ইলেকট্রিক্যাল") || context.includes("Electrical")) { currentDept = "Electrical"; }
-       else if (context.includes("ইদলকট্ররিক্স") || context.includes("ইলেকট্রনিক্স") || context.includes("Electronics")) { currentDept = "Electronics"; }
-       else if (context.includes("বমকারিকুাল") || context.includes("মেকানিক্যাল") || context.includes("Mechanical")) { currentDept = "Mechanical"; }
-       else if (context.includes("পাওয়াি") || context.includes("পাওয়ার") || context.includes("Power")) { currentDept = "Power"; }
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) continue;
+
+    // Remove extra spaces
+    line = line.replace(/\s+/g, " ");
+
+    if (line.toLowerCase().startsWith("curriculum:")) {
+      currentCurriculum = line.substring(11).trim();
+    } else if (line.toLowerCase().startsWith("regulation:")) {
+      currentRegulation = line.substring(11).trim();
+    } else if (line.toLowerCase().startsWith("department:")) {
+      currentDept = line.substring(11).trim();
+    } 
+    else if (/(?:1st|2nd|3rd|4th|5th|6th|7th|8th|১ম|২য়|৩য়|৪র্থ|৫ম|৬ষ্ঠ|৭ম|৮ম|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth)\s*(?:Semester|পর্ব)/i.test(line)) {
+       if (line.length < 50) {
+         currentSemester = line;
+       }
     }
-    
-    if (subjectCodeRegex.test(token)) {
-      if (token.length >= 4 && token.length <= 5) {
-        const code = translateBengaliNum(token);
-        let rest = [];
-        for (let j = i + 1; j < tokens.length; j++) {
-            if (/^(?:\d+|[০-৯]+)[\.।]$/.test(tokens[j])) break; 
-            if (/^(\d{4,5}|[০-৯]{4,5})$/.test(tokens[j])) break; 
-            if (tokens[j] === "িাং") break;
-            rest.push(tokens[j]);
-        }
-        let subjectName = rest.join(' ').trim();
-        
-        let tech = currentDept;
-        if (subjectName.includes("আরকডদটকিাি") || subjectName.includes("আর্কিটেকচার") || subjectName.includes("Architecture")) { tech = "Architecture"; subjectName = subjectName.replace(/আরকডদটকিাি|আর্কিটেকচার|Architecture/g, '').trim(); }
-        else if (subjectName.includes("অদটাদমাবাইল") || subjectName.includes("অটোমোবাইল") || subjectName.includes("Automobile")) { tech = "Automobile"; subjectName = subjectName.replace(/অদটাদমাবাইল|অটোমোবাইল|Automobile/g, '').trim(); }
-        else if (subjectName.includes("বকরমকুাল") || subjectName.includes("কেমিক্যাল") || subjectName.includes("Chemical")) { tech = "Chemical"; subjectName = subjectName.replace(/বকরমকুাল|কেমিক্যাল|Chemical/g, '').trim(); }
-        else if (subjectName.includes("রিরভল") || subjectName.includes("সিভিল") || subjectName.includes("Civil")) { tech = "Civil"; subjectName = subjectName.replace(/রিরভল|সিভিল|Civil/g, '').trim(); }
-        else if (subjectName.includes("করিউটাি") || subjectName.includes("কম্পিউটার") || subjectName.includes("Computer")) { tech = "Computer"; subjectName = subjectName.replace(/করিউটাি|কম্পিউটার|Computer/g, '').trim(); }
-        else if (subjectName.includes("ইদলকরট্রকুাল") || subjectName.includes("ইলেকট্রিক্যাল") || subjectName.includes("Electrical")) { tech = "Electrical"; subjectName = subjectName.replace(/ইদলকরট্রকুাল|ইলেকট্রিক্যাল|Electrical/g, '').trim(); }
-        else if (subjectName.includes("ইদলকট্ররিক্স") || subjectName.includes("ইলেকট্রনিক্স") || subjectName.includes("Electronics")) { tech = "Electronics"; subjectName = subjectName.replace(/ইদলকট্ররিক্স|ইলেকট্রনিক্স|Electronics/g, '').trim(); }
-        else if (subjectName.includes("বমকারিকুাল") || subjectName.includes("মেকানিক্যাল") || subjectName.includes("Mechanical")) { tech = "Mechanical"; subjectName = subjectName.replace(/বমকারিকুাল|মেকানিক্যাল|Mechanical/g, '').trim(); }
-        else if (subjectName.includes("পাওয়াি") || subjectName.includes("পাওয়ার") || subjectName.includes("Power")) { tech = "Power"; subjectName = subjectName.replace(/পাওয়াি|পাওয়ার|Power/g, '').trim(); }
-        
-        if (subjectName.endsWith(',')) subjectName = subjectName.slice(0, -1);
-        if (subjectName.trim() === '') subjectName = `Subject ${code}`;
-        
-        booklists.push({
-          Curriculum: "Diploma In Engineering",
-          Regulation: currentRegulation,
-          Semester: currentSemester,
-          Department: tech,
-          Department_Code: "",
-          Subject_Name: subjectName.trim(),
-          Subject_Code: code,
-        });
-      }
+    else if (/^(\d{4,5}|[০-৯]{4,5})/.test(line)) {
+       const match = line.match(/^(\d{4,5}|[০-৯]{4,5})\s+(.+)$/);
+       if (match) {
+         booklists.push({
+            Curriculum: currentCurriculum,
+            Regulation: currentRegulation,
+            Semester: currentSemester,
+            Department: currentDept,
+            Department_Code: "",
+            Subject_Code: translateBengaliNum(match[1]),
+            Subject_Name: match[2].trim()
+         });
+       } else {
+         // Fallback if Subject code is on its own line and Subject name is on the next line
+         // pdf parsing sometimes does this
+         const code = line.trim();
+         if (code.length >= 4 && code.length <= 5 && i + 1 < lines.length) {
+            booklists.push({
+               Curriculum: currentCurriculum,
+               Regulation: currentRegulation,
+               Semester: currentSemester,
+               Department: currentDept,
+               Department_Code: "",
+               Subject_Code: translateBengaliNum(code),
+               Subject_Name: lines[i+1].trim()
+            });
+            i++; // skip next line since it was the subject name
+         }
+       }
     }
   }
   return booklists;
