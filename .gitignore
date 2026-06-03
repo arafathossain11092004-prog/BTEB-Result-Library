@@ -1,8 +1,15 @@
 node_modules/
+dist/
 build/
 coverage/
 .DS_Store
 *.log
+*.tgz
+*.tar.gz
+50117.txt
+56055.txt
+test.html
+test2.html
 .env*
 !.env.example
 firebase-applet-config.json

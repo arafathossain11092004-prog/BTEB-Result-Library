@@ -11,6 +11,7 @@ import {
   Building2,
   Download,
   Calendar,
+  BookCopy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toJpeg } from "html-to-image";
@@ -19,9 +20,185 @@ import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import SeoBlocks from "../components/SeoBlocks";
 
+const getDepartmentsByRegulation = (regulation: string = ""): string[] => {
+  const regStr = String(regulation).toLowerCase();
+  const is2016 = regStr.includes("2016");
+  if (is2016) {
+    return [
+      "682 Aircraft Maintenance (Aerospace) Technology",
+      "683 Aircraft Maintenance (Avionics) Technology",
+      "661 Architecture Technology",
+      "687 Architecture & Interior Design Technology",
+      "662 Automobile Technology",
+      "676 Ceramic Technology",
+      "663 Chemical Technology",
+      "664 Civil Technology",
+      "665 Civil (Wood) Technology",
+      "685 Computer Science & Technology",
+      "666 Computer Technology",
+      "688 Construction Technology",
+      "684 Data Telecommunication & Network Technology",
+      "667 Electrical Technology",
+      "686 Electromedical Technology",
+      "668 Electronics Technology",
+      "690 Environmental Technology",
+      "669 Food Technology",
+      "98 Footwear Technology",
+      "677 Glass Technology",
+      "696 Graphic Design Technology",
+      "691 Instrumentation & Process Control Technology",
+      "679 Marine Technology",
+      "670 Mechanical Technology",
+      "692 Mechatronics Technology",
+      "693 Mining & Mine Survey Technology",
+      "671 Power Technology",
+      "695 Printing Technology",
+      "672 Refrigeration & Air Conditioning (RAC) Technology",
+      "680 Shipbuilding Technology",
+      "678 Surveying Technology",
+      "694 Telecommunication Technology",
+      "99 Tourism & Hospitality"
+    ];
+  } else {
+    // Default to 2022
+    return [
+      "82 Aircraft Maintenance Technology (Aerospace)",
+      "83 Aircraft Maintenance Technology (Avionics)",
+      "14 Apparel Manufacturing Technology",
+      "61 Architecture Technology",
+      "62 Automobile Technology",
+      "76 Ceramic Technology",
+      "63 Chemical Technology",
+      "64 Civil Technology",
+      "65 Civil (Wood) Technology",
+      "85 Computer Science & Technology",
+      "88 Construction Technology",
+      "23 Diploma in Agriculture",
+      "74 Diploma in Fisheries",
+      "20 Diploma in Forestry",
+      "72 Diploma in Livestock",
+      "67 Electrical Technology",
+      "86 Electromedical Technology",
+      "68 Electronics Technology",
+      "90 Environmental Technology",
+      "12 Fabric Manufacturing Technology",
+      "16 Fashion Design Technology",
+      "69 Food Technology",
+      "98 Footwear Technology",
+      "77 Glass Technology",
+      "96 Graphic Design Technology",
+      "15 Jute Product Manufacturing",
+      "679 Marine Technology",
+      "70 Mechanical Technology",
+      "92 Mechatronics Technology",
+      "17 Merchandising & Marketing",
+      "71 Power Technology",
+      "95 Printing Technology",
+      "72 RAC Technology",
+      "80 Shipbuilding Engineering",
+      "78 Surveying Technology",
+      "94 Telecommunication Technology",
+      "18 Textile Machine Design & Maintenance",
+      "13 Wet Processing Technology",
+      "11 Yarn Manufacturing Technology"
+    ];
+  }
+};
+
+const getCoreWords = (str: string): string[] => {
+  return str
+    .toLowerCase()
+    .replace(/[()&,:\-\[\]"']/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w && !['technology', 'dept', 'department', 'in', 'engineering', 'and', 'diploma', 'of', 'class', 'course'].includes(w));
+};
+
+const getJaccardSimilarity = (inputWords: string[], candidateWords: string[]): number => {
+  if (inputWords.length === 0 || candidateWords.length === 0) return 0;
+  let matches = 0;
+  for (const w of candidateWords) {
+    if (inputWords.includes(w)) {
+      matches++;
+    }
+  }
+  if (matches === 0) return 0;
+  const unionSize = new Set([...inputWords, ...candidateWords]).size;
+  return matches / unionSize;
+};
+
+const normalizeDeptGroupKey = (deptStr: string, curriculum: string, regulation: string = ""): string => {
+  const cleanRaw = String(deptStr).trim().toLowerCase();
+  if (cleanRaw === 'all department' || cleanRaw === 'other') return deptStr;
+
+  const depts = getDepartmentsByRegulation(regulation);
+
+  // Approach 1: Match by exact/subset code first
+  const numMatch = cleanRaw.match(/\d+/);
+  if (numMatch) {
+    const inputNum = numMatch[0]; // e.g., "66" or "666" or "700"
+    
+    for (const d of depts) {
+      const match = d.match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        const code2 = match[1]; // e.g., "66" or "70"
+        
+        // Generate the 3-digit code equivalent
+        let code3 = "";
+        if (code2.length === 2) {
+          const firstDigit = code2[0];
+          const secondDigit = code2[1];
+          if (secondDigit === '0') {
+            code3 = code2 + "0"; // e.g., "70" -> "700"
+          } else {
+            code3 = code2 + secondDigit; // e.g., "66" -> "666", "64" -> "644"
+          }
+        }
+        
+        if (inputNum === code2 || inputNum === code3) {
+          return d;
+        }
+      }
+    }
+  }
+
+  // Approach 2: Match by core-words similarity
+  const inputWords = getCoreWords(cleanRaw);
+  let bestDept = deptStr;
+  let highestScore = 0;
+
+  for (const d of depts) {
+    const match = d.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      const deptName = match[2];
+      const candidateWords = getCoreWords(deptName);
+      const score = getJaccardSimilarity(inputWords, candidateWords);
+      if (score > highestScore) {
+        highestScore = score;
+        bestDept = d;
+      }
+    } else {
+      const candidateWords = getCoreWords(d);
+      const score = getJaccardSimilarity(inputWords, candidateWords);
+      if (score > highestScore) {
+        highestScore = score;
+        bestDept = d;
+      }
+    }
+  }
+
+  if (highestScore > 0.2) {
+    return bestDept;
+  }
+
+  return deptStr;
+};
+
 export default function ExamRoutines() {
   const [routines, setRoutines] = useState<any[]>([]);
+  const [booklists, setBooklists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'routine' | 'booklist' | 'combined'>('routine');
 
   const [activeCurriculum, setActiveCurriculum] = useState<string | null>(null);
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
@@ -35,15 +212,20 @@ export default function ExamRoutines() {
   }, [routines]);
 
   useEffect(() => {
-    fetchRoutines().catch(console.error);
+    fetchData().catch(console.error);
   }, []);
 
-  const fetchRoutines = async () => {
+  const fetchData = async () => {
     try {
-      const q = query(collection(db, "examRoutines"), orderBy("date", "asc"));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setRoutines(data);
+      const qRoutines = query(collection(db, "examRoutines"), orderBy("date", "asc"));
+      const snapRoutines = await getDocs(qRoutines);
+      const dataRoutines = snapRoutines.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setRoutines(dataRoutines);
+
+      const qBooklists = query(collection(db, "booklists"), limit(2000));
+      const snapBooklists = await getDocs(qBooklists);
+      const dataBooklists = snapBooklists.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setBooklists(dataBooklists);
     } catch (error) {
       console.error(error);
     } finally {
@@ -74,34 +256,57 @@ export default function ExamRoutines() {
 
   const departments = useMemo(() => {
     if (!activeCurriculum || !activeRegulation) return [];
+    
+    const fromBooklists = booklists
+      .filter(
+        (b) =>
+          (b.curriculum || "Unknown") === activeCurriculum &&
+          (b.regulation || "Unknown") === activeRegulation,
+      )
+      .map((b) => b.department || "Unknown");
+
+    const fromRoutines = routines
+      .filter(
+        (r) =>
+          (r.curriculum || "Unknown") === activeCurriculum &&
+          (r.regulation || "Unknown") === activeRegulation,
+      )
+      .map((r) => r.department || "Unknown");
+
+    const allRawDepts = [...fromBooklists, ...fromRoutines];
+
     return Array.from(
       new Set(
-        routines
-          .filter(
-            (r) =>
-              (r.curriculum || "Unknown") === activeCurriculum &&
-              (r.regulation || "Unknown") === activeRegulation,
-          )
-          .map((r) => r.department || "Unknown"),
+        allRawDepts.map((d) => normalizeDeptGroupKey(d, activeCurriculum, activeRegulation))
       ),
     ).sort();
-  }, [routines, activeCurriculum, activeRegulation]);
+  }, [booklists, routines, activeCurriculum, activeRegulation]);
 
   const semesters = useMemo(() => {
     if (!activeCurriculum || !activeRegulation || !activeDepartment) return [];
+    
+    const fromBooklists = booklists
+      .filter(
+        (b) =>
+          (b.curriculum || "Unknown") === activeCurriculum &&
+          (b.regulation || "Unknown") === activeRegulation &&
+          (normalizeDeptGroupKey(b.department || "Unknown", activeCurriculum, activeRegulation) === activeDepartment),
+      )
+      .map((b) => b.semester || "Unknown");
+
+    const fromRoutines = routines
+      .filter(
+        (r) =>
+          (r.curriculum || "Unknown") === activeCurriculum &&
+          (r.regulation || "Unknown") === activeRegulation &&
+          (normalizeDeptGroupKey(r.department || "Unknown", activeCurriculum, activeRegulation) === activeDepartment),
+      )
+      .map((r) => r.semester || "Unknown");
+
     return Array.from(
-      new Set(
-        routines
-          .filter(
-            (r) =>
-              (r.curriculum || "Unknown") === activeCurriculum &&
-              (r.regulation || "Unknown") === activeRegulation &&
-              (r.department || "Unknown") === activeDepartment,
-          )
-          .map((r) => r.semester || "Unknown"),
-      ),
+      new Set([...fromBooklists, ...fromRoutines]),
     ).sort();
-  }, [routines, activeCurriculum, activeRegulation, activeDepartment]);
+  }, [booklists, routines, activeCurriculum, activeRegulation, activeDepartment]);
 
   const filteredSubjects = useMemo(() => {
     if (
@@ -116,10 +321,38 @@ export default function ExamRoutines() {
         (r.curriculum || "Unknown") === activeCurriculum &&
         (r.regulation || "Unknown") === activeRegulation &&
         (r.semester || "Unknown") === activeSemester &&
-        ((r.department || "Unknown") === activeDepartment || (r.department === "All Department"))
+        (normalizeDeptGroupKey(r.department || "Unknown", activeCurriculum, activeRegulation) === activeDepartment || (r.department === "All Department"))
     );
   }, [
     routines,
+    activeCurriculum,
+    activeRegulation,
+    activeSemester,
+    activeDepartment,
+  ]);
+
+  const filteredBooklists = useMemo(() => {
+    if (
+      !activeCurriculum ||
+      !activeRegulation ||
+      !activeSemester ||
+      !activeDepartment
+    )
+      return [];
+    const filtered = booklists.filter(
+      (b) =>
+        (b.curriculum || "Unknown") === activeCurriculum &&
+        (b.regulation || "Unknown") === activeRegulation &&
+        (b.semester || "Unknown") === activeSemester &&
+        (normalizeDeptGroupKey(b.department || "Unknown", activeCurriculum, activeRegulation) === activeDepartment || (b.department === "All Department"))
+    );
+    return filtered.sort((a, b) => {
+      const aIdx = typeof a.orderIndex === 'number' ? a.orderIndex : (a.createdAt || 0);
+      const bIdx = typeof b.orderIndex === 'number' ? b.orderIndex : (b.createdAt || 0);
+      return aIdx - bIdx;
+    });
+  }, [
+    booklists,
     activeCurriculum,
     activeRegulation,
     activeSemester,
@@ -167,8 +400,157 @@ export default function ExamRoutines() {
       setActiveSemester(null);
   }, [semesters, activeSemester, activeDepartment]);
 
-  const handleDownloadPNG = () => generateImageAndDownload('jpg');
+   const handleDownloadPNG = () => generateImageAndDownload('jpg');
   const handlePrint = () => generateImageAndDownload('pdf');
+
+  const handleBooklistDownloadPNG = () => generateBooklistImageAndDownload('jpg');
+  const handleBooklistPrint = () => generateBooklistImageAndDownload('pdf');
+
+  const generateBooklistImageAndDownload = async (type: 'pdf' | 'jpg') => {
+    const printContent = document.getElementById("booklist-card");
+    if (printContent) {
+      const originalWidth = printContent.style.width;
+      const originalMaxWidth = printContent.style.maxWidth;
+      const originalMinHeight = printContent.style.minHeight;
+      const originalDisplay = printContent.style.display;
+      const originalFlexDir = printContent.style.flexDirection;
+      const originalBorderRadius = printContent.style.borderRadius;
+
+      const tableWrapper = printContent.querySelector(
+        ".table-wrapper",
+      ) as HTMLElement;
+      const origOverflow = tableWrapper ? tableWrapper.style.overflow : "";
+
+      // Force A4 size constraints (794x1123 at 96 DPI)
+      printContent.style.width = "794px";
+      printContent.style.maxWidth = "794px";
+      printContent.style.minHeight = "1123px";
+      printContent.style.display = "flex";
+      printContent.style.flexDirection = "column";
+      printContent.style.borderRadius = "0px";
+
+      if (tableWrapper) tableWrapper.style.overflow = "visible";
+      
+      let styleEl = document.createElement('style');
+      styleEl.innerHTML = `
+      .lg\\:col-span-4 { grid-column: span 4 / span 4 !important; }
+      .lg\\:col-span-8 { grid-column: span 8 / span 8 !important; }
+      .lg\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+      .md\\:p-8 { padding: 2rem !important; }
+      .md\\:text-5xl { font-size: 3rem !important; line-height: 1 !important; }
+      .sm\\:block { display: block !important; }
+      .sm\\:flex-none { flex: none !important; }
+      .sm\\:flex-row { flex-direction: row !important; }
+      .sm\\:gap-6 { gap: 1.5rem !important; }
+      .sm\\:items-center { align-items: center !important; }
+      .sm\\:items-end { align-items: flex-end !important; }
+      .sm\\:overflow-visible { overflow: visible !important; }
+      .sm\\:p-8 { padding: 2rem !important; }
+      .sm\\:px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+      .sm\\:py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+      .sm\\:text-2xl { font-size: 1.5rem !important; line-height: 2 !important; }
+      .sm\\:text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+      .sm\\:text-base { font-size: 1rem !important; line-height: 1.5 !important; }
+      .sm\\:text-lg { font-size: 1.125rem !important; line-height: 1.75 !important; }
+      .sm\\:text-sm { font-size: 0.875rem !important; line-height: 1.25 !important; }
+      .sm\\:w-48 { width: 12rem !important; }
+      .sm\\:w-auto { width: auto !important; }
+    `;
+      document.head.appendChild(styleEl);
+
+      const footer = document.createElement("div");
+      footer.className =
+        "mt-auto p-6 md:p-8 bg-[#f8fafc] border-t-2 border-indigo-100 flex justify-between items-end text-slate-500 font-medium text-sm relative z-50 shrink-0";
+      
+      let qrCodeImg = "";
+      try {
+        qrCodeImg = await QRCode.toDataURL(window.location.href, { margin: 1, width: 90, color: { dark: '#1e1b4b' } });
+      } catch (e) {
+        console.error(e);
+      }
+
+      footer.innerHTML = `
+        <div class="flex flex-col gap-1 items-start w-1/3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-700 rounded flex items-center justify-center text-white font-bold text-xl">
+              B
+            </div>
+            <span class="font-bold text-xl text-blue-800 tracking-tight">
+              BTEB Result Library
+            </span>
+          </div>
+        </div>
+        
+        <div class="w-1/3 text-center pb-1"></div>
+
+        <div class="w-1/3 flex justify-end">
+          ${qrCodeImg ? `
+            <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-indigo-100 shadow-sm">
+              <div class="text-right">
+                <div class="text-xs font-bold text-indigo-900 mb-0.5">Verify Online</div>
+                <div class="text-[9px] text-slate-500 leading-tight">Scan this QR code<br/>to open live page</div>
+              </div>
+              <img src="${qrCodeImg}" alt="QR Code" class="w-[60px] h-[60px] rounded object-contain bg-white" />
+            </div>
+          ` : ''}
+        </div>
+      `;
+      printContent.appendChild(footer);
+
+      try {
+        const dataUrl = await toJpeg(printContent, {
+          quality: 1.0,
+          pixelRatio: 2,
+          backgroundColor: "#ffffff",
+          style: {
+            width: "794px",
+            fontFamily: "sans-serif",
+          },
+        });
+
+        if (type === 'jpg') {
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = `${activeDepartment}-${activeSemester}-Booklist.jpg`;
+          link.click();
+        } else if (type === 'pdf') {
+          const img = new Image();
+          img.src = dataUrl;
+          await new Promise((resolve) => {
+             img.onload = resolve;
+          });
+          
+          const pdfWidth = 210;
+          const pdfHeight = (img.height * pdfWidth) / img.width;
+          
+          const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+          });
+          
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`${activeDepartment}-${activeSemester}-Booklist.pdf`);
+        }
+      } catch (err) {
+        console.error("Error generating booklist screenshot/PDF", err);
+      } finally {
+        if (styleEl && styleEl.parentNode) {
+          styleEl.parentNode.removeChild(styleEl);
+        }
+        printContent.style.width = originalWidth;
+        printContent.style.maxWidth = originalMaxWidth;
+        printContent.style.minHeight = originalMinHeight;
+        printContent.style.display = originalDisplay;
+        printContent.style.flexDirection = originalFlexDir;
+        printContent.style.borderRadius = originalBorderRadius;
+        if (tableWrapper) tableWrapper.style.overflow = origOverflow;
+        if (printContent.contains(footer)) {
+          printContent.removeChild(footer);
+        }
+      }
+    }
+  };
 
   const generateImageAndDownload = async (type: 'pdf' | 'jpg') => {
     const printContent = document.getElementById("routine-card");
@@ -578,144 +960,315 @@ export default function ExamRoutines() {
                   exit={{ opacity: 0, x: -20 }}
                   className="flex flex-col gap-6"
                 >
-                  {/* Action Bar */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 sm:px-6 rounded-2xl border border-slate-100 shadow-sm print:hidden gap-4">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-500" />
-                      Routine Explorer
-                    </h3>
-                    <div className="flex flex-wrap w-full sm:w-auto gap-2">
-                      <button
-                        onClick={handlePrint}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95"
-                      >
-                        <Printer className="w-4 h-4" /> Download PDF
-                      </button>
-                      <button
-                        onClick={handleDownloadPNG}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95"
-                      >
-                        <Download className="w-4 h-4" /> Download JPG
-                      </button>
-                    </div>
+                  {/* Dynamic Tab Switcher for Routine, Booklist, Combined */}
+                  <div className="flex bg-slate-100 p-1 rounded-2xl relative z-10 w-full md:max-w-md mx-auto print:hidden gap-1 border border-slate-200/60 shadow-inner">
+                    <button
+                      onClick={() => setActiveTab('routine')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
+                        activeTab === 'routine'
+                          ? "bg-white text-blue-700 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4 text-blue-500" /> Routine
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('booklist')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
+                        activeTab === 'booklist'
+                          ? "bg-white text-indigo-700 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+                      }`}
+                    >
+                      <BookOpen className="w-4 h-4 text-indigo-500" /> Booklist
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('combined')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
+                        activeTab === 'combined'
+                          ? "bg-white text-emerald-700 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+                      }`}
+                    >
+                      <Layers className="w-4 h-4 text-emerald-500" /> Combined
+                    </button>
                   </div>
 
-                  <div
-                    id="routine-card"
-                    className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative flex flex-col min-h-0"
-                  >
-                    {/* Modern Header */}
-                    <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-blue-900 p-6 sm:p-8 text-white relative overflow-hidden shrink-0">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                      <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
-                      <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
-                        <FileText className="w-24 h-24" />
+                  {/* ROUTINE VIEW / CARD */}
+                  {(activeTab === 'routine' || activeTab === 'combined') && (
+                    <div className="flex flex-col gap-4">
+                      {/* Action Bar for Routine */}
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 sm:px-6 rounded-2xl border border-slate-100 shadow-sm print:hidden gap-4">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-blue-500" />
+                          Routine Explorer
+                        </h3>
+                        <div className="flex flex-wrap w-full sm:w-auto gap-2">
+                          <button
+                            onClick={handlePrint}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+                          >
+                            <Printer className="w-4 h-4" /> Download PDF
+                          </button>
+                          <button
+                            onClick={handleDownloadPNG}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95 cursor-pointer"
+                          >
+                            <Download className="w-4 h-4" /> Download JPG
+                          </button>
+                        </div>
                       </div>
-                      
-                      <div className="relative z-10 flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1 leading-tight">
-                              {displayExamName || "Exam Routine"}
-                            </h1>
-                            <p className="text-blue-100/80 font-medium text-sm tracking-wide">
-                              BTEB Result Library
-                            </p>
+
+                      {/* Routine Card Body */}
+                      <div
+                        id="routine-card"
+                        className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative flex flex-col min-h-0"
+                      >
+                        {/* Modern Header */}
+                        <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-blue-900 p-6 sm:p-8 text-white relative overflow-hidden shrink-0">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+                          <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
+                            <FileText className="w-24 h-24" />
                           </div>
-                          <div className="hidden sm:block text-right">
-                            <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-white/90 text-sm font-medium backdrop-blur-md">
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                              btebresultlibrary.vercel.app
-                            </span>
+                          
+                          <div className="relative z-10 flex flex-col gap-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1 leading-tight">
+                                  {displayExamName || "Exam Routine"}
+                                </h1>
+                                <p className="text-blue-100/80 font-medium text-sm tracking-wide">
+                                  BTEB Result Library
+                                </p>
+                              </div>
+                              <div className="hidden sm:block text-right">
+                                <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-white/90 text-sm font-medium backdrop-blur-md">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                  btebresultlibrary.vercel.app
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="h-px w-full bg-gradient-to-r from-white/20 to-transparent my-1"></div>
+
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-between items-start sm:items-end">
+                              <div>
+                                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
+                                  {activeDepartment}
+                                </h2>
+                                <p className="text-blue-200 font-medium text-base sm:text-lg flex items-center gap-2">
+                                  {activeSemester} Semester
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <span className="bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                                  {activeCurriculum}
+                                </span>
+                                <span className="bg-white/10 border border-white/20 text-blue-50 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                                  {activeRegulation} Probidhan
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="h-px w-full bg-gradient-to-r from-white/20 to-transparent my-1"></div>
-
-                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-between items-start sm:items-end">
-                          <div>
-                            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
-                              {activeDepartment}
-                            </h2>
-                            <p className="text-blue-200 font-medium text-base sm:text-lg flex items-center gap-2">
-                              {activeSemester} Semester
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <span className="bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                              {activeCurriculum}
-                            </span>
-                            <span className="bg-white/10 border border-white/20 text-blue-50 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                              {activeRegulation} Probidhan
-                            </span>
-                          </div>
+                        <div className="p-6 sm:p-8 bg-white flex-1 overflow-hidden flex flex-col">
+                          {filteredSubjects.length === 0 ? (
+                            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 flex-1">
+                              <p className="text-slate-500">
+                                No routines found for this selection.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
+                              <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-0 bg-white">
+                                <thead className="bg-[#f8fafc] border-b-2 border-indigo-100">
+                                  <tr>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 whitespace-nowrap">
+                                      Date & Day
+                                    </th>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
+                                      Time
+                                    </th>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
+                                      Subject Name
+                                    </th>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 whitespace-nowrap">
+                                      Code
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                                  {filteredSubjects.map((subject, idx) => (
+                                    <tr
+                                      key={subject.id}
+                                      className={`transition-colors hover:bg-indigo-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                                    >
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-top">
+                                        <div className="font-bold text-slate-900 text-sm sm:text-base">
+                                          {subject.date}
+                                        </div>
+                                        {subject.day && (
+                                          <div className="text-xs font-semibold text-indigo-600/80 mt-0.5">
+                                            {subject.day}
+                                          </div>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                        <span className="inline-flex items-center bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide whitespace-nowrap shadow-sm">
+                                          {subject.time}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-slate-800 text-sm sm:text-base leading-snug align-middle">
+                                        {subject.subjectName}
+                                      </td>
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                        <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-emerald-50 text-emerald-800 px-2.5 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shadow-sm">
+                                          {subject.subjectCode}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+                  )}
 
-                    <div className="p-6 sm:p-8 bg-white flex-1 overflow-hidden flex flex-col">
-                      {filteredSubjects.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 flex-1">
-                          <p className="text-slate-500">
-                            No routines found for this selection.
-                          </p>
+                  {/* BOOKLIST VIEW / CARD */}
+                  {(activeTab === 'booklist' || activeTab === 'combined') && (
+                    <div className="flex flex-col gap-4">
+                      {/* Action Bar for Booklist */}
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 sm:px-6 rounded-2xl border border-slate-100 shadow-sm print:hidden gap-4">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                          <BookCopy className="w-5 h-5 text-indigo-500" />
+                          Booklist Explorer
+                        </h3>
+                        <div className="flex flex-wrap w-full sm:w-auto gap-2">
+                          <button
+                            onClick={handleBooklistPrint}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+                          >
+                            <Printer className="w-4 h-4" /> Download PDF
+                          </button>
+                          <button
+                            onClick={handleBooklistDownloadPNG}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95 cursor-pointer"
+                          >
+                            <Download className="w-4 h-4" /> Download JPG
+                          </button>
                         </div>
-                      ) : (
-                        <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
-                          <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-0 bg-white">
-                            <thead className="bg-[#f8fafc] border-b-2 border-indigo-100">
-                              <tr>
-                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 whitespace-nowrap">
-                                  Date & Day
-                                </th>
-                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
-                                  Time
-                                </th>
-                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
-                                  Subject Name
-                                </th>
-                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 whitespace-nowrap">
-                                  Code
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                              {filteredSubjects.map((subject, idx) => (
-                                <tr
-                                  key={subject.id}
-                                  className={`transition-colors hover:bg-indigo-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
-                                >
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-top">
-                                    <div className="font-bold text-slate-900 text-sm sm:text-base">
-                                      {subject.date}
-                                    </div>
-                                    {subject.day && (
-                                      <div className="text-xs font-semibold text-indigo-600/80 mt-0.5">
-                                        {subject.day}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
-                                    <span className="inline-flex items-center bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide whitespace-nowrap shadow-sm">
-                                      {subject.time}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-slate-800 text-sm sm:text-base leading-snug align-middle">
-                                    {subject.subjectName}
-                                  </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
-                                    <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-emerald-50 text-emerald-800 px-2.5 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shadow-sm">
-                                      {subject.subjectCode}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                      </div>
+
+                      {/* Booklist Card Body */}
+                      <div
+                        id="booklist-card"
+                        className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative flex flex-col min-h-0"
+                      >
+                        {/* Modern Header */}
+                        <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-emerald-950 p-6 sm:p-8 text-white relative overflow-hidden shrink-0">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+                          <div className="absolute top-8 right-8 opacity-10 pointer-events-none">
+                            <BookOpen className="w-24 h-24" />
+                          </div>
+                          
+                          <div className="relative z-10 flex flex-col gap-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
+                                  Book List
+                                </h1>
+                                <p className="text-blue-100/80 font-medium text-sm tracking-wide">
+                                  BTEB Result Library
+                                </p>
+                              </div>
+                              <div className="hidden sm:block text-right">
+                                <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-white/90 text-sm font-medium backdrop-blur-md">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                  btebresultlibrary.vercel.app
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="h-px w-full bg-gradient-to-r from-white/20 to-transparent my-1"></div>
+
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-between items-start sm:items-end">
+                              <div>
+                                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
+                                  {activeDepartment}
+                                </h2>
+                                <p className="text-emerald-100 font-medium text-base sm:text-lg flex items-center gap-2">
+                                  {activeSemester} Semester
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <span className="bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                                  {activeCurriculum}
+                                </span>
+                                <span className="bg-white/10 border border-white/20 text-blue-50 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                                  {activeRegulation} Probidhan
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      )}
+
+                        <div className="p-6 sm:p-8 bg-white flex-1 overflow-hidden flex flex-col">
+                          {filteredBooklists.length === 0 ? (
+                            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 flex-1">
+                              <p className="text-slate-500">
+                                No subjects found for this selection.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
+                              <table className="w-full text-left border-collapse min-w-[300px]">
+                                <thead className="bg-[#f8fafc] border-b-2 border-indigo-100">
+                                  <tr>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 border-none font-sans whitespace-nowrap">
+                                      Subject Name
+                                    </th>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 w-32 sm:w-48 whitespace-nowrap border-none font-sans">
+                                      Subject Code
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                  {filteredBooklists.map((subject, idx) => (
+                                    <tr
+                                      key={subject.id}
+                                      className={`transition-colors hover:bg-emerald-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                                    >
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                        <div className="flex items-center gap-3">
+                                          <div className="bg-indigo-50/50 p-2 rounded-lg text-indigo-500 flex-shrink-0 border border-indigo-100/50 shadow-sm">
+                                            <BookCopy className="w-5 h-5" />
+                                          </div>
+                                          <span className="font-bold text-slate-800 text-sm sm:text-base leading-snug">
+                                            {subject.subjectName}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                        <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shadow-sm">
+                                          {subject.subjectCode}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
