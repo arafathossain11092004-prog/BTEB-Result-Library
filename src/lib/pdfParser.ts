@@ -21,7 +21,7 @@ function getDepartmentBySubjectCode(code: string, regulation: string): { departm
     if (cleanCode.startsWith("657") || cleanCode.startsWith("658") || cleanCode.startsWith("659")) {
       return { department: "All Department", departmentCode: "" };
     }
-    if (cleanCode.length === 5 && cleanCode.startsWith("6")) {
+    if (cleanCode.length >= 5 && cleanCode.length <= 7 && cleanCode.startsWith("6")) {
       const prefix = cleanCode.substring(0, 3);
       for (const dept of KNOWN_ENGINEERING_DEPTS) {
         if (dept.startsWith(prefix) && dept.startsWith("6")) {
@@ -34,7 +34,7 @@ function getDepartmentBySubjectCode(code: string, regulation: string): { departm
     if (cleanCode.startsWith("257") || cleanCode.startsWith("258") || cleanCode.startsWith("259")) {
       return { department: "All Department", departmentCode: "" };
     }
-    if (cleanCode.length === 5 && cleanCode.startsWith("2")) {
+    if (cleanCode.length >= 5 && cleanCode.length <= 7 && cleanCode.startsWith("2")) {
       const techCode = cleanCode.substring(1, 3);
       for (const dept of KNOWN_ENGINEERING_DEPTS) {
         const match = dept.match(/^(\d+)\s+(.+)$/);
@@ -107,7 +107,7 @@ export async function parsePdfToRoutines(file: File) {
   let currentRegulation = "2016";
   
   const dateRegexInfo = /(\d{2}-\d{2}-\d{4}|[০-৯]{2}-[০-৯]{2}-[০-৯]{4})/;
-  const subjectCodeRegex = /^(\d{4,5}|[০-৯]{4,5})$/;
+  const subjectCodeRegex = /^(\d{4,7}|[০-৯]{4,7})$/;
   
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -143,7 +143,7 @@ export async function parsePdfToRoutines(file: File) {
     }
     
     if (subjectCodeRegex.test(token)) {
-      if (token.length >= 4 && token.length <= 5) {
+      if (token.length >= 4 && token.length <= 7) {
         const code = translateBengaliNum(token);
         let rest = [];
         for (let j = i + 1; j < tokens.length; j++) {
@@ -509,8 +509,8 @@ function processBooklistLines(lines: string[]) {
          currentSemester = normalizeSemester(line);
        }
     }
-    else if (/^(\d{4,5}|[০-৯]{4,5})/.test(line)) {
-       const match = line.match(/^(\d{4,5}|[০-৯]{4,5})\s+(.+)$/);
+    else if (/^(\d{4,7}|[০-৯]{4,7})/.test(line)) {
+       const match = line.match(/^(\d{4,7}|[০-৯]{4,7})\s+(.+)$/);
        if (match) {
          booklists.push({
             Curriculum: currentCurriculum,
@@ -525,7 +525,7 @@ function processBooklistLines(lines: string[]) {
          // Fallback if Subject code is on its own line and Subject name is on the next line
          // pdf parsing sometimes does this
          const code = line.trim();
-         if (code.length >= 4 && code.length <= 5 && i + 1 < lines.length) {
+         if (code.length >= 4 && code.length <= 7 && i + 1 < lines.length) {
             booklists.push({
                Curriculum: currentCurriculum,
                Regulation: currentRegulation,
