@@ -505,7 +505,7 @@ function processBooklistLines(lines: string[]) {
       currentDept = name;
       currentDeptCode = code;
     } 
-    else if (/optional|option|অপশনাল|ঐচ্ছিক/i.test(line) && line.length < 60) {
+    else if (/optional|option|অপশনাল|ঐচ্ছিক/i.test(line) && line.length < 60 && !/^\d/i.test(line)) {
       isCurrentOptional = true;
       const semMatch = line.match(/(?:1st|2nd|3rd|4th|5th|6th|7th|8th|১ম|২য়|৩য়|৪র্থ|৫ম|৬ষ্ঠ|৭ম|৮ম|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth)/i);
       if (semMatch) {
@@ -518,8 +518,8 @@ function processBooklistLines(lines: string[]) {
          isCurrentOptional = false;
        }
     }
-    else if (/^(\d{4,7}|[০-৯]{4,7})/.test(line)) {
-       const match = line.match(/^(\d{4,7}|[০-৯]{4,7})\s+(.+)$/);
+    else if (/^(\d{4,7}[a-zA-Z]?|[০-৯]{4,7})/.test(line)) {
+       const match = line.match(/^(\d{4,7}[a-zA-Z]?|[০-৯]{4,7})\s+(.+)$/);
        if (match) {
          booklists.push({
             Curriculum: currentCurriculum,
@@ -535,7 +535,8 @@ function processBooklistLines(lines: string[]) {
          // Fallback if Subject code is on its own line and Subject name is on the next line
          // pdf parsing sometimes does this
          const code = line.trim();
-         if (code.length >= 4 && code.length <= 7 && i + 1 < lines.length) {
+         const isJustCode = /^(\d{4,7}[a-zA-Z]?|[০-৯]{4,7})$/.test(code);
+         if (isJustCode && i + 1 < lines.length) {
             booklists.push({
                Curriculum: currentCurriculum,
                Regulation: currentRegulation,
