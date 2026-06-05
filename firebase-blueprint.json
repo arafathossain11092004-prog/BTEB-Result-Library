@@ -69,6 +69,25 @@
         "createdAt": { "type": "integer" }
       },
       "required": ["email", "createdAt"]
+    },
+    "Booklist": {
+      "title": "Booklist",
+      "description": "A booklist containing subject names and codes for a syllabus",
+      "type": "object",
+      "properties": {
+        "curriculum": { "type": "string" },
+        "regulation": { "type": "string" },
+        "semester": { "type": "string" },
+        "department": { "type": "string" },
+        "departmentCode": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "subjectCode": { "type": "string" },
+        "isOptional": { "type": "boolean" },
+        "orderIndex": { "type": "integer" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["semester", "subjectName", "subjectCode", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -91,6 +110,10 @@
     "settings": {
       "schema": { "$ref": "#/entities/Settings" },
       "description": "Global application settings"
+    },
+    "booklists": {
+      "schema": { "$ref": "#/entities/Booklist" },
+      "description": "Collection of curriculum booklists"
     }
   }
 }

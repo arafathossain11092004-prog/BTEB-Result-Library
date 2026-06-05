@@ -74,7 +74,7 @@ service cloud.firestore {
 
     function isValidBooklist(data) {
       return data.keys().hasAll(['semester', 'subjectName', 'subjectCode', 'createdAt', 'updatedAt'])
-        && data.keys().size() >= 5 && data.keys().size() <= 10
+        && data.keys().size() >= 5 && data.keys().size() <= 12
         && data.semester is string && data.semester.size() <= 100
         && data.subjectName is string && data.subjectName.size() <= 200
         && data.subjectCode is string && data.subjectCode.size() <= 100
@@ -83,7 +83,9 @@ service cloud.firestore {
         && (data.get('department', '') is string)
         && (data.get('departmentCode', '') is string)
         && (data.get('curriculum', '') is string)
-        && (data.get('regulation', '') is string);
+        && (data.get('regulation', '') is string)
+        && (data.get('isOptional', false) is bool)
+        && (data.get('orderIndex', 0) is number);
     }
 
     match /results/{resultId} {
