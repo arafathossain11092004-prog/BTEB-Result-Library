@@ -648,7 +648,7 @@ export default function ResultView() {
         <meta name="description" content={type === 'institute' ? `Check the BTEB examination results, pass rates, and PDFs for institute ${instituteCode}.` : `View the complete diploma academic result for roll number ${roll} from Bangladesh Technical Education Board (BTEB).`} />
         <link rel="canonical" href={`https://btebresultlibrary.vercel.app/result?roll=${roll}&type=${type}&curriculum=${curriculum}&regulation=${regulation}`} />
       </Helmet>
-      <div className="max-w-3xl mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0">
+      <div className={`${type === 'group' || type === 'institute' ? 'max-w-7xl' : 'max-w-3xl'} mx-auto pb-10 mt-2 lg:px-4 print:my-0 print:pb-0 print:px-0 print:max-w-none print:mx-0`}>
         <div className="mb-6 flex gap-3 justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-xl border border-white/60 shadow-lg shadow-slate-200/50 print:hidden flex-wrap w-full">
         <button onClick={() => window.history.back()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -697,7 +697,7 @@ export default function ResultView() {
 
       <div 
         ref={resultRef}
-        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : 'p-6 sm:p-10 print:p-4'}`}
+        className={`bg-white/95 backdrop-blur-3xl rounded-3xl border border-white/60 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-transparent relative w-full ${type === 'institute' ? 'p-0 overflow-hidden' : type === 'group' ? 'p-4 sm:p-6 lg:p-8 overflow-hidden' : 'p-6 sm:p-10 print:p-4'}`}
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80 rounded-t-3xl print:hidden"></div>
         {type === 'individual' ? (
@@ -841,9 +841,9 @@ export default function ResultView() {
                           </div>
                         )}
                         <div className="mt-8 print:mt-4 border border-indigo-100/80 rounded-2xl shadow-md print:shadow-none bg-white overflow-hidden">
-                          <div className="hidden sm:grid grid-cols-12 bg-indigo-50/50 border-b border-indigo-100 text-indigo-900">
-                            <div className="col-span-4 lg:col-span-3 py-4 px-5 font-bold border-r border-indigo-100/50 uppercase tracking-wider text-xs">Semester</div>
-                            <div className="col-span-8 lg:col-span-9 py-4 px-5 font-bold uppercase tracking-wider text-xs">Result Details</div>
+                          <div className="hidden sm:grid sm:grid-cols-12 bg-indigo-50/50 border-b border-indigo-100 text-indigo-900 text-left items-stretch">
+                            <div className="sm:col-span-4 lg:col-span-3 py-4 px-4 sm:px-5 font-bold border-r border-slate-100 uppercase tracking-wider text-xs flex items-center justify-start">Semester</div>
+                            <div className="sm:col-span-8 lg:col-span-9 py-4 px-3 sm:px-5 font-bold uppercase tracking-wider text-xs flex items-center justify-start">Result Details</div>
                           </div>
                           <div className="flex flex-col divide-y divide-slate-100 print:divide-gray-200">
                               {semestersList.map((sem, i) => {
@@ -1051,7 +1051,7 @@ export default function ResultView() {
         ) : (
            <div className="space-y-8">
               {/* Modern Group Result Header */}
-              <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-800 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6 max-w-3xl mx-auto">
+              <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-800 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shrink-0 shadow-lg mb-6 w-full">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
                 <div className="absolute top-8 right-8 opacity-10 pointer-events-none">

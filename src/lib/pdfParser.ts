@@ -486,6 +486,7 @@ function processBooklistLines(lines: string[]) {
   let currentDept = "Other";
   let currentDeptCode = "";
   let currentSemester = "1st";
+  let isCurrentOptional = false;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();
@@ -504,9 +505,17 @@ function processBooklistLines(lines: string[]) {
       currentDept = name;
       currentDeptCode = code;
     } 
+    else if (/optional|option|অপশনাল|ঐচ্ছিক/i.test(line) && line.length < 60) {
+      isCurrentOptional = true;
+      const semMatch = line.match(/(?:1st|2nd|3rd|4th|5th|6th|7th|8th|১ম|২য়|৩য়|৪র্থ|৫ম|৬ষ্ঠ|৭ম|৮ম|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth)/i);
+      if (semMatch) {
+        currentSemester = normalizeSemester(semMatch[0]);
+      }
+    }
     else if (/(?:1st|2nd|3rd|4th|5th|6th|7th|8th|১ম|২য়|৩য়|৪র্থ|৫ম|৬ষ্ঠ|৭ম|৮ম|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth)\s*(?:Semester|পর্ব)/i.test(line)) {
        if (line.length < 50) {
          currentSemester = normalizeSemester(line);
+         isCurrentOptional = false;
        }
     }
     else if (/^(\d{4,7}|[০-৯]{4,7})/.test(line)) {
@@ -519,7 +528,8 @@ function processBooklistLines(lines: string[]) {
             Department: currentDept,
             Department_Code: currentDeptCode,
             Subject_Code: translateBengaliNum(match[1]),
-            Subject_Name: match[2].trim()
+            Subject_Name: match[2].trim(),
+            isOptional: isCurrentOptional
          });
        } else {
          // Fallback if Subject code is on its own line and Subject name is on the next line
@@ -533,7 +543,8 @@ function processBooklistLines(lines: string[]) {
                Department: currentDept,
                Department_Code: currentDeptCode,
                Subject_Code: translateBengaliNum(code),
-               Subject_Name: lines[i+1].trim()
+               Subject_Name: lines[i+1].trim(),
+               isOptional: isCurrentOptional
             });
             i++; // skip next line since it was the subject name
          }

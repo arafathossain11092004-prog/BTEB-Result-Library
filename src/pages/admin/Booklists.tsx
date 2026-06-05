@@ -84,7 +84,7 @@ interface FormBlock {
   department: string;
   customDepartment: string;
   departmentCode: string;
-  subjects: { subjectName: string; subjectCode: string }[];
+  subjects: { subjectName: string; subjectCode: string; isOptional?: boolean }[];
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -281,7 +281,7 @@ export default function AdminBooklists() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ subjectName: '', subjectCode: '' });
+  const [editForm, setEditForm] = useState({ subjectName: '', subjectCode: '', isOptional: false });
   
   const [expandedCurr, setExpandedCurr] = useState<string | null>(null);
   const [expandedReg, setExpandedReg] = useState<string | null>(null);
@@ -390,6 +390,7 @@ export default function AdminBooklists() {
                 departmentCode: item.Department_Code || '',
                 subjectName: item.Subject_Name || '',
                 subjectCode: item.Subject_Code || '',
+                isOptional: !!item.isOptional,
                 orderIndex: count,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
@@ -442,7 +443,7 @@ export default function AdminBooklists() {
       department: '',
       customDepartment: '',
       departmentCode: '',
-      subjects: [{ subjectName: '', subjectCode: '' }]
+      subjects: [{ subjectName: '', subjectCode: '', isOptional: false }]
     }]);
   };
 
@@ -473,7 +474,7 @@ export default function AdminBooklists() {
   const handleAddSubjectField = (blockId: string) => {
     setFormBlocks(formBlocks.map(block => {
       if (block.id !== blockId) return block;
-      return { ...block, subjects: [...block.subjects, { subjectName: '', subjectCode: '' }] };
+      return { ...block, subjects: [...block.subjects, { subjectName: '', subjectCode: '', isOptional: false }] };
     }));
   };
 
@@ -484,7 +485,7 @@ export default function AdminBooklists() {
     }));
   };
 
-  const handleSubjectChange = (blockId: string, index: number, field: string, value: string) => {
+  const handleSubjectChange = (blockId: string, index: number, field: string, value: any) => {
     setFormBlocks(formBlocks.map(block => {
       if (block.id !== blockId) return block;
       const newSubjects = [...block.subjects];
@@ -557,6 +558,7 @@ export default function AdminBooklists() {
       await updateDoc(doc(db, 'booklists', editingItem.id), {
         subjectName: editForm.subjectName,
         subjectCode: editForm.subjectCode,
+        isOptional: editForm.isOptional || false,
         updatedAt: Date.now()
       });
       setEditingItem(null);
@@ -811,9 +813,20 @@ export default function AdminBooklists() {
                       <label className="block text-xs font-medium text-gray-700 mb-1">Subject Name *</label>
                       <input required type="text" value={subject.subjectName} onChange={e => handleSubjectChange(block.id, index, 'subjectName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm" />
                     </div>
-                    <div className="w-1/3">
+                    <div className="w-1/4">
                       <label className="block text-xs font-medium text-gray-700 mb-1">Subject Code *</label>
                       <input required type="text" value={subject.subjectCode} onChange={e => handleSubjectChange(block.id, index, 'subjectCode', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm" />
+                    </div>
+                    <div className="flex items-center pb-2 px-1 select-none">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-600">
+                        <input 
+                          type="checkbox" 
+                          checked={!!subject.isOptional} 
+                          onChange={e => handleSubjectChange(block.id, index, 'isOptional', e.target.checked)} 
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                        />
+                        Optional
+                      </label>
                     </div>
                   </div>
                 ))}
@@ -948,9 +961,14 @@ export default function AdminBooklists() {
                                                               {grouped[curr][reg][dept][sem].subjects.map((subject: any) => (
                                                                 <tr key={subject.id} className="hover:bg-blue-50/50 transition-colors">
                                                                   <td className="px-4 py-3 font-medium text-gray-800">
-                                                                    <div className="flex gap-2 items-center">
+                                                                    <div className="flex gap-2 items-center flex-wrap">
                                                                       <BookCopy className="w-4 h-4 text-gray-400" />
                                                                       {subject.subjectName}
+                                                                      {subject.isOptional && (
+                                                                        <span className="bg-amber-100/80 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded leading-none border border-amber-200">
+                                                                          Optional
+                                                                        </span>
+                                                                      )}
                                                                     </div>
                                                                   </td>
                                                                   <td className="px-4 py-3">
@@ -959,7 +977,7 @@ export default function AdminBooklists() {
                                                                     </span>
                                                                   </td>
                                                                   <td className="px-4 py-3 text-right">
-                                                                    <button onClick={() => { setEditingItem(subject); setEditForm({ subjectName: subject.subjectName, subjectCode: subject.subjectCode }); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors mr-2" title="Edit">
+                                                                    <button onClick={() => { setEditingItem(subject); setEditForm({ subjectName: subject.subjectName, subjectCode: subject.subjectCode, isOptional: !!subject.isOptional }); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors mr-2" title="Edit">
                                                                       <Edit className="w-4 h-4" />
                                                                     </button>
                                                                     <button onClick={() => handleDelete(subject.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
@@ -1014,6 +1032,17 @@ export default function AdminBooklists() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Subject Code</label>
                   <input required type="text" value={editForm.subjectCode} onChange={e => setEditForm({...editForm, subjectCode: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                </div>
+                <div className="flex items-center pt-2 select-none">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium text-slate-700">
+                    <input 
+                      type="checkbox" 
+                      checked={editForm.isOptional} 
+                      onChange={e => setEditForm({...editForm, isOptional: e.target.checked})} 
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                    />
+                    Optional Subject (ঐচ্ছিক বিষয়)
+                  </label>
                 </div>
                 <div className="pt-2 flex justify-end gap-2">
                   <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>

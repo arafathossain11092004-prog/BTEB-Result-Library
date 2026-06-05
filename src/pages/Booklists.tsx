@@ -350,6 +350,14 @@ export default function Booklists() {
     activeDepartment,
   ]);
 
+  const regularSubjects = useMemo(() => {
+    return filteredSubjects.filter((s) => !s.isOptional);
+  }, [filteredSubjects]);
+
+  const optionalSubjects = useMemo(() => {
+    return filteredSubjects.filter((s) => !!s.isOptional);
+  }, [filteredSubjects]);
+
   // Auto-select if only one option available
   useEffect(() => {
     if (curriculums.length === 1 && !activeCurriculum)
@@ -870,43 +878,98 @@ export default function Booklists() {
                           </p>
                         </div>
                       ) : (
-                        <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
-                          <table className="w-full text-left border-collapse min-w-[300px]">
-                            <thead className="bg-[#f8fafc] border-b-2 border-indigo-100">
-                              <tr>
-                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
-                                  Subject Name
-                                </th>
-                                <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 w-32 sm:w-48 whitespace-nowrap">
-                                  Subject Code
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                              {filteredSubjects.map((subject, idx) => (
-                                <tr
-                                  key={subject.id}
-                                  className={`transition-colors hover:bg-emerald-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
-                                >
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
-                                    <div className="flex items-center gap-3">
-                                      <div className="bg-indigo-50/50 p-2 rounded-lg text-indigo-500 flex-shrink-0 border border-indigo-100/50 shadow-sm">
-                                        <BookCopy className="w-5 h-5" />
-                                      </div>
-                                      <span className="font-bold text-slate-800 text-sm sm:text-base leading-snug">
-                                        {subject.subjectName}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
-                                    <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shadow-sm">
-                                      {subject.subjectCode}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        <div className="space-y-8 flex-1">
+                          {/* Regular Subjects table */}
+                          {regularSubjects.length > 0 && (
+                            <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
+                              <table className="w-full text-left border-collapse min-w-[300px]">
+                                <thead className="bg-[#f8fafc] border-b-2 border-indigo-100">
+                                  <tr>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900">
+                                      Subject Name
+                                    </th>
+                                    <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-indigo-900 w-32 sm:w-48 whitespace-nowrap">
+                                      Subject Code
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                  {regularSubjects.map((subject, idx) => (
+                                    <tr
+                                      key={subject.id}
+                                      className={`transition-colors hover:bg-emerald-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                                    >
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                        <div className="flex items-center gap-3">
+                                          <div className="bg-indigo-50/50 p-2 rounded-lg text-indigo-500 flex-shrink-0 border border-indigo-100/50 shadow-sm">
+                                            <BookCopy className="w-5 h-5" />
+                                          </div>
+                                          <span className="font-bold text-slate-800 text-sm sm:text-base leading-snug">
+                                            {subject.subjectName}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                        <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shadow-sm">
+                                          {subject.subjectCode}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+
+                          {/* Optional Subjects Section */}
+                          {optionalSubjects.length > 0 && (
+                            <div className="mt-8">
+                              <div className="flex items-center gap-2 mb-4 border-b pb-2 border-slate-100">
+                                <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
+                                <h4 className="text-base sm:text-lg font-bold text-slate-900">
+                                  Optional Subjects (ঐচ্ছিক বিষয়সমূহ)
+                                </h4>
+                              </div>
+                              <div className="table-wrapper overflow-x-auto sm:overflow-visible rounded-xl border border-slate-200 shadow-sm">
+                                <table className="w-full text-left border-collapse min-w-[300px]">
+                                  <thead className="bg-[#f8fafc] border-b-2 border-amber-100">
+                                    <tr>
+                                      <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-amber-900">
+                                        Subject Name
+                                      </th>
+                                      <th className="px-4 py-4 sm:px-6 font-bold text-xs uppercase tracking-wider text-amber-900 w-32 sm:w-48 whitespace-nowrap">
+                                        Subject Code
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100 bg-white">
+                                    {optionalSubjects.map((subject, idx) => (
+                                      <tr
+                                        key={subject.id}
+                                        className={`transition-colors hover:bg-amber-50/20 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                                      >
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                          <div className="flex items-center gap-3">
+                                            <div className="bg-amber-50/50 p-2 rounded-lg text-amber-500 flex-shrink-0 border border-amber-100/50 shadow-sm">
+                                              <BookCopy className="w-5 h-5" />
+                                            </div>
+                                            <span className="font-bold text-slate-800 text-sm sm:text-base leading-snug">
+                                              {subject.subjectName}
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 align-middle">
+                                          <span className="inline-block font-mono text-xs sm:text-sm font-bold tracking-widest bg-amber-50 text-amber-800 px-3 py-1.5 rounded-lg border border-amber-200 whitespace-nowrap shadow-sm">
+                                            {subject.subjectCode}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -935,30 +998,64 @@ export default function Booklists() {
             </div>
           </div>
 
-          <table className="w-full text-left border-collapse border border-gray-400">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm w-3/4">
-                  Subject Name
-                </th>
-                <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm">
-                  Subject Code
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSubjects.map((subject, index) => (
-                <tr key={subject.id || index}>
-                  <td className="px-6 py-4 border border-gray-400 text-gray-900 font-medium">
-                    {subject.subjectName}
-                  </td>
-                  <td className="px-6 py-4 border border-gray-400 text-gray-900 font-mono font-bold">
-                    {subject.subjectCode}
-                  </td>
+          {regularSubjects.length > 0 && (
+            <table className="w-full text-left border-collapse border border-gray-400">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm w-3/4">
+                    Subject Name
+                  </th>
+                  <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm">
+                    Subject Code
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {regularSubjects.map((subject, index) => (
+                  <tr key={subject.id || index}>
+                    <td className="px-6 py-4 border border-gray-400 text-gray-900 font-medium">
+                      {subject.subjectName}
+                    </td>
+                    <td className="px-6 py-4 border border-gray-400 text-gray-900 font-mono font-bold">
+                      {subject.subjectCode}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {optionalSubjects.length > 0 && (
+            <div className="mt-8">
+              <div className="my-6 text-left">
+                <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-3">Optional Subjects (ঐচ্ছিক বিষয়সমূহ)</h3>
+              </div>
+              <table className="w-full text-left border-collapse border border-gray-400">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm w-3/4">
+                      Subject Name
+                    </th>
+                    <th className="px-6 py-4 border border-gray-400 font-bold text-gray-900 text-sm">
+                      Subject Code
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {optionalSubjects.map((subject, index) => (
+                    <tr key={subject.id || index}>
+                      <td className="px-6 py-4 border border-gray-400 text-gray-900 font-medium">
+                        {subject.subjectName}
+                      </td>
+                      <td className="px-6 py-4 border border-gray-400 text-gray-900 font-mono font-bold">
+                        {subject.subjectCode}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="mt-8 pt-6 border-t font-sans border-gray-300 flex justify-between items-center text-gray-600 relative h-[100px]">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center flex items-center justify-center gap-2 mt-3">
