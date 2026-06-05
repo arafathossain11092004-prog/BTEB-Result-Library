@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc, where } from 'firebase/firestore';
+import { collection, query, limit, getDocs, deleteDoc, doc, writeBatch, updateDoc, where, deleteField } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Plus, Trash2, Loader2, BookCopy, X, Folder, FolderOpen, Save, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -382,7 +382,7 @@ export default function AdminBooklists() {
               const finalDept = normalizeDeptGroupKey(rawDept, finalCurr, item.Regulation || '');
               const finalSemester = normalizeSemesterString(item.Semester || '1st');
 
-              batch.set(newDocRef, {
+              const booklistData: any = {
                 curriculum: finalCurr,
                 regulation: item.Regulation || '2016',
                 semester: finalSemester,
@@ -390,11 +390,15 @@ export default function AdminBooklists() {
                 departmentCode: item.Department_Code || '',
                 subjectName: item.Subject_Name || '',
                 subjectCode: item.Subject_Code || '',
-                isOptional: !!item.isOptional,
-                orderIndex: count,
-                createdAt: Date.now(),
+                createdAt: Date.now() + count,
                 updatedAt: Date.now()
-              });
+              };
+
+              if (item.isOptional) {
+                booklistData.isOptional = true;
+              }
+
+              batch.set(newDocRef, booklistData);
               count++;
             }
             await batch.commit();
@@ -507,18 +511,25 @@ export default function AdminBooklists() {
         const finalDept = normalizeDeptGroupKey(rawDept, finalCurr, block.regulation);
         const finalSemester = normalizeSemesterString(block.semester);
         
-        block.subjects.forEach(subject => {
+        block.subjects.forEach((subject, idx) => {
            const newDocRef = doc(collection(db, 'booklists'));
-           batch.set(newDocRef, {
+           const booklistData: any = {
              curriculum: finalCurr,
              regulation: block.regulation,
              semester: finalSemester,
              department: finalDept,
              departmentCode: block.departmentCode,
-             ...subject,
-             createdAt: Date.now(),
+             subjectName: subject.subjectName,
+             subjectCode: subject.subjectCode,
+             createdAt: Date.now() + idx,
              updatedAt: Date.now()
-           });
+           };
+
+           if (subject.isOptional) {
+             booklistData.isOptional = true;
+           }
+
+           batch.set(newDocRef, booklistData);
         });
       });
       await batch.commit();
@@ -555,12 +566,17 @@ export default function AdminBooklists() {
     
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'booklists', editingItem.id), {
+      const updateData: any = {
         subjectName: editForm.subjectName,
         subjectCode: editForm.subjectCode,
-        isOptional: editForm.isOptional || false,
         updatedAt: Date.now()
-      });
+      };
+      if (editForm.isOptional) {
+        updateData.isOptional = true;
+      } else {
+        updateData.isOptional = deleteField();
+      }
+      await updateDoc(doc(db, 'booklists', editingItem.id), updateData);
       setEditingItem(null);
       await fetchBooklists();
     } catch (error) {
