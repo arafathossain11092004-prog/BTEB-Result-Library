@@ -515,7 +515,15 @@ function processBooklistLines(lines: string[]) {
     else if (/(?:1st|2nd|3rd|4th|5th|6th|7th|8th|১ম|২য়|৩য়|৪র্থ|৫ম|৬ষ্ঠ|৭ম|৮ম|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth)\s*(?:Semester|পর্ব)/i.test(line)) {
        if (line.length < 50) {
          currentSemester = normalizeSemester(line);
-         isCurrentOptional = false;
+         // Reset isCurrentOptional ONLY if this is a regular semester header
+         // (i.e., not containing optional keywords, not wrapped in parenthesis, and previous lines didn't have optional keywords)
+         const hasParenthesis = /\(|\)/.test(line);
+         const prevLineHasOptional = i > 0 && /optional|option|অপশনাল|ঐচ্ছিক/i.test(lines[i-1]);
+         const prevPrevLineHasOptional = i > 1 && /optional|option|অপশনাল|ঐচ্ছিক/i.test(lines[i-2]);
+         
+         if (!hasParenthesis && !prevLineHasOptional && !prevPrevLineHasOptional) {
+           isCurrentOptional = false;
+         }
        }
     }
     else if (/^(\d{4,7}[a-zA-Z]?|[০-৯]{4,7})/.test(line)) {
