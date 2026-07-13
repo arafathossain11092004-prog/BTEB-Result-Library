@@ -382,14 +382,22 @@ export default function AdminBooklists() {
               const finalDept = normalizeDeptGroupKey(rawDept, finalCurr, item.Regulation || '');
               const finalSemester = normalizeSemesterString(item.Semester || '1st');
 
+              const finalCurriculum = String(finalCurr || 'Diploma In Engineering').substring(0, 150);
+              const finalRegVal = String(item.Regulation || '2016').substring(0, 50);
+              const finalSemVal = String(finalSemester || '1st').substring(0, 100);
+              const finalDeptVal = String(finalDept || 'Other').substring(0, 150);
+              const finalDeptCodeVal = String(item.Department_Code || '').substring(0, 50);
+              const finalSubjectNameVal = String(item.Subject_Name || '').substring(0, 450);
+              const finalSubjectCodeVal = String(item.Subject_Code || '').substring(0, 100);
+
               const booklistData: any = {
-                curriculum: finalCurr,
-                regulation: item.Regulation || '2016',
-                semester: finalSemester,
-                department: finalDept,
-                departmentCode: item.Department_Code || '',
-                subjectName: item.Subject_Name || '',
-                subjectCode: item.Subject_Code || '',
+                curriculum: finalCurriculum,
+                regulation: finalRegVal,
+                semester: finalSemVal,
+                department: finalDeptVal,
+                departmentCode: finalDeptCodeVal,
+                subjectName: finalSubjectNameVal,
+                subjectCode: finalSubjectCodeVal,
                 createdAt: Date.now() + count,
                 updatedAt: Date.now()
               };

@@ -331,19 +331,33 @@ export default function AdminExamRoutines() {
                 }
               }
 
+              // Safe truncation and type enforcement to strictly satisfy Firestore Rules
+              const finalCurriculum = String(item.Curriculum || 'Diploma In Engineering').substring(0, 150);
+              const finalRegulation = String(item.Regulation || '2016').substring(0, 50);
+              const finalSemester = String(item.Semester || '1st Semester').substring(0, 100);
+              const finalDepartment = String(item.Department || 'Other').substring(0, 150);
+              const finalDepartmentCode = String(item.Department_Code || '').substring(0, 50);
+              const finalSubjectName = String(sName || '').substring(0, 450);
+              const finalSubjectCode = String(item.Subject_Code || '').substring(0, 100);
+              const finalDate = String(item.Date || '').substring(0, 150);
+              const finalDay = String(item.Day || '').substring(0, 100);
+              const finalTime = String(item.Time || '').substring(0, 150);
+              const finalPublishDate = String(globalPublishDate || '').substring(0, 150);
+              const finalExamName = String(globalExamName || '').substring(0, 150);
+
               batch.set(newDocRef, {
-                curriculum: item.Curriculum || 'Diploma In Engineering',
-                regulation: item.Regulation || '2016',
-                semester: item.Semester || '1st Semester',
-                department: item.Department || 'Other',
-                departmentCode: item.Department_Code || '',
-                subjectName: sName,
-                subjectCode: item.Subject_Code || '',
-                date: item.Date || '',
-                day: item.Day || '',
-                time: item.Time || '',
-                publishDate: globalPublishDate || '',
-                examName: globalExamName || '',
+                curriculum: finalCurriculum,
+                regulation: finalRegulation,
+                semester: finalSemester,
+                department: finalDepartment,
+                departmentCode: finalDepartmentCode,
+                subjectName: finalSubjectName,
+                subjectCode: finalSubjectCode,
+                date: finalDate,
+                day: finalDay,
+                time: finalTime,
+                publishDate: finalPublishDate,
+                examName: finalExamName,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
               });
@@ -517,18 +531,31 @@ export default function AdminExamRoutines() {
         dateBlock.timeSlots.forEach(timeSlot => {
           timeSlot.subjects.forEach(sub => {
             const newDocRef = doc(collection(db, 'examRoutines'));
+            const finalCurriculum = String(dateBlock.curriculum || 'Diploma In Engineering').substring(0, 150);
+            const finalRegulation = String(dateBlock.regulation || '2022').substring(0, 50);
+            const finalSemester = String(sub.semesters.map(s => s.semesterName).join(', ')).substring(0, 150);
+            const finalDepartment = String(sub.semesters.map(s => s.departments.join(', ') || 'All Department').join(' | ')).substring(0, 150);
+            const finalSubjectName = String(sub.subjectName || '').substring(0, 450);
+            const finalSubjectCode = String(sub.subjectCode || '').substring(0, 100);
+            const finalDate = String(formattedDate || '').substring(0, 150);
+            const finalDay = String(dateBlock.day || '').substring(0, 100);
+            const finalTime = String(timeSlot.timeShift || '').substring(0, 150);
+            const finalPublishDate = String(globalPublishDate || '').substring(0, 150);
+            const finalExamName = String(globalExamName || '').substring(0, 150);
+
             batch.set(newDocRef, {
-              curriculum: dateBlock.curriculum || 'Diploma In Engineering',
-              regulation: dateBlock.regulation || '2022',
-              semester: sub.semesters.map(s => s.semesterName).join(', '),
-              department: sub.semesters.map(s => s.departments.join(', ') || 'All Department').join(' | '),
-              subjectName: sub.subjectName,
-              subjectCode: sub.subjectCode,
-              date: formattedDate,
-              day: dateBlock.day,
-              time: timeSlot.timeShift,
-              publishDate: globalPublishDate,
-              examName: globalExamName,
+              curriculum: finalCurriculum,
+              regulation: finalRegulation,
+              semester: finalSemester,
+              department: finalDepartment,
+              departmentCode: '',
+              subjectName: finalSubjectName,
+              subjectCode: finalSubjectCode,
+              date: finalDate,
+              day: finalDay,
+              time: finalTime,
+              publishDate: finalPublishDate,
+              examName: finalExamName,
               createdAt: Date.now(),
               updatedAt: Date.now()
             });

@@ -11,10 +11,16 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isVerifiedUser() { return isSignedIn(); }
     
-    function isBootstrappedAdmin() { return isVerifiedUser() && (request.auth.token.email == 'helloimarafat@gmail.com' || request.auth.token.email == 'btebbd@bteb.gov.bd'); }
+    function isBootstrappedAdmin() { 
+      return isVerifiedUser() && 
+             request.auth.token.keys().hasAll(['email']) && 
+             (request.auth.token.email.lower() == 'helloimarafat@gmail.com' || request.auth.token.email.lower() == 'btebbd@bteb.gov.bd'); 
+    }
     function isEffectiveAdmin() { 
       return isBootstrappedAdmin() || 
-             (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))); 
+             (isVerifiedUser() && 
+              request.auth.token.keys().hasAll(['email']) && 
+              exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))); 
     }
 
     function isValidResult(data) {
