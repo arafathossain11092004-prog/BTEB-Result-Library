@@ -33,7 +33,14 @@
         "date": { "type": "string" },
         "time": { "type": "string" },
         "createdAt": { "type": "integer" },
-        "updatedAt": { "type": "integer" }
+        "updatedAt": { "type": "integer" },
+        "department": { "type": "string" },
+        "departmentCode": { "type": "string" },
+        "day": { "type": "string" },
+        "curriculum": { "type": "string" },
+        "regulation": { "type": "string" },
+        "publishDate": { "type": "string" },
+        "examName": { "type": "string" }
       },
       "required": ["semester", "subjectName", "subjectCode", "date", "time", "createdAt", "updatedAt"]
     },
