@@ -355,9 +355,9 @@ export default function AdminExamRoutines() {
           alert(`Successfully parsed and saved ${count} exam routines from the files!`);
           setShowForm(false);
           fetchRoutines().catch(console.error);
-        } catch (e) {
+        } catch (e: any) {
           console.error("Batch save error", e);
-          alert("Error saving parsed routines to Firebase.");
+          alert(`Error saving parsed routines to Firebase: ${e.message || e}`);
         }
       } else {
         alert('No valid routines found in the uploaded files.');
